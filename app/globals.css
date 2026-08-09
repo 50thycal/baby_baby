@@ -1,0 +1,192 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Palette. Warm paper, soft ink, one saturated colour per action so the three
+   primary buttons are distinguishable at a glance in a dark room.
+   Dark mode follows the phone's own setting — this app gets used at 3am.
+--------------------------------------------------------------------------- */
+:root {
+  --c-paper: #fdfaf5;
+  --c-card: #ffffff;
+  --c-ink: #1f1b16;
+  --c-muted: #8a8073;
+  --c-line: #ece3d6;
+  --c-veil: rgb(31 27 22 / 0.45);
+
+  --c-feed: #ef9c34;
+  --c-feed-ink: #7a4708;
+  --c-feed-wash: #fdf0dd;
+
+  --c-sleep: #7671e6;
+  --c-sleep-ink: #322d8a;
+  --c-sleep-wash: #eae9fd;
+
+  --c-diaper: #2eb69a;
+  --c-diaper-ink: #0d5647;
+  --c-diaper-wash: #e0f5f0;
+
+  --c-danger: #e05a5a;
+  --c-danger-wash: #fdeaea;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-paper: #13110e;
+    --c-card: #1e1a16;
+    --c-ink: #f6f1e8;
+    --c-muted: #988e80;
+    --c-line: #2e2822;
+    --c-veil: rgb(0 0 0 / 0.6);
+
+    --c-feed: #f0a94b;
+    --c-feed-ink: #f7cf95;
+    --c-feed-wash: #33240f;
+
+    --c-sleep: #8b86f0;
+    --c-sleep-ink: #c3c0f8;
+    --c-sleep-wash: #1f1d40;
+
+    --c-diaper: #3fc9ab;
+    --c-diaper-ink: #9be6d5;
+    --c-diaper-wash: #0e2f28;
+
+    --c-danger: #ef7070;
+    --c-danger-wash: #3a1919;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--c-paper);
+  --color-card: var(--c-card);
+  --color-ink: var(--c-ink);
+  --color-muted: var(--c-muted);
+  --color-line: var(--c-line);
+  --color-veil: var(--c-veil);
+
+  --color-feed: var(--c-feed);
+  --color-feed-ink: var(--c-feed-ink);
+  --color-feed-wash: var(--c-feed-wash);
+
+  --color-sleep: var(--c-sleep);
+  --color-sleep-ink: var(--c-sleep-ink);
+  --color-sleep-wash: var(--c-sleep-wash);
+
+  --color-diaper: var(--c-diaper);
+  --color-diaper-ink: var(--c-diaper-ink);
+  --color-diaper-wash: var(--c-diaper-wash);
+
+  --color-danger: var(--c-danger);
+  --color-danger-wash: var(--c-danger-wash);
+
+  /* SF Pro Rounded on iOS — the whole visual direction for free. */
+  --font-sans: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN",
+    system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* --------------------------------------------------------------------------- */
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  background: var(--c-paper);
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--c-paper);
+  color: var(--c-ink);
+  font-family: var(--font-sans);
+  overscroll-behavior-y: none;
+  -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* Press feedback: everything tappable dips slightly. Cheap, and it reads as
+   "the tap registered" without waiting for the network. */
+.press {
+  transition:
+    transform 140ms cubic-bezier(0.2, 0.8, 0.3, 1),
+    filter 140ms ease;
+}
+.press:active {
+  transform: scale(0.965);
+  filter: brightness(0.97);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes veil-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pop-in {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-sheet {
+  animation: sheet-in 300ms cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+.animate-veil {
+  animation: veil-in 200ms ease-out;
+}
+.animate-pop {
+  animation: pop-in 320ms cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+.animate-breathe {
+  animation: breathe 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-sheet,
+  .animate-veil,
+  .animate-pop,
+  .animate-breathe {
+    animation: none;
+  }
+  .press:active {
+    transform: none;
+  }
+}
