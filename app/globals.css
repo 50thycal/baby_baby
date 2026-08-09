@@ -1,0 +1,209 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Palette borrowed from the MBT Awareness Loop app: warm paper rather than
+   white, low-contrast warm greys, and cards that are barely lighter than the
+   background with a hairline border doing the separating.
+
+   Where this app diverges: the reference is monochrome because it has one
+   action. This one has three, and at 3am they need to be told apart without
+   reading, so FEED / SLEEP / DIAPER each get an accent — desaturated into the
+   same earthy family so they sit in the reference's world rather than shouting
+   over it. Dark mode follows the phone's own setting.
+--------------------------------------------------------------------------- */
+:root {
+  --c-paper: #f4f1ea;
+  --c-card: #fbf9f4;
+  --c-sunk: #ede8dc;
+  --c-ink: #2a2823;
+  --c-muted: #8a877f;
+  --c-line: #e2dccd;
+  --c-veil: rgb(42 40 35 / 0.4);
+
+  --c-feed: #b5752a;
+  --c-feed-ink: #6d4415;
+  --c-feed-wash: #efe4d1;
+
+  --c-sleep: #635ea0;
+  --c-sleep-ink: #3a3766;
+  --c-sleep-wash: #e4e2ec;
+
+  --c-diaper: #38806f;
+  --c-diaper-ink: #234f45;
+  --c-diaper-wash: #dee8e3;
+
+  --c-danger: #ab5a4c;
+  --c-danger-wash: #f0e0da;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-paper: #14130f;
+    --c-card: #1c1b16;
+    --c-sunk: #26241d;
+    --c-ink: #ede8dc;
+    --c-muted: #807d75;
+    --c-line: #2a271f;
+    --c-veil: rgb(0 0 0 / 0.6);
+
+    --c-feed: #cf9345;
+    --c-feed-ink: #e3bc85;
+    --c-feed-wash: #2c2317;
+
+    --c-sleep: #8580c4;
+    --c-sleep-ink: #b6b2dd;
+    --c-sleep-wash: #201e2c;
+
+    --c-diaper: #56a08e;
+    --c-diaper-ink: #8cc4b4;
+    --c-diaper-wash: #16241f;
+
+    --c-danger: #c4756a;
+    --c-danger-wash: #2b1c19;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--c-paper);
+  --color-card: var(--c-card);
+  --color-sunk: var(--c-sunk);
+  --color-ink: var(--c-ink);
+  --color-muted: var(--c-muted);
+  --color-line: var(--c-line);
+  --color-veil: var(--c-veil);
+
+  --color-feed: var(--c-feed);
+  --color-feed-ink: var(--c-feed-ink);
+  --color-feed-wash: var(--c-feed-wash);
+
+  --color-sleep: var(--c-sleep);
+  --color-sleep-ink: var(--c-sleep-ink);
+  --color-sleep-wash: var(--c-sleep-wash);
+
+  --color-diaper: var(--c-diaper);
+  --color-diaper-ink: var(--c-diaper-ink);
+  --color-diaper-wash: var(--c-diaper-wash);
+
+  --color-danger: var(--c-danger);
+  --color-danger-wash: var(--c-danger-wash);
+
+  /* Same stack as the reference app: plain system sans. A rounded face reads
+     as childish, and the spec asked for personality without that. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto,
+    sans-serif;
+}
+
+/* --------------------------------------------------------------------------- */
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  background: var(--c-paper);
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--c-paper);
+  color: var(--c-ink);
+  font-family: var(--font-sans);
+  overscroll-behavior-y: none;
+  -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* Press feedback: everything tappable dips slightly. Cheap, and it reads as
+   "the tap registered" without waiting for the network. The 0.985 dip and the
+   80ms/160ms timings are the reference app's. */
+.press {
+  transition:
+    transform 80ms ease,
+    background 160ms ease;
+}
+.press:active {
+  transform: scale(0.985);
+}
+
+/* A surface: barely lighter than the paper, separated by a hairline rather
+   than a shadow. The reference leans on this for every card and button. */
+.panel {
+  background: var(--c-card);
+  border: 1px solid var(--c-line);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes veil-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pop-in {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-sheet {
+  animation: sheet-in 300ms cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+.animate-veil {
+  animation: veil-in 200ms ease-out;
+}
+.animate-pop {
+  animation: pop-in 320ms cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+.animate-breathe {
+  animation: breathe 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-sheet,
+  .animate-veil,
+  .animate-pop,
+  .animate-breathe {
+    animation: none;
+  }
+  .press:active {
+    transform: none;
+  }
+}
