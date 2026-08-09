@@ -47,6 +47,12 @@ Nothing in the code is Neon-specific beyond the driver import. `DATABASE_URL`
 is a plain Postgres connection string, so Supabase or any other Postgres works
 by swapping that one variable.
 
+`vercel.json` pins `"framework": "nextjs"`. Settings in that file take
+precedence over the dashboard's Framework Preset, which matters if the Vercel
+project was linked to this repo before the app existed — it would have been
+auto-detected as "Other", skipped `next build`, and failed looking for a
+`public/` directory.
+
 ### Local development
 
 ```bash
