@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { PAPER } from "@/lib/palette";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -8,8 +9,8 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#fdfaf5",
-    theme_color: "#fdfaf5",
+    background_color: PAPER,
+    theme_color: PAPER,
     icons: [
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "maskable" },

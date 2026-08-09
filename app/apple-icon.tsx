@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { ACCENT, INK, PAPER } from "@/lib/palette";
 
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
@@ -15,7 +16,7 @@ export default function AppleIcon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#ef9c34",
+          background: ACCENT,
         }}
       >
         <div
@@ -24,14 +25,14 @@ export default function AppleIcon() {
             width: 104,
             height: 104,
             borderRadius: 52,
-            background: "#fdfaf5",
+            background: PAPER,
             alignItems: "center",
             justifyContent: "center",
             gap: 22,
           }}
         >
-          <div style={{ width: 15, height: 15, borderRadius: 8, background: "#1f1b16" }} />
-          <div style={{ width: 15, height: 15, borderRadius: 8, background: "#1f1b16" }} />
+          <div style={{ width: 15, height: 15, borderRadius: 8, background: INK }} />
+          <div style={{ width: 15, height: 15, borderRadius: 8, background: INK }} />
         </div>
       </div>
     ),

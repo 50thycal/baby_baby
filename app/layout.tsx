@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { PAPER, PAPER_DARK } from "@/lib/palette";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,8 +19,8 @@ export const viewport: Viewport = {
   maximumScale: 1, // stops iOS double-tap zoom during fast repeated taps
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fdfaf5" },
-    { media: "(prefers-color-scheme: dark)", color: "#13110e" },
+    { media: "(prefers-color-scheme: light)", color: PAPER },
+    { media: "(prefers-color-scheme: dark)", color: PAPER_DARK },
   ],
 };
 
