@@ -4,11 +4,10 @@ import { useState } from "react";
 import NotesList from "@/components/NotesList";
 import SummaryCard from "@/components/SummaryCard";
 import Timeline from "@/components/Timeline";
-import { useToast } from "@/components/Toaster";
 import CommentSheet from "@/components/sheets/CommentSheet";
+import CopySheet from "@/components/sheets/CopySheet";
 import EventDetailSheet from "@/components/sheets/EventDetailSheet";
 import { useEvents } from "@/lib/api";
-import { buildExport, copyText } from "@/lib/export";
 import { tick } from "@/lib/haptics";
 import { useNow } from "@/lib/useNow";
 import { RANGES, type RangeKey, type TimelineEvent } from "@/lib/types";
@@ -18,19 +17,9 @@ export default function Dashboard() {
   const [commentMode, setCommentMode] = useState(false);
   const [selected, setSelected] = useState<TimelineEvent | null>(null);
   const [commentAt, setCommentAt] = useState<Date | null>(null);
+  const [copying, setCopying] = useState(false);
   const { data, error, isLoading } = useEvents(range);
   const now = useNow(30_000);
-  const notify = useToast();
-
-  const copyForAI = async () => {
-    if (!data) return;
-    try {
-      await copyText(JSON.stringify(buildExport(data), null, 2));
-      notify("Copied — paste it into any AI chat");
-    } catch {
-      notify("Couldn't reach the clipboard", "bad");
-    }
-  };
 
   return (
     <div className="flex flex-col gap-3 px-5 pb-4">
@@ -100,10 +89,13 @@ export default function Dashboard() {
               {commentMode ? "Tap the timeline…" : "💬 Comment"}
             </button>
             <button
-              onClick={copyForAI}
+              onClick={() => {
+                tick();
+                setCopying(true);
+              }}
               className="panel press h-14 flex-1 rounded-full text-[15px] font-medium"
             >
-              Copy for AI
+              Copy data
             </button>
           </div>
 
@@ -116,6 +108,7 @@ export default function Dashboard() {
 
       {selected && <EventDetailSheet event={selected} onClose={() => setSelected(null)} />}
       {commentAt && <CommentSheet at={commentAt} onClose={() => setCommentAt(null)} />}
+      {copying && <CopySheet onClose={() => setCopying(false)} />}
     </div>
   );
 }

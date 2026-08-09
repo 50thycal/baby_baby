@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { BadRequest, fail, ok, parseAmount, parseTimestamp, readJson } from "@/lib/http";
+import { snapshotBeforeDelete } from "@/lib/snapshot";
 import type { Feeding } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +33,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
 
 export async function DELETE(_req: Request, { params }: Ctx) {
   try {
+    // Always leave a restore point on the other side of a delete.
+    await snapshotBeforeDelete();
     const { id } = await params;
     const sql = await db();
     await sql`DELETE FROM feedings WHERE id = ${id}`;

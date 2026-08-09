@@ -166,6 +166,63 @@ Two decisions worth keeping:
 doesn't leave a partial import behind, and skips rows that exactly match
 existing ones, so re-pasting after a half-failure adds only what's missing.
 
+## Copying the data out
+
+**Copy data** on the History screen opens a span picker — 24 hours, 3 days, a
+week, or everything — and puts a compact text log on the clipboard. The
+dashboard's own range buttons stop at a week because that's as much as the
+timeline can usefully draw; handing a whole history to something that will
+analyse it is exactly the case where you want all of it, so the export goes
+further via `range=all`.
+
+```
+Baby log · Jul 20, 2026 – Aug 9, 2026 · local time (America/New_York), 24h clock
+TOTALS 20 days · 32 feeds · 1205 mL · avg 38 mL/feed · every 2h55
+       sleep 12h28 over 9 naps (longest 2h41) · 7 diapers: 3 pee, 2 poop, 2 blowout
+
+8/6  feeds 9 / 180 mL  20@02:00 20@05:00 20@07:40 10@11:10 20@12:37
+     sleep 13:20-14:50 (1h30)
+     diaper pee@07:36
+```
+
+Three decisions:
+
+- **One line per day, 24-hour clock.** The old JSON carried an ISO timestamp
+  *and* a localised string on every row, spending most of its length repeating
+  the date. This is roughly a tenth of the size, which is the difference between
+  a week fitting in a message and not. A 24-hour clock is unambiguous without
+  am/pm and always five characters.
+- **Comments are excluded.** They're jokes and reactions between family, not
+  data worth analysing.
+- **The header describes the data, not the query.** `range=all` starts at a
+  fixed floor, so using it verbatim would head the export
+  `Jan 1 2000 – Aug 9 2026 · 9718 days` — wrong, and useless for a per-day rate.
+
+## Backups
+
+The app has no accounts on purpose — anyone with the link can log a feed, and
+anyone with the link can delete one. The safety net sits behind that rather than
+in front of it. A **Backups** link next to Import lists restore points, each
+showing its row counts so you can spot the one from before something went wrong.
+
+Copies are triggered by activity, not a clock. Every `/api/state` read calls
+`maybeSnapshot()`, throttled twice over: an in-process timer keeps all but one
+request in five minutes from touching the database, and a count-plus-timestamp
+fingerprint means an idle week doesn't store the same data over and over. No
+cron job, so no scheduling limits and nothing to notice when it stops running.
+
+Deletes are treated separately. `snapshotBeforeDelete()` runs before any row is
+removed and forces a copy if the newest is more than two minutes old — without
+it, deleting something 50 minutes into the hour would cost 50 minutes of
+legitimate entries to undo. Back-to-back deletes reuse the copy just taken.
+
+Restoring takes a copy of the current state first, so restoring to the wrong
+point is itself undoable. Any restore point can also be downloaded as JSON to
+keep a copy somewhere that isn't this database.
+
+Neither path is allowed to fail a request: a backup problem is logged and
+dropped rather than blocking the person trying to log a feed.
+
 ## Tests
 
 ```sh

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { fail, ok } from "@/lib/http";
+import { maybeSnapshot } from "@/lib/snapshot";
 import type { Diaper, Feeding, HomeState, SleepSession } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,10 @@ export async function GET() {
       lastSleep: (lastSleeps[0] as SleepSession) ?? null,
       lastDiaper: (diapers[0] as Diaper) ?? null,
     };
+    // Piggybacks the backup check on the poll every open phone already makes.
+    // Heavily throttled in-process and never allowed to fail the request.
+    await maybeSnapshot();
+
     return ok(state);
   } catch (err) {
     return fail(err);
