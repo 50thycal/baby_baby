@@ -3,16 +3,35 @@ import { SCHEMA_STATEMENTS } from "./schema";
 
 let client: NeonQueryFunction<false, false> | null = null;
 
+/**
+ * Vercel injects a different variable name depending on how the database was
+ * attached — the Neon marketplace integration sets DATABASE_URL, while the
+ * older Vercel Postgres path sets POSTGRES_URL. Accept either, and fall back to
+ * the direct (unpooled) URLs so the app still comes up if only those are
+ * present. Pooled first: these are serverless functions, and a pool is the
+ * whole point.
+ */
+const URL_VARS = [
+  "DATABASE_URL",
+  "POSTGRES_URL",
+  "DATABASE_URL_UNPOOLED",
+  "POSTGRES_URL_NON_POOLING",
+] as const;
+
 function connect() {
   if (client) return client;
-  const url = process.env.DATABASE_URL;
-  if (!url) {
+  const name = URL_VARS.find((key) => process.env[key]);
+  if (!name) {
     throw new Error(
-      "DATABASE_URL is not set. Add a Postgres database to the project " +
-        "(Vercel → Storage → Neon) or copy .env.example to .env.local.",
+      "No database URL is set. Add a Postgres database to the project " +
+        "(Vercel → Storage → Create Database → Neon), then redeploy so the " +
+        "connection string reaches this deployment. Locally, copy " +
+        ".env.example to .env.local. Looked for: " +
+        URL_VARS.join(", ") +
+        ".",
     );
   }
-  client = neon(url);
+  client = neon(process.env[name]!);
   return client;
 }
 
