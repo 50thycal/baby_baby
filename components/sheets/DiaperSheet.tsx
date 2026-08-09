@@ -62,7 +62,7 @@ export function DiaperPicker({
             type="button"
             onClick={() => onChange(t)}
             aria-pressed={selected}
-            className="press flex h-28 flex-col items-center justify-center gap-1.5 rounded-3xl border-2 transition-colors"
+            className="press flex h-28 flex-col items-center justify-center gap-1.5 rounded-[18px] border transition-colors"
             style={{
               background: selected ? "var(--c-diaper)" : "var(--c-diaper-wash)",
               borderColor: selected ? "var(--c-diaper)" : "transparent",
@@ -72,7 +72,7 @@ export function DiaperPicker({
             <span className="text-3xl leading-none" aria-hidden>
               {DIAPER_EMOJI[t]}
             </span>
-            <span className="px-2 text-center text-[15px] font-bold leading-tight">
+            <span className="px-2 text-center text-[15px] font-medium leading-tight">
               {DIAPER_LABEL[t]}
             </span>
           </button>

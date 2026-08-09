@@ -32,7 +32,7 @@ export function Toaster({ children }: { children: React.ReactNode }) {
           style={{ top: "calc(env(safe-area-inset-top) + 14px)" }}
         >
           <div
-            className="max-w-full truncate rounded-full px-5 py-3 text-sm font-bold shadow-lg"
+            className="max-w-full truncate rounded-full px-5 py-3 text-sm font-medium shadow-lg"
             style={{
               background: toast.tone === "bad" ? "var(--c-danger)" : "var(--c-ink)",
               color: "var(--c-paper)",

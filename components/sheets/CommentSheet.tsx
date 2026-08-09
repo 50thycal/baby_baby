@@ -25,7 +25,7 @@ export default function CommentSheet({ at, onClose }: { at: Date; onClose: () =>
           maxLength={280}
           rows={2}
           autoFocus
-          className="w-full resize-none rounded-2xl bg-paper p-4 text-lg font-medium outline-none placeholder:text-muted focus:ring-2 focus:ring-ink/20"
+          className="w-full resize-none rounded-[18px] bg-sunk p-4 text-lg font-medium outline-none placeholder:text-muted focus:ring-2 focus:ring-ink/20"
         />
 
         <div className="flex flex-wrap gap-2">
@@ -34,7 +34,7 @@ export default function CommentSheet({ at, onClose }: { at: Date; onClose: () =>
               key={phrase}
               type="button"
               onClick={() => setText(phrase)}
-              className="press rounded-full bg-paper px-4 py-2.5 text-sm font-bold text-muted"
+              className="press rounded-full bg-sunk px-4 py-2.5 text-sm font-medium text-muted"
             >
               {phrase}
             </button>

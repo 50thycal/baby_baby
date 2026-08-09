@@ -28,7 +28,7 @@ export default function SleepSheet({ onClose, active }: Props) {
       <div className="flex flex-col items-center gap-2">
         {active && start ? (
           <div className="mb-1 flex flex-col items-center">
-            <div className="text-5xl font-bold tabular-nums text-sleep">
+            <div className="text-5xl font-semibold tabular-nums tracking-[-0.01em] text-sleep">
               {fmtDuration(Math.max(0, ts.getTime() - start.getTime()))}
             </div>
             <div className="mt-1 text-sm font-medium text-muted">
@@ -66,7 +66,7 @@ export default function SleepSheet({ onClose, active }: Props) {
             }}
           />
           {wouldBeNegative && (
-            <p className="mt-2 text-center text-sm font-semibold text-danger">
+            <p className="mt-2 text-center text-sm font-medium text-danger">
               Wake-up time has to be after {fmtClock(start!)}
             </p>
           )}

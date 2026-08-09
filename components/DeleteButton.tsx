@@ -20,7 +20,7 @@ export default function DeleteButton({ onDelete }: { onDelete: () => Promise<voi
           thud();
           setArmed(true);
         }}
-        className="press h-12 w-full rounded-2xl text-base font-bold text-danger"
+        className="press h-12 w-full rounded-2xl text-base font-medium text-danger"
       >
         Delete
       </button>
@@ -29,14 +29,14 @@ export default function DeleteButton({ onDelete }: { onDelete: () => Promise<voi
 
   return (
     <div className="rounded-2xl bg-danger-wash p-3">
-      <p className="mb-2 text-center text-sm font-semibold text-danger">
+      <p className="mb-2 text-center text-sm font-medium text-danger">
         {error ?? "Delete this for good?"}
       </p>
       <div className="flex gap-2">
         <button
           type="button"
           onClick={() => setArmed(false)}
-          className="press h-12 flex-1 rounded-2xl bg-card text-base font-bold"
+          className="press h-12 flex-1 rounded-2xl bg-card text-base font-medium"
         >
           Keep it
         </button>
@@ -53,7 +53,7 @@ export default function DeleteButton({ onDelete }: { onDelete: () => Promise<voi
               setBusy(false);
             }
           }}
-          className="press h-12 flex-1 rounded-2xl bg-danger text-base font-bold text-white disabled:opacity-60"
+          className="press h-12 flex-1 rounded-2xl bg-danger text-base font-medium text-white disabled:opacity-60"
         >
           {busy ? "Deleting…" : "Delete"}
         </button>

@@ -79,16 +79,16 @@ export default function TimeField({ value, onChange, base, accent, label }: Prop
           setOpen((v) => !v);
           tick();
         }}
-        className="press mx-auto flex w-full flex-col items-center rounded-3xl px-4 py-3"
-        style={{ background: open ? "var(--c-paper)" : "transparent" }}
+        className="press mx-auto flex w-full flex-col items-center rounded-[18px] px-4 py-3"
+        style={{ background: open ? "var(--c-sunk)" : "transparent" }}
       >
         {label && (
-          <span className="mb-0.5 text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+          <span className="mb-0.5 text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
             {label}
           </span>
         )}
         <span className="flex items-baseline gap-2">
-          <span className="text-3xl font-bold tabular-nums">{fmtClock(value)}</span>
+          <span className="text-3xl font-semibold tabular-nums tracking-[-0.01em]">{fmtClock(value)}</span>
           <span
             className="text-sm font-semibold"
             style={{ color: accent ?? "var(--c-muted)" }}
@@ -165,7 +165,7 @@ function Chip({ children, onClick }: { children: React.ReactNode; onClick: () =>
     <button
       type="button"
       onClick={onClick}
-      className="press h-10 min-w-12 rounded-full bg-paper px-3 text-sm font-bold text-muted"
+      className="press h-10 min-w-12 rounded-full bg-sunk px-3 text-sm font-medium text-muted"
     >
       {children}
     </button>

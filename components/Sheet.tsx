@@ -37,13 +37,13 @@ export default function Sheet({ onClose, title, accent, children }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="animate-sheet relative max-h-[92vh] overflow-y-auto rounded-t-[32px] bg-card px-5 pt-3 shadow-[0_-8px_40px_rgb(0_0_0/0.18)]"
+        className="animate-sheet relative max-h-[92vh] overflow-y-auto rounded-t-[24px] border-t border-line bg-card px-5 pt-3"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 22px)" }}
       >
-        <div className="mx-auto mb-4 h-1.5 w-11 rounded-full bg-line" />
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-line" />
         {title && (
           <h2
-            className="mb-4 text-center text-[13px] font-bold uppercase tracking-[0.16em]"
+            className="mb-4 text-center text-[13px] font-medium uppercase tracking-[0.12em]"
             style={{ color: accent ?? "var(--c-muted)" }}
           >
             {title}

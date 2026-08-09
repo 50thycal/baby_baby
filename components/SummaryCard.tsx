@@ -34,7 +34,7 @@ export default function SummaryCard({ data }: { data: EventsPayload }) {
   const details = [feedingDetail, sleepDetail, diaperDetail].filter(Boolean) as string[];
 
   return (
-    <div className="rounded-[26px] bg-card p-4">
+    <div className="panel rounded-[20px] p-4">
       {/* Content-sized rather than an even grid: "37h 45m" needs far more room
           than "24", and equal columns make the long one collide with its neighbour. */}
       <div className="flex flex-wrap justify-between gap-x-4 gap-y-3">
@@ -69,12 +69,12 @@ function Stat({
 }) {
   return (
     <div>
-      <div className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color }}>
+      <div className="text-[10px] font-medium uppercase tracking-[0.12em]" style={{ color }}>
         {label}
       </div>
       <div className="mt-1 flex items-baseline gap-0.5 whitespace-nowrap">
-        <span className="text-[22px] font-bold leading-none tabular-nums">{value}</span>
-        {unit && <span className="text-xs font-bold text-muted">{unit}</span>}
+        <span className="text-[22px] font-semibold leading-none tabular-nums">{value}</span>
+        {unit && <span className="text-xs font-medium text-muted">{unit}</span>}
       </div>
     </div>
   );

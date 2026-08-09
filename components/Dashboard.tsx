@@ -42,10 +42,11 @@ export default function Dashboard() {
               tick();
               setRange(r.key);
             }}
-            className="press h-11 rounded-full px-1 text-[13px] font-bold transition-colors"
+            className="press h-11 whitespace-nowrap rounded-full border px-1 text-[12px] font-medium"
             style={{
               background: range === r.key ? "var(--c-ink)" : "var(--c-card)",
               color: range === r.key ? "var(--c-paper)" : "var(--c-muted)",
+              borderColor: range === r.key ? "var(--c-ink)" : "var(--c-line)",
             }}
           >
             {r.label}
@@ -54,12 +55,12 @@ export default function Dashboard() {
       </div>
 
       {error && (
-        <p className="rounded-2xl bg-danger-wash px-4 py-3 text-center text-sm font-semibold text-danger">
+        <p className="rounded-2xl bg-danger-wash px-4 py-3 text-center text-sm font-medium text-danger">
           Couldn&apos;t load the timeline.
         </p>
       )}
 
-      {!data && isLoading && <div className="h-64 animate-pulse rounded-[26px] bg-card" />}
+      {!data && isLoading && <div className="h-64 animate-pulse panel rounded-[20px]" />}
 
       {data && (
         <>
@@ -89,17 +90,18 @@ export default function Dashboard() {
                 setCommentMode((v) => !v);
               }}
               aria-pressed={commentMode}
-              className="press h-14 flex-1 rounded-3xl text-[15px] font-bold transition-colors"
+              className="press h-14 flex-1 rounded-full border text-[15px] font-medium"
               style={{
                 background: commentMode ? "var(--c-sleep)" : "var(--c-card)",
                 color: commentMode ? "#fff" : "var(--c-ink)",
+                borderColor: commentMode ? "var(--c-sleep)" : "var(--c-line)",
               }}
             >
               {commentMode ? "Tap the timeline…" : "💬 Comment"}
             </button>
             <button
               onClick={copyForAI}
-              className="press h-14 flex-1 rounded-3xl bg-card text-[15px] font-bold"
+              className="panel press h-14 flex-1 rounded-full text-[15px] font-medium"
             >
               Copy for AI
             </button>

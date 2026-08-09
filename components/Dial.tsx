@@ -129,7 +129,7 @@ export default function Dial({ value, onChange, max = 100, step = 5 }: Props) {
                 y1={CENTER + inner * Math.sin(a)}
                 x2={CENTER + outer * Math.cos(a)}
                 y2={CENTER + outer * Math.sin(a)}
-                stroke="var(--c-paper)"
+                stroke="var(--c-card)"
                 strokeWidth={2}
                 strokeLinecap="round"
                 opacity={0.55}
@@ -149,7 +149,7 @@ export default function Dial({ value, onChange, max = 100, step = 5 }: Props) {
         </svg>
 
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <div className="text-[68px] font-bold leading-none tabular-nums tracking-tight">
+          <div className="text-[68px] font-semibold leading-none tabular-nums tracking-tight">
             {value}
           </div>
           <div className="mt-1 text-lg font-semibold text-muted">mL</div>
@@ -178,7 +178,7 @@ function NudgeButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="press h-12 w-20 rounded-2xl bg-feed-wash text-lg font-bold text-feed-ink disabled:opacity-35"
+      className="press h-12 w-20 rounded-2xl bg-feed-wash text-lg font-medium text-feed-ink disabled:opacity-35"
     >
       {label}
     </button>

@@ -13,12 +13,12 @@ export default function Page() {
 
   return (
     <Toaster>
-      <main className="mx-auto flex h-[100dvh] w-full max-w-md flex-col">
+      <main className="mx-auto flex h-[100dvh] w-full max-w-[520px] flex-col">
         <header
           className="shrink-0 px-5 pb-3"
-          style={{ paddingTop: "calc(env(safe-area-inset-top) + 12px)" }}
+          style={{ paddingTop: "calc(env(safe-area-inset-top) + 14px)" }}
         >
-          <div className="flex rounded-full bg-card p-1">
+          <div className="panel flex rounded-full p-1">
             <Tab id="log" active={tab} onSelect={setTab}>
               Log
             </Tab>
@@ -56,7 +56,7 @@ function Tab({
         if (!selected) tick();
         onSelect(id);
       }}
-      className="press h-11 flex-1 rounded-full text-[15px] font-bold transition-colors"
+      className="press h-11 flex-1 rounded-full text-[15px] font-medium"
       style={{
         background: selected ? "var(--c-ink)" : "transparent",
         color: selected ? "var(--c-paper)" : "var(--c-muted)",

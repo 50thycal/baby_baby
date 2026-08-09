@@ -76,13 +76,13 @@ export default function Timeline({
   const maxFeed = Math.max(100, ...data.feedings.map((f) => f.amount_ml));
 
   return (
-    <div className="rounded-[26px] bg-card p-3">
+    <div className="panel rounded-[20px] p-3">
       <div className="flex">
         <div className="shrink-0" style={{ width: GUTTER }}>
           {TRACKS.map((track) => (
             <div
               key={track.key}
-              className="flex items-center text-[10px] font-bold uppercase tracking-[0.1em] text-muted"
+              className="flex items-center text-[10px] font-medium uppercase tracking-[0.1em] text-muted"
               style={{ height: track.height, marginBottom: 6 }}
             >
               {track.label}
@@ -107,7 +107,7 @@ export default function Timeline({
                     aria-label={`Feeding ${f.amount_ml} mL at ${fmtClock(f.ts)}`}
                   >
                     {pxPerHour >= 23 && (
-                      <span className="mb-0.5 text-[10px] font-bold tabular-nums text-feed-ink">
+                      <span className="mb-0.5 text-[10px] font-medium tabular-nums text-feed-ink">
                         {f.amount_ml}
                       </span>
                     )}
@@ -140,7 +140,7 @@ export default function Timeline({
                     aria-label={`Sleep from ${fmtClock(s.sleep_start)}`}
                   >
                     {blockWidth > 46 && (
-                      <span className="truncate text-[10px] font-bold text-white">
+                      <span className="truncate text-[10px] font-medium text-white">
                         {fmtDuration(clipped.to - clipped.from)}
                       </span>
                     )}
@@ -237,7 +237,7 @@ function isEmpty(data: EventsPayload) {
 function Track({ height, children }: { height: number; children: React.ReactNode }) {
   return (
     <div
-      className="relative overflow-hidden rounded-xl bg-paper"
+      className="relative overflow-hidden rounded-[10px] bg-sunk"
       style={{ height, marginBottom: 6 }}
     >
       {children}

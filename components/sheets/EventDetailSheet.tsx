@@ -97,7 +97,7 @@ function EditSleep({
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <div className="mb-1 text-4xl font-bold tabular-nums text-sleep">
+      <div className="mb-1 text-4xl font-semibold tabular-nums tracking-[-0.01em] text-sleep">
         {end ? fmtDuration(Math.max(0, end.getTime() - start.getTime())) : "in progress"}
       </div>
 
@@ -139,7 +139,7 @@ function EditSleep({
         />
       </div>
       {invalid && (
-        <p className="mt-1 text-center text-sm font-semibold text-danger">
+        <p className="mt-1 text-center text-sm font-medium text-danger">
           Wake-up has to come after falling asleep.
         </p>
       )}
@@ -209,7 +209,7 @@ function EditComment({
         onChange={(e) => setText(e.target.value)}
         maxLength={280}
         rows={3}
-        className="w-full resize-none rounded-2xl bg-paper p-4 text-lg font-medium outline-none focus:ring-2 focus:ring-ink/20"
+        className="w-full resize-none rounded-[18px] bg-sunk p-4 text-lg font-medium outline-none focus:ring-2 focus:ring-ink/20"
       />
       <TimeField value={ts} onChange={setTs} base={original} />
       <ConfirmButton

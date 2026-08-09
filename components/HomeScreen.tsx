@@ -93,13 +93,13 @@ function StatusStrip({
 }) {
   if (error) {
     return (
-      <p className="rounded-2xl bg-danger-wash px-4 py-3 text-center text-sm font-semibold text-danger">
+      <p className="rounded-2xl bg-danger-wash px-4 py-3 text-center text-sm font-medium text-danger">
         Can&apos;t reach the database right now.
       </p>
     );
   }
   if (!state) {
-    return <div className="h-[76px] animate-pulse rounded-2xl bg-line/50" />;
+    return <div className="h-[76px] animate-pulse rounded-2xl bg-sunk" />;
   }
 
   const asleep = state.activeSleep;
@@ -147,7 +147,7 @@ function StatusLine({
     <div className="flex items-baseline justify-between gap-3">
       <span className="shrink-0 text-muted">{label}</span>
       <span
-        className="truncate text-right font-semibold"
+        className="truncate text-right font-medium"
         style={accent ? { color: accent } : undefined}
       >
         {value}
@@ -175,28 +175,22 @@ function ActionTile({
   filled?: boolean;
   onClick: () => void;
 }) {
+  // The accent lives in the hairline itself rather than a stripe down the edge:
+  // the reference separates everything with a border, never a shadow or a bar.
   return (
     <button
       type="button"
       onClick={onClick}
-      className="press relative flex min-h-[104px] flex-1 items-center gap-4 overflow-hidden rounded-[28px] px-6 text-left"
-      style={{ background: wash, color: ink }}
+      className="press relative flex min-h-[104px] flex-1 items-center gap-4 overflow-hidden rounded-[20px] border px-6 text-left"
+      style={{ background: wash, color: ink, borderColor: accent }}
     >
       <span className={`text-4xl leading-none ${filled ? "animate-breathe" : ""}`} aria-hidden>
         {emoji}
       </span>
       <span className="flex min-w-0 flex-col">
-        <span className="text-3xl font-bold tracking-tight">{label}</span>
-        {detail && (
-          <span className="truncate text-[13px] font-semibold opacity-70">{detail}</span>
-        )}
+        <span className="text-3xl font-semibold tracking-[-0.01em]">{label}</span>
+        {detail && <span className="truncate text-[13px] font-normal opacity-75">{detail}</span>}
       </span>
-      {!filled && (
-        <span
-          className="absolute bottom-0 right-0 top-0 w-1.5"
-          style={{ background: accent, opacity: 0.5 }}
-        />
-      )}
     </button>
   );
 }

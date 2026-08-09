@@ -137,6 +137,22 @@ lib/
 `GET /api/state` answers "what's happening now" for the Log screen;
 `GET /api/events?range=24h` returns everything the dashboard draws in one trip.
 
+## Visual direction
+
+The palette, typography and control language come from the **MBT Awareness
+Loop** app (`50thycal/mbt-app-pilot`): warm paper instead of white, low-contrast
+warm greys, cards barely lighter than the background with a hairline border
+doing the separating, plain system sans at light weights, uppercase eyebrow
+labels, and a 0.985 press dip. Radii and spacing follow it too.
+
+The deliberate divergence is colour. The reference is monochrome because it has
+a single action; this app has three that need telling apart at a glance in the
+dark, so FEED / SLEEP / DIAPER each carry an accent — desaturated into the same
+earthy family so they sit inside that world rather than shouting over it. The
+emoji supply the personality the spec asked for; the type doesn't have to.
+
+Every token is in one block at the top of `app/globals.css`.
+
 ## Notes
 
 - Installable to the iPhone home screen — `display: standalone`, safe-area

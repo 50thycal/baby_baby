@@ -26,13 +26,13 @@ export default function NotesList({ comments, onOpen }: Props) {
         .map((comment) => {
           const at = new Date(comment.ts);
           return (
-            <div key={comment.id} className="rounded-3xl bg-card p-4">
+            <div key={comment.id} className="panel rounded-[20px] p-4">
               <button
                 onClick={() => onOpen(comment)}
                 className="press block w-full text-left"
                 aria-label={`Edit note: ${comment.text}`}
               >
-                <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted">
+                <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted">
                   {isSameLocalDay(at, now)
                     ? fmtClock(at)
                     : `${fmtDayLabel(at)} · ${fmtClock(at)}`}
@@ -69,7 +69,7 @@ function Reactions({ comment }: { comment: Comment }) {
                 setPending(null);
               }
             }}
-            className="press flex h-9 items-center gap-1 rounded-full px-3 text-sm font-bold disabled:opacity-60"
+            className="press flex h-9 items-center gap-1 rounded-full px-3 text-sm font-medium disabled:opacity-60"
             style={{
               background: count > 0 ? "var(--c-paper)" : "transparent",
               opacity: count > 0 ? 1 : 0.45,
