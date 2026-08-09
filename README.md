@@ -166,6 +166,38 @@ Two decisions worth keeping:
 doesn't leave a partial import behind, and skips rows that exactly match
 existing ones, so re-pasting after a half-failure adds only what's missing.
 
+## Copying the data out
+
+**Copy data** on the History screen opens a span picker — 24 hours, 3 days, a
+week, or everything — and puts a compact text log on the clipboard. The
+dashboard's own range buttons stop at a week because that's as much as the
+timeline can usefully draw; handing a whole history to something that will
+analyse it is exactly the case where you want all of it, so the export goes
+further via `range=all`.
+
+```
+Baby log · Jul 20, 2026 – Aug 9, 2026 · local time (America/New_York), 24h clock
+TOTALS 20 days · 32 feeds · 1205 mL · avg 38 mL/feed · every 2h55
+       sleep 12h28 over 9 naps (longest 2h41) · 7 diapers: 3 pee, 2 poop, 2 blowout
+
+8/6  feeds 9 / 180 mL  20@02:00 20@05:00 20@07:40 10@11:10 20@12:37
+     sleep 13:20-14:50 (1h30)
+     diaper pee@07:36
+```
+
+Three decisions:
+
+- **One line per day, 24-hour clock.** The old JSON carried an ISO timestamp
+  *and* a localised string on every row, spending most of its length repeating
+  the date. This is roughly a tenth of the size, which is the difference between
+  a week fitting in a message and not. A 24-hour clock is unambiguous without
+  am/pm and always five characters.
+- **Comments are excluded.** They're jokes and reactions between family, not
+  data worth analysing.
+- **The header describes the data, not the query.** `range=all` starts at a
+  fixed floor, so using it verbatim would head the export
+  `Jan 1 2000 – Aug 9 2026 · 9718 days` — wrong, and useless for a per-day rate.
+
 ## Backups
 
 The app has no accounts on purpose — anyone with the link can log a feed, and

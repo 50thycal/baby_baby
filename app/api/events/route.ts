@@ -17,11 +17,18 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   try {
     const key = new URL(req.url).searchParams.get("range") ?? "24h";
-    const valid = RANGES.some((r) => r.key === key);
-    const hours = rangeHours((valid ? key : "24h") as RangeKey);
-
     const end = new Date();
-    const start = new Date(end.getTime() - hours * 3600_000);
+
+    // `all` is for the export, not the dashboard — it has no button. The floor
+    // is a fixed date rather than the epoch so the window is still bounded.
+    let start: Date;
+    if (key === "all") {
+      start = new Date("2000-01-01T00:00:00.000Z");
+    } else {
+      const valid = RANGES.some((r) => r.key === key);
+      const hours = rangeHours((valid ? key : "24h") as RangeKey);
+      start = new Date(end.getTime() - hours * 3600_000);
+    }
 
     const sql = await db();
     const [feedings, sleep, diapers, comments] = await Promise.all([
