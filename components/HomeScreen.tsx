@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import BackupSheet from "@/components/sheets/BackupSheet";
 import DiaperSheet from "@/components/sheets/DiaperSheet";
 import FeedSheet from "@/components/sheets/FeedSheet";
 import ImportSheet from "@/components/sheets/ImportSheet";
@@ -10,7 +11,7 @@ import { useNow } from "@/lib/useNow";
 import { fmtAgo, fmtDuration } from "@/lib/time";
 import { DIAPER_EMOJI, DIAPER_SHORT, type HomeState } from "@/lib/types";
 
-type Which = "feed" | "sleep" | "diaper" | "import" | null;
+type Which = "feed" | "sleep" | "diaper" | "import" | "backups" | null;
 
 export default function HomeScreen() {
   const { data, error } = useHomeState();
@@ -73,15 +74,25 @@ export default function HomeScreen() {
         />
       </div>
 
-      {/* Deliberately small and quiet: typing up a paper log is a one-off, and
-          it must never compete with the three things done at 3am. */}
-      <button
-        type="button"
-        onClick={() => setOpen("import")}
-        className="press -mt-1 self-center px-4 py-1 text-[13px] text-muted underline underline-offset-4"
-      >
-        Import from a paper log
-      </button>
+      {/* Deliberately small and quiet: both are rare, deliberate errands and
+          must never compete with the three things done at 3am. */}
+      <div className="-mt-1 flex items-center justify-center gap-1 text-[13px] text-muted">
+        <button
+          type="button"
+          onClick={() => setOpen("import")}
+          className="press px-3 py-1 underline underline-offset-4"
+        >
+          Import from a paper log
+        </button>
+        <span aria-hidden>·</span>
+        <button
+          type="button"
+          onClick={() => setOpen("backups")}
+          className="press px-3 py-1 underline underline-offset-4"
+        >
+          Backups
+        </button>
+      </div>
 
       {open === "feed" && (
         <FeedSheet onClose={close} defaultAmount={data?.lastFeeding?.amount_ml ?? 60} />
@@ -89,6 +100,7 @@ export default function HomeScreen() {
       {open === "sleep" && <SleepSheet onClose={close} active={asleep} />}
       {open === "diaper" && <DiaperSheet onClose={close} />}
       {open === "import" && <ImportSheet onClose={close} />}
+      {open === "backups" && <BackupSheet onClose={close} />}
     </div>
   );
 }

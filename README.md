@@ -166,6 +166,31 @@ Two decisions worth keeping:
 doesn't leave a partial import behind, and skips rows that exactly match
 existing ones, so re-pasting after a half-failure adds only what's missing.
 
+## Backups
+
+The app has no accounts on purpose — anyone with the link can log a feed, and
+anyone with the link can delete one. The safety net sits behind that rather than
+in front of it. A **Backups** link next to Import lists restore points, each
+showing its row counts so you can spot the one from before something went wrong.
+
+Copies are triggered by activity, not a clock. Every `/api/state` read calls
+`maybeSnapshot()`, throttled twice over: an in-process timer keeps all but one
+request in five minutes from touching the database, and a count-plus-timestamp
+fingerprint means an idle week doesn't store the same data over and over. No
+cron job, so no scheduling limits and nothing to notice when it stops running.
+
+Deletes are treated separately. `snapshotBeforeDelete()` runs before any row is
+removed and forces a copy if the newest is more than two minutes old — without
+it, deleting something 50 minutes into the hour would cost 50 minutes of
+legitimate entries to undo. Back-to-back deletes reuse the copy just taken.
+
+Restoring takes a copy of the current state first, so restoring to the wrong
+point is itself undoable. Any restore point can also be downloaded as JSON to
+keep a copy somewhere that isn't this database.
+
+Neither path is allowed to fail a request: a backup problem is logged and
+dropped rather than blocking the person trying to log a feed.
+
 ## Tests
 
 ```sh
