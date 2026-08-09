@@ -137,6 +137,44 @@ lib/
 `GET /api/state` answers "what's happening now" for the Log screen;
 `GET /api/events?range=24h` returns everything the dashboard draws in one trip.
 
+## Importing a paper log
+
+A quiet link under the three tiles on the Log screen opens a paste box for
+typing up a paper feeding log in one go. One entry per line:
+
+```
+8/6  2:00am  20
+8/6  5:00am  20 mL
+8/6  7:36am  diaper pee
+# blank lines and hash comments are ignored
+```
+
+Dates accept `8/6`, `08/06` or `8/6/26`; a bare `M/D` resolves to the most
+recent one that isn't in the future. Times accept `2:00am`, `2am` or `02:00`.
+Diaper lines take `pee`, `poop`, `both` or `blowout`.
+
+Two decisions worth keeping:
+
+- **Parsing happens in the browser**, not the API. The times on a paper log are
+  local times, and building them client-side resolves them in the reader's own
+  zone — no offset to ask for or hardcode.
+- **Nothing is written until the parse is shown back** — counts, millilitres and
+  a per-day split, with unreadable lines listed by line number. Transcribing
+  handwriting is error-prone enough that a silent import is worse than none.
+
+`POST /api/import` validates the whole batch before writing, so one bad row
+doesn't leave a partial import behind, and skips rows that exactly match
+existing ones, so re-pasting after a half-failure adds only what's missing.
+
+## Tests
+
+```sh
+npm test     # parser unit tests (node:test)
+```
+
+The API and browser suites run against a real Postgres rather than a mock;
+they're driven from the harness rather than checked in.
+
 ## Visual direction
 
 The palette, typography and control language come from the **MBT Awareness

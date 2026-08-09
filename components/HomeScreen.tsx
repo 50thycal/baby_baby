@@ -3,13 +3,14 @@
 import { useState } from "react";
 import DiaperSheet from "@/components/sheets/DiaperSheet";
 import FeedSheet from "@/components/sheets/FeedSheet";
+import ImportSheet from "@/components/sheets/ImportSheet";
 import SleepSheet from "@/components/sheets/SleepSheet";
 import { useHomeState } from "@/lib/api";
 import { useNow } from "@/lib/useNow";
 import { fmtAgo, fmtDuration } from "@/lib/time";
 import { DIAPER_EMOJI, DIAPER_SHORT, type HomeState } from "@/lib/types";
 
-type Which = "feed" | "sleep" | "diaper" | null;
+type Which = "feed" | "sleep" | "diaper" | "import" | null;
 
 export default function HomeScreen() {
   const { data, error } = useHomeState();
@@ -72,11 +73,22 @@ export default function HomeScreen() {
         />
       </div>
 
+      {/* Deliberately small and quiet: typing up a paper log is a one-off, and
+          it must never compete with the three things done at 3am. */}
+      <button
+        type="button"
+        onClick={() => setOpen("import")}
+        className="press -mt-1 self-center px-4 py-1 text-[13px] text-muted underline underline-offset-4"
+      >
+        Import from a paper log
+      </button>
+
       {open === "feed" && (
         <FeedSheet onClose={close} defaultAmount={data?.lastFeeding?.amount_ml ?? 60} />
       )}
       {open === "sleep" && <SleepSheet onClose={close} active={asleep} />}
       {open === "diaper" && <DiaperSheet onClose={close} />}
+      {open === "import" && <ImportSheet onClose={close} />}
     </div>
   );
 }
