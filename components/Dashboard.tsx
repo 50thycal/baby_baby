@@ -20,9 +20,10 @@ export default function Dashboard() {
   const [copying, setCopying] = useState(false);
   const { data, error, isLoading } = useEvents(range);
   // The summary is anchored to local midnight, so it needs its own window: at
-  // 11pm, yesterday's midnight is already 47 hours back. Three days is the
-  // smallest range that always covers it, whatever the clock says.
-  const { data: recent } = useEvents("3d");
+  // 11pm, yesterday's midnight is already 47 hours back. A week rather than the
+  // minimum three days, because the pace line averages several complete days —
+  // and SWR shares this exact request with the Log screen's forecasts.
+  const { data: recent } = useEvents("1w");
   const now = useNow(30_000);
 
   return (

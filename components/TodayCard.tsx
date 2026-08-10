@@ -1,6 +1,7 @@
 "use client";
 
 import { compareToYesterday, type TodayComparison } from "@/lib/daily";
+import { dayPace } from "@/lib/predict";
 import { fmtDuration } from "@/lib/time";
 import type { EventsPayload } from "@/lib/types";
 
@@ -18,6 +19,15 @@ import type { EventsPayload } from "@/lib/types";
  */
 export default function TodayCard({ data, now }: { data: EventsPayload; now: Date }) {
   const c = compareToYesterday(data, now);
+  // Against the usual shape of a day, rather than yesterday alone — one odd day
+  // shouldn't set the bar. Null until a couple of complete days exist.
+  const pace = dayPace(data, now);
+  const paceColour =
+    !pace || pace.deltaMl === 0
+      ? "var(--c-muted)"
+      : pace.deltaMl > 0
+        ? "var(--c-feed)"
+        : "var(--c-muted)";
 
   return (
     <div className="panel rounded-[20px] p-4">
@@ -52,7 +62,22 @@ export default function TodayCard({ data, now }: { data: EventsPayload; now: Dat
         />
       </div>
 
-      <p className="mt-3 border-t border-line pt-2 text-[11px] leading-snug text-muted">
+      {pace && (
+        <div className="mt-3 border-t border-line pt-2 text-[13px]">
+          <span className="text-muted">Pace · </span>
+          <span className="font-medium" style={{ color: paceColour }}>
+            {pace.deltaMl === 0
+              ? "right on the usual"
+              : `${Math.abs(pace.deltaMl)} mL ${pace.deltaMl > 0 ? "ahead of" : "behind"} the usual`}
+          </span>
+          <span className="text-muted">
+            {" "}
+            by now. A whole day is typically {pace.typicalFullDayMl} mL.
+          </span>
+        </div>
+      )}
+
+      <p className="mt-2 border-t border-line pt-2 text-[11px] leading-snug text-muted">
         Today since midnight. The arrow compares with yesterday at this time;
         the last line is all of yesterday.
       </p>

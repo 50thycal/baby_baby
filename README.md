@@ -166,6 +166,39 @@ Two decisions worth keeping:
 doesn't leave a partial import behind, and skips rows that exactly match
 existing ones, so re-pasting after a half-failure adds only what's missing.
 
+## Forecasts
+
+Four short-range predictions, each shown where the decision is made rather than
+collected into a panel of their own.
+
+| Forecast | Where | Reads like |
+|---|---|---|
+| Next feed window | Log, status strip | `Next feed  3:57 AM – 4:38 AM` |
+| Likely amount | Feed sheet, under the dial | `lately 40–55 mL · trending up` |
+| Wake window | Log, while she's asleep | `Sleeping 40m — up ~6:26–7:16 AM` |
+| Day pace | Basic, under the totals | `9 mL ahead of the usual by now` |
+
+Three rules run through `lib/predict.ts`:
+
+- **Ranges, never points.** "3:15pm" claims a precision that isn't there.
+  A window is the same information told honestly, and it stays true on the days
+  she's unpredictable rather than being quietly wrong.
+- **Quartiles, not means.** A cluster-feeding evening or one missed log would
+  drag an average around badly. The 25th–75th percentile is the middle half of
+  what she actually does and shrugs off both.
+- **Refuse rather than guess.** Every function returns `null` below a minimum
+  sample, and the line simply isn't drawn. Nothing older than five days counts
+  either — at this age, a fortnight ago is a different baby.
+
+Two details worth knowing. No window is allowed to be narrower than 40 minutes:
+a very regular stretch collapses the quartiles onto one value, which would
+render as `5:00 – 5:00` — a point estimate wearing a range's clothes. And naps
+and night sleep are pooled separately for the wake window, since an hour-long
+afternoon nap and a five-hour night averaged together describe neither.
+
+The wake window is the softest of the four by some distance; newborn sleep
+varies enormously and the range is wide by construction.
+
 ## The two dashboards
 
 **Basic** is the day-to-day view: today's totals at the top, then the range

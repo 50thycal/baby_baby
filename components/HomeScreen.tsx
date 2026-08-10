@@ -6,15 +6,19 @@ import DiaperSheet from "@/components/sheets/DiaperSheet";
 import FeedSheet from "@/components/sheets/FeedSheet";
 import ImportSheet from "@/components/sheets/ImportSheet";
 import SleepSheet from "@/components/sheets/SleepSheet";
-import { useHomeState } from "@/lib/api";
+import { useEvents, useHomeState } from "@/lib/api";
+import { nextFeedWindow, wakeWindow } from "@/lib/predict";
 import { useNow } from "@/lib/useNow";
-import { fmtAgo, fmtDuration } from "@/lib/time";
-import { DIAPER_EMOJI, DIAPER_SHORT, type HomeState } from "@/lib/types";
+import { fmtAgo, fmtClock, fmtDuration } from "@/lib/time";
+import { DIAPER_EMOJI, DIAPER_SHORT, type EventsPayload, type HomeState } from "@/lib/types";
 
 type Which = "feed" | "sleep" | "diaper" | "import" | "backups" | null;
 
 export default function HomeScreen() {
   const { data, error } = useHomeState();
+  // A week of history, for the forecasts. Cheap: SWR shares it with the
+  // dashboards, and the tiles render without waiting for it.
+  const { data: history } = useEvents("1w");
   const [open, setOpen] = useState<Which>(null);
   const now = useNow(15_000);
 
@@ -23,7 +27,7 @@ export default function HomeScreen() {
 
   return (
     <div className="flex h-full flex-col gap-4 px-5 pb-4">
-      <StatusStrip state={data} now={now} error={!!error} />
+      <StatusStrip state={data} now={now} error={!!error} history={history} />
 
       <div className="flex flex-1 flex-col gap-3">
         <ActionTile
@@ -105,15 +109,23 @@ export default function HomeScreen() {
   );
 }
 
-/** Three quiet lines of context. Never more than three. */
+/**
+ * Four quiet lines of context.
+ *
+ * The forecasts live here rather than in a panel of their own: "when is she
+ * next due" belongs beside "when did she last eat", and the three tiles below
+ * must stay the loudest thing on the screen.
+ */
 function StatusStrip({
   state,
   now,
   error,
+  history,
 }: {
   state: HomeState | undefined;
   now: Date;
   error: boolean;
+  history: EventsPayload | undefined;
 }) {
   if (error) {
     return (
@@ -127,6 +139,16 @@ function StatusStrip({
   }
 
   const asleep = state.activeSleep;
+
+  // Both forecasts return null until there's enough history to mean anything,
+  // in which case the line simply isn't drawn.
+  const feedWindow = history ? nextFeedWindow(history.feedings, now) : null;
+  const wake = history && asleep ? wakeWindow(history.sleep, asleep, now) : null;
+
+  const sleepingFor = asleep
+    ? fmtDuration(now.getTime() - new Date(asleep.sleep_start).getTime())
+    : null;
+
   return (
     <div className="flex flex-col gap-1.5 text-[15px]">
       <StatusLine
@@ -137,11 +159,28 @@ function StatusStrip({
             : "nothing logged yet"
         }
       />
+      {feedWindow && (
+        <StatusLine
+          label="Next feed"
+          value={
+            feedWindow.overdue
+              ? `overdue — usually by ${fmtClock(feedWindow.to)}`
+              : `${fmtClock(feedWindow.from)} – ${fmtClock(feedWindow.to)}`
+          }
+          accent={feedWindow.overdue ? "var(--c-feed)" : undefined}
+        />
+      )}
       <StatusLine
         label="Baby"
         value={
           asleep
-            ? `Sleeping — ${fmtDuration(now.getTime() - new Date(asleep.sleep_start).getTime())}`
+            ? wake
+              ? `Sleeping ${sleepingFor} — ${
+                  wake.overdue
+                    ? "a long one"
+                    : `up ~${fmtClock(wake.from)}–${fmtClock(wake.to)}`
+                }`
+              : `Sleeping — ${sleepingFor}`
             : "Awake"
         }
         accent={asleep ? "var(--c-sleep)" : undefined}
