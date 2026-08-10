@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import NotesList from "@/components/NotesList";
-import SummaryCard from "@/components/SummaryCard";
+import TodayCard from "@/components/TodayCard";
 import Timeline from "@/components/Timeline";
 import CommentSheet from "@/components/sheets/CommentSheet";
 import CopySheet from "@/components/sheets/CopySheet";
@@ -19,6 +19,10 @@ export default function Dashboard() {
   const [commentAt, setCommentAt] = useState<Date | null>(null);
   const [copying, setCopying] = useState(false);
   const { data, error, isLoading } = useEvents(range);
+  // The summary is anchored to local midnight, so it needs its own window: at
+  // 11pm, yesterday's midnight is already 47 hours back. Three days is the
+  // smallest range that always covers it, whatever the clock says.
+  const { data: recent } = useEvents("3d");
   const now = useNow(30_000);
 
   return (
@@ -53,7 +57,7 @@ export default function Dashboard() {
 
       {data && (
         <>
-          <SummaryCard data={data} />
+          {recent && <TodayCard data={recent} now={now} />}
 
           <Timeline
             data={data}

@@ -166,6 +166,32 @@ Two decisions worth keeping:
 doesn't leave a partial import behind, and skips rows that exactly match
 existing ones, so re-pasting after a half-failure adds only what's missing.
 
+## The two dashboards
+
+**Basic** is the day-to-day view: today's totals at the top, then the range
+buttons and the timeline.
+
+The headline used to be a rolling 24 hours, which can't answer "how is she doing
+today" — at 9am a rolling window is still mostly yesterday. It is now anchored to
+**local midnight**, with two comparisons:
+
+- The **arrow** compares against *yesterday at this same time*. Comparing half a
+  day to a whole one would show "behind" every morning, and a number that's
+  alarming by construction is a number people stop reading.
+- The line underneath is **all of yesterday** — the figure to end up near.
+
+**Advanced** overlays today's cumulative curve on yesterday's for feeding, sleep
+and dirty diapers, so you can see *where* in the day a difference opened up
+rather than just its size. Yesterday is drawn complete; today stops at the
+current time, because running it flat to the right edge would read as "she
+stopped".
+
+Underneath are averages over **whole days only**. Today is partial by
+definition, and folding half a day into a per-day mean drags every figure down.
+
+All of it is computed client-side from one week of events, because the day
+boundaries belong to the reader's timezone, not the server's.
+
 ## Copying the data out
 
 **Copy data** on the History screen opens a span picker — 24 hours, 3 days, a

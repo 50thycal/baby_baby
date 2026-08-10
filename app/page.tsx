@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import AdvancedDashboard from "@/components/AdvancedDashboard";
 import Dashboard from "@/components/Dashboard";
 import HomeScreen from "@/components/HomeScreen";
 import { Toaster } from "@/components/Toaster";
 import { tick } from "@/lib/haptics";
 
-type Tab = "log" | "history";
+type Tab = "log" | "basic" | "advanced";
 
 export default function Page() {
   const [tab, setTab] = useState<Tab>("log");
@@ -22,14 +23,19 @@ export default function Page() {
             <Tab id="log" active={tab} onSelect={setTab}>
               Log
             </Tab>
-            <Tab id="history" active={tab} onSelect={setTab}>
-              History
+            <Tab id="basic" active={tab} onSelect={setTab}>
+              Basic
+            </Tab>
+            <Tab id="advanced" active={tab} onSelect={setTab}>
+              Advanced
             </Tab>
           </div>
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {tab === "log" ? <HomeScreen /> : <Dashboard />}
+          {tab === "log" && <HomeScreen />}
+          {tab === "basic" && <Dashboard />}
+          {tab === "advanced" && <AdvancedDashboard />}
         </div>
       </main>
     </Toaster>
