@@ -113,7 +113,11 @@ function Stat({
         {label}
       </div>
       <div className="flex items-baseline gap-1">
-        <span className="text-[22px] font-semibold leading-none tabular-nums">{value}</span>
+        {/* nowrap and a touch smaller: "13h 26m" wrapped onto two lines in a
+            third of a phone's width, which knocked the columns out of line. */}
+        <span className="whitespace-nowrap text-[20px] font-semibold leading-none tabular-nums">
+          {value}
+        </span>
         {unit && <span className="text-xs text-muted">{unit}</span>}
       </div>
       <div className="mt-0.5 text-[11px] tabular-nums" style={{ color: deltaColor }}>

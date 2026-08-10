@@ -44,6 +44,37 @@ export type Diaper = {
   created_at: string;
 };
 
+/**
+ * Things that happen at a moment and have no size worth recording — you only
+ * want to know roughly when. Kept in one table with a kind, the way diapers
+ * carry a type, so a third one costs nothing.
+ */
+export const MOMENT_KINDS = ["spit_up", "fussy"] as const;
+export type MomentKind = (typeof MOMENT_KINDS)[number];
+
+export const MOMENT_LABEL: Record<MomentKind, string> = {
+  spit_up: "Big spit up",
+  fussy: "Fussy fussy",
+};
+
+export const MOMENT_EMOJI: Record<MomentKind, string> = {
+  spit_up: "🤢",
+  fussy: "😠",
+};
+
+/** Which track each one belongs to — spit-ups ride with feeding, fussiness with sleep. */
+export const MOMENT_ACCENT: Record<MomentKind, string> = {
+  spit_up: "var(--c-feed)",
+  fussy: "var(--c-sleep)",
+};
+
+export type Moment = {
+  id: string;
+  kind: MomentKind;
+  ts: string;
+  created_at: string;
+};
+
 export type Comment = {
   id: string;
   ts: string;
@@ -60,6 +91,7 @@ export type EventsPayload = {
   sleep: SleepSession[];
   diapers: Diaper[];
   comments: Comment[];
+  moments: Moment[];
 };
 
 /** The small amount of "what's happening right now" the home screen shows. */
@@ -89,4 +121,5 @@ export type TimelineEvent =
   | { kind: "feeding"; data: Feeding }
   | { kind: "sleep"; data: SleepSession }
   | { kind: "diaper"; data: Diaper }
-  | { kind: "comment"; data: Comment };
+  | { kind: "comment"; data: Comment }
+  | { kind: "moment"; data: Moment };

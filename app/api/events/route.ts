@@ -7,6 +7,7 @@ import {
   type Diaper,
   type EventsPayload,
   type Feeding,
+  type Moment,
   type RangeKey,
   type SleepSession,
 } from "@/lib/types";
@@ -31,7 +32,7 @@ export async function GET(req: Request) {
     }
 
     const sql = await db();
-    const [feedings, sleep, diapers, comments] = await Promise.all([
+    const [feedings, sleep, diapers, comments, moments] = await Promise.all([
       sql`SELECT * FROM feedings
           WHERE ts >= ${start.toISOString()} AND ts <= ${end.toISOString()}
           ORDER BY ts ASC`,
@@ -47,6 +48,9 @@ export async function GET(req: Request) {
       sql`SELECT * FROM comments
           WHERE ts >= ${start.toISOString()} AND ts <= ${end.toISOString()}
           ORDER BY ts ASC`,
+      sql`SELECT * FROM moments
+          WHERE ts >= ${start.toISOString()} AND ts <= ${end.toISOString()}
+          ORDER BY ts ASC`,
     ]);
 
     const payload: EventsPayload = {
@@ -56,6 +60,7 @@ export async function GET(req: Request) {
       sleep: sleep as SleepSession[],
       diapers: diapers as Diaper[],
       comments: comments as Comment[],
+      moments: moments as Moment[],
     };
     return ok(payload);
   } catch (err) {

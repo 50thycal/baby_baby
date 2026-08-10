@@ -27,6 +27,8 @@ export default function CumulativeChart({
   color,
   format,
   title,
+  marks = [],
+  markLabel,
 }: {
   today: number[];
   yesterday: number[];
@@ -35,6 +37,9 @@ export default function CumulativeChart({
   color: string;
   format: (value: number) => string;
   title: string;
+  /** Moments today, as fractions of the day. Drawn as bare vertical lines. */
+  marks?: number[];
+  markLabel?: string;
 }) {
   const peak = Math.max(1, ...today, ...yesterday);
   const plotW = W - PAD_L - PAD_R;
@@ -56,10 +61,15 @@ export default function CumulativeChart({
   return (
     <div className="panel rounded-[20px] p-3">
       <div className="mb-1 flex items-baseline justify-between">
-        <span className="text-[11px] font-medium uppercase tracking-[0.12em]" style={{ color }}>
+        <span
+          className="whitespace-nowrap text-[11px] font-medium uppercase tracking-[0.12em]"
+          style={{ color }}
+        >
           {title}
         </span>
-        <span className="flex items-center gap-2 text-[10px] text-muted">
+        {/* A third legend item pushed the header onto two lines; nowrap on both
+            sides keeps it a single row. */}
+        <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-[10px] text-muted">
           <span className="flex items-center gap-1">
             <span className="inline-block h-[2px] w-3 rounded" style={{ background: color }} />
             today
@@ -71,6 +81,15 @@ export default function CumulativeChart({
             />
             yesterday
           </span>
+          {markLabel && marks.length > 0 && (
+            <span className="flex items-center gap-1">
+              <span
+                className="inline-block h-3 w-[2px] rounded"
+                style={{ background: color, opacity: 0.55 }}
+              />
+              {markLabel}
+            </span>
+          )}
         </span>
       </div>
 
@@ -96,6 +115,22 @@ export default function CumulativeChart({
               {format(peak * f)}
             </text>
           </g>
+        ))}
+
+        {/* Moment markers sit behind the lines: they say "around here", and
+            should never be mistaken for part of the curve. */}
+        {marks.map((f, i) => (
+          <line
+            key={i}
+            x1={PAD_L + f * plotW}
+            x2={PAD_L + f * plotW}
+            y1={PAD_T}
+            y2={PAD_T + plotH}
+            stroke={color}
+            strokeWidth={1.5}
+            strokeDasharray="2 2"
+            opacity={0.55}
+          />
         ))}
 
         <path

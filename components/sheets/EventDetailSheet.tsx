@@ -10,7 +10,14 @@ import { useToast } from "@/components/Toaster";
 import { DiaperPicker } from "@/components/sheets/DiaperSheet";
 import { send } from "@/lib/api";
 import { fmtDuration } from "@/lib/time";
-import { DIAPER_LABEL, type DiaperType, type TimelineEvent } from "@/lib/types";
+import {
+  DIAPER_LABEL,
+  MOMENT_ACCENT,
+  MOMENT_EMOJI,
+  MOMENT_LABEL,
+  type DiaperType,
+  type TimelineEvent,
+} from "@/lib/types";
 
 type Props = { event: TimelineEvent; onClose: () => void };
 
@@ -19,6 +26,8 @@ const ACCENT: Record<TimelineEvent["kind"], string> = {
   sleep: "var(--c-sleep)",
   diaper: "var(--c-diaper)",
   comment: "var(--c-ink)",
+  // Filled in per row: a spit-up borrows the feed colour, fussiness the sleep one.
+  moment: "var(--c-ink)",
 };
 
 const TITLE: Record<TimelineEvent["kind"], string> = {
@@ -26,17 +35,20 @@ const TITLE: Record<TimelineEvent["kind"], string> = {
   sleep: "Edit sleep",
   diaper: "Edit diaper",
   comment: "Edit note",
+  moment: "Edit",
 };
 
 /** Everything on the timeline is a mistake waiting to be fixed. */
 export default function EventDetailSheet({ event, onClose }: Props) {
-  const accent = ACCENT[event.kind];
+  const accent = event.kind === "moment" ? MOMENT_ACCENT[event.data.kind] : ACCENT[event.kind];
+  const title = event.kind === "moment" ? MOMENT_LABEL[event.data.kind] : TITLE[event.kind];
   return (
-    <Sheet onClose={onClose} title={TITLE[event.kind]} accent={accent}>
+    <Sheet onClose={onClose} title={title} accent={accent}>
       {event.kind === "feeding" && <EditFeeding event={event.data} onClose={onClose} />}
       {event.kind === "sleep" && <EditSleep event={event.data} onClose={onClose} />}
       {event.kind === "diaper" && <EditDiaper event={event.data} onClose={onClose} />}
       {event.kind === "comment" && <EditComment event={event.data} onClose={onClose} />}
+      {event.kind === "moment" && <EditMoment event={event.data} onClose={onClose} />}
     </Sheet>
   );
 }
@@ -229,6 +241,45 @@ function EditComment({
         onDelete={async () => {
           await send("DELETE", `/api/comments/${event.id}`);
           notify("Note deleted");
+          onClose();
+        }}
+      />
+    </div>
+  );
+}
+
+/** A spit-up or fussy spell: only the time is editable, because that's all there is. */
+function EditMoment({
+  event,
+  onClose,
+}: {
+  event: Extract<TimelineEvent, { kind: "moment" }>["data"];
+  onClose: () => void;
+}) {
+  const original = new Date(event.ts);
+  const [ts, setTs] = useState(original);
+  const notify = useToast();
+  const accent = MOMENT_ACCENT[event.kind];
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div className="text-5xl" aria-hidden>
+        {MOMENT_EMOJI[event.kind]}
+      </div>
+      <TimeField value={ts} onChange={setTs} base={original} accent={accent} label="When" />
+      <ConfirmButton
+        label="Save"
+        accent={accent}
+        onConfirm={async () => {
+          await send("PATCH", `/api/moments/${event.id}`, { ts: ts.toISOString() });
+          notify("Updated");
+          onClose();
+        }}
+      />
+      <DeleteButton
+        onDelete={async () => {
+          await send("DELETE", `/api/moments/${event.id}`);
+          notify("Deleted");
           onClose();
         }}
       />

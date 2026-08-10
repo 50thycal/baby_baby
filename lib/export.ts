@@ -47,6 +47,7 @@ export function buildExport(data: EventsPayload): string {
     ...data.feedings.map((f) => new Date(f.ts).getTime()),
     ...data.sleep.map((n) => new Date(n.sleep_start).getTime()),
     ...data.diapers.map((d) => new Date(d.ts).getTime()),
+    ...(data.moments ?? []).map((m) => new Date(m.ts).getTime()),
   ];
   const queryStart = new Date(data.start);
   const queryEnd = new Date(data.end);
@@ -57,13 +58,19 @@ export function buildExport(data: EventsPayload): string {
 
   // Bucket everything by the local day it happened on. Sleep is filed under the
   // day it started, so a nap across midnight stays one entry.
-  type Day = { label: string; feeds: { ml: number; at: Date }[]; sleep: string[]; diapers: string[] };
+  type Day = {
+    label: string;
+    feeds: { ml: number; at: Date }[];
+    sleep: string[];
+    diapers: string[];
+    marks: string[];
+  };
   const days = new Map<string, Day>();
   const bucket = (d: Date): Day => {
     const key = dayKey(d);
     const existing = days.get(key);
     if (existing) return existing;
-    const created: Day = { label: dayLabel(d), feeds: [], sleep: [], diapers: [] };
+    const created: Day = { label: dayLabel(d), feeds: [], sleep: [], diapers: [], marks: [] };
     days.set(key, created);
     return created;
   };
@@ -85,6 +92,11 @@ export function buildExport(data: EventsPayload): string {
     const at = new Date(d.ts);
     const type = d.type === "massive_blowout" ? "blowout" : d.type;
     bucket(at).diapers.push(`${type}@${clock(at)}`);
+  }
+
+  for (const m of data.moments ?? []) {
+    const at = new Date(m.ts);
+    bucket(at).marks.push(`${m.kind === "spit_up" ? "spit-up" : "fussy"}@${clock(at)}`);
   }
 
   const lines: string[] = [];
@@ -140,6 +152,7 @@ export function buildExport(data: EventsPayload): string {
     }
     if (day.sleep.length) lines.push(`      sleep ${day.sleep.join("  ")}`);
     if (day.diapers.length) lines.push(`      diaper ${day.diapers.join("  ")}`);
+    if (day.marks.length) lines.push(`      also ${day.marks.join("  ")}`);
   }
 
   if (!days.size) lines.push("(nothing logged in this period)");
