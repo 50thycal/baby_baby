@@ -8,7 +8,6 @@ import {
   DIAPER_LABEL,
   MOMENT_ACCENT,
   MOMENT_EMOJI,
-  MOMENT_LABEL,
   type EventsPayload,
   type Moment,
   type RangeKey,
@@ -32,9 +31,16 @@ const LAYOUT: Record<RangeKey, { pxPerHour: number; tickHours: number }> = {
   "1w": { pxPerHour: 12, tickHours: 12 },
 };
 
+/**
+ * A strip along the top of the feed and sleep tracks that belongs to the
+ * spit-up / fussy emoji alone. Bars and blocks stop below it, so a marker can
+ * never sit on top of something you need to tap.
+ */
+const MOMENT_LANE = 15;
+
 const TRACKS = [
-  { key: "feed", label: "Feed", height: 74 },
-  { key: "sleep", label: "Sleep", height: 42 },
+  { key: "feed", label: "Feed", height: 88 },
+  { key: "sleep", label: "Sleep", height: 54 },
   { key: "diaper", label: "Diaper", height: 38 },
   { key: "notes", label: "Notes", height: 30 },
 ] as const;
@@ -122,18 +128,11 @@ export default function Timeline({
                   </button>
                 );
               })}
-              {/* Spit-ups: a mark, not a measurement. Drawn over the bars at
-                  full height so it's clear they sit between or during feeds
-                  rather than being a feed of their own. */}
+              {/* Spit-ups: a mark, not a measurement — see MomentMark. */}
               {data.moments
                 .filter((m) => m.kind === "spit_up")
                 .map((m) => (
-                  <MomentMark
-                    key={m.id}
-                    moment={m}
-                    left={x(new Date(m.ts).getTime())}
-                    onSelect={onSelect}
-                  />
+                  <MomentMark key={m.id} moment={m} left={x(new Date(m.ts).getTime())} />
                 ))}
             </Track>
 
@@ -150,10 +149,10 @@ export default function Timeline({
                   <button
                     key={s.id}
                     onClick={() => onSelect({ kind: "sleep", data: s })}
-                    className={`absolute inset-y-1.5 flex items-center justify-center overflow-hidden rounded-xl bg-sleep px-1 ${
+                    className={`absolute flex items-center justify-center overflow-hidden rounded-xl bg-sleep px-1 ${
                       active ? "animate-breathe" : ""
                     }`}
-                    style={{ left, width: blockWidth }}
+                    style={{ left, width: blockWidth, top: MOMENT_LANE + 2, bottom: 6 }}
                     aria-label={`Sleep from ${fmtClock(s.sleep_start)}`}
                   >
                     {blockWidth > 46 && (
@@ -167,12 +166,7 @@ export default function Timeline({
               {data.moments
                 .filter((m) => m.kind === "fussy")
                 .map((m) => (
-                  <MomentMark
-                    key={m.id}
-                    moment={m}
-                    left={x(new Date(m.ts).getTime())}
-                    onSelect={onSelect}
-                  />
+                  <MomentMark key={m.id} moment={m} left={x(new Date(m.ts).getTime())} />
                 ))}
             </Track>
 
@@ -262,41 +256,38 @@ function isEmpty(data: EventsPayload) {
 }
 
 /**
- * A spit-up or a fussy spell: a full-height line with its emoji on top.
+ * A spit-up or a fussy spell.
  *
- * Deliberately not scaled by anything — these have no size, only a time, and a
- * line is the honest way to say "around here". The tap target is wider than the
- * line so it can still be opened and corrected on a phone.
+ * Deliberately NOT tappable. These sit on the same track as the feed bars, and
+ * a tap target over a bar stole the tap — you'd go to check how big a feed was
+ * and get the spit-up instead. The bars are the thing you actually need to
+ * open, so the marker gets out of the way entirely.
+ *
+ * The emoji sits in a reserved lane along the top, above the tallest bar, so it
+ * never covers one. The line is thin and translucent for the same reason.
  */
-function MomentMark({
-  moment,
-  left,
-  onSelect,
-}: {
-  moment: Moment;
-  left: number;
-  onSelect: (event: TimelineEvent) => void;
-}) {
+function MomentMark({ moment, left }: { moment: Moment; left: number }) {
   return (
-    <button
-      onClick={() => onSelect({ kind: "moment", data: moment })}
-      className="absolute inset-y-0 flex w-6 flex-col items-center justify-start overflow-hidden"
-      style={{ left: left - 12 }}
-      aria-label={`${MOMENT_LABEL[moment.kind]} at ${fmtClock(moment.ts)}`}
+    <span
+      className="pointer-events-none absolute inset-y-0"
+      style={{ left: left - 8, width: 16 }}
+      aria-hidden
     >
+      {/* The line starts below the emoji lane and runs to the floor of the
+          track, so it reads as "around this time" without hiding a bar. */}
       <span
-        className="absolute inset-y-0 w-[2px] rounded-full"
-        style={{ background: MOMENT_ACCENT[moment.kind], opacity: 0.85 }}
+        className="absolute left-1/2 w-px -translate-x-1/2 rounded-full"
+        style={{
+          top: MOMENT_LANE,
+          bottom: 0,
+          background: MOMENT_ACCENT[moment.kind],
+          opacity: 0.45,
+        }}
       />
-      {/* The halo keeps the emoji legible where the line crosses a sleep block,
-          and `overflow-hidden` above stops it spilling into the track above. */}
-      <span
-        className="relative mt-[1px] flex h-[15px] w-[15px] items-center justify-center rounded-full text-[10px] leading-none"
-        style={{ background: "var(--c-card)" }}
-      >
+      <span className="absolute inset-x-0 top-0 text-center text-[11px] leading-none">
         {MOMENT_EMOJI[moment.kind]}
       </span>
-    </button>
+    </span>
   );
 }
 

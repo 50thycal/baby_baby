@@ -20,6 +20,47 @@ const PAD_R = 6;
 const PAD_T = 8;
 const PAD_B = 18;
 
+/** A legend key that mirrors the actual stroke: same colour, same dashes. */
+function Swatch({
+  color,
+  dash,
+  opacity = 1,
+  vertical = false,
+}: {
+  color: string;
+  dash?: string;
+  opacity?: number;
+  vertical?: boolean;
+}) {
+  return vertical ? (
+    <svg width="7" height="11" aria-hidden>
+      <line
+        x1="3.5"
+        y1="0"
+        x2="3.5"
+        y2="11"
+        stroke={color}
+        strokeWidth={1.5}
+        strokeDasharray={dash}
+        opacity={opacity}
+      />
+    </svg>
+  ) : (
+    <svg width="14" height="4" aria-hidden>
+      <line
+        x1="0"
+        y1="2"
+        x2="14"
+        y2="2"
+        stroke={color}
+        strokeWidth={2}
+        strokeDasharray={dash}
+        opacity={opacity}
+      />
+    </svg>
+  );
+}
+
 export default function CumulativeChart({
   today,
   yesterday,
@@ -60,33 +101,30 @@ export default function CumulativeChart({
 
   return (
     <div className="panel rounded-[20px] p-3">
-      <div className="mb-1 flex items-baseline justify-between">
+      <div className="mb-1 flex items-baseline justify-between gap-2">
         <span
-          className="whitespace-nowrap text-[11px] font-medium uppercase tracking-[0.12em]"
+          className="truncate text-[11px] font-medium uppercase tracking-[0.12em]"
           style={{ color }}
         >
           {title}
         </span>
         {/* A third legend item pushed the header onto two lines; nowrap on both
             sides keeps it a single row. */}
+        {/* Swatches are drawn as SVG so they can carry the same dash pattern as
+            the strokes they stand for — a solid bar next to a dashed line reads
+            as a different series, not the same one. */}
         <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-[10px] text-muted">
           <span className="flex items-center gap-1">
-            <span className="inline-block h-[2px] w-3 rounded" style={{ background: color }} />
+            <Swatch color={color} />
             today
           </span>
           <span className="flex items-center gap-1">
-            <span
-              className="inline-block h-[2px] w-3 rounded"
-              style={{ background: "var(--c-muted)", opacity: 0.7 }}
-            />
+            <Swatch color="var(--c-muted)" dash="3 3" opacity={0.8} />
             yesterday
           </span>
           {markLabel && marks.length > 0 && (
             <span className="flex items-center gap-1">
-              <span
-                className="inline-block h-3 w-[2px] rounded"
-                style={{ background: color, opacity: 0.55 }}
-              />
+              <Swatch color={color} dash="2 2" opacity={0.55} vertical />
               {markLabel}
             </span>
           )}
