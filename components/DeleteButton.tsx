@@ -53,7 +53,11 @@ export default function DeleteButton({ onDelete }: { onDelete: () => Promise<voi
               setBusy(false);
             }
           }}
-          className="press h-12 flex-1 rounded-2xl bg-danger text-base font-medium text-white disabled:opacity-60"
+          className="press h-12 flex-1 rounded-2xl bg-danger text-base font-medium disabled:opacity-60"
+          // Not `text-white`: globals.css has an unlayered
+          // `button { color: inherit }`, which beats Tailwind's layered
+          // utilities. This was rendering charcoal on red.
+          style={{ color: "#fff" }}
         >
           {busy ? "Deleting…" : "Delete"}
         </button>

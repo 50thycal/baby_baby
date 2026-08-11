@@ -107,16 +107,15 @@ Every timestamp defaults to now and is adjustable by tapping it — a horizontal
 scroll-snap wheel with 5-minute detents, plus `−1h / −30m / −5m / +5m / reset`
 chips. No date pickers anywhere.
 
-**History** — three time-aligned tracks sharing one horizontal axis: feeding
-bars scaled by volume, sleep blocks scaled by duration, diaper icons. Ranges are
-24h / 2d / 3d / 1 week; it opens scrolled to now. Tapping any mark opens edit
+**Basic** — three time-aligned tracks sharing one horizontal axis: feeding bars
+scaled by volume, sleep blocks scaled by duration, diaper icons. Ranges are
+24h / 2d / 3d / 1w / All; it opens scrolled to now. Tapping any mark opens edit
 and delete (delete is two-step). **Comment** mode turns the timeline into a
 target — tap a moment, write a note, and it lands at that timestamp with emoji
 reactions.
 
-**Copy for AI** puts readable JSON for the selected range on the clipboard:
-period, summary, and every feeding, sleep, diaper and comment. Paste it into any
-chat and ask about patterns.
+**Copy data** puts a compact text log for the chosen span on the clipboard —
+see [Copying the data out](#copying-the-data-out).
 
 ## Layout
 
@@ -334,6 +333,41 @@ Three decisions:
 - **The header describes the data, not the query.** `range=all` starts at a
   fixed floor, so using it verbatim would head the export
   `Jan 1 2000 – Aug 9 2026 · 9718 days` — wrong, and useless for a per-day rate.
+
+## Knowing which build you're on
+
+One URL, shared around a family, on phones that keep tabs alive for days. So
+"am I looking at the current version?" is a real question, and the running code
+can't answer it alone — a tab opened last Tuesday will happily keep serving
+last Tuesday's bundle.
+
+A thin line above the tabs says which build it is (`Updated Aug 11, 2:47 am ·
+0d081c4`), and when the server has moved on it becomes a tappable
+**New version ready — tap to refresh**.
+
+The two halves have to come from different places, and that's the whole design:
+
+- `next.config.ts` stamps the commit and build time into the bundle at **compile
+  time**, via the `env` key so the compiler substitutes them into the server and
+  client output alike. Reading them at request time would defeat the point —
+  the value has to be frozen to the bundle it shipped in.
+- `GET /api/version` reports whatever the **currently deployed** server is. On
+  Vercel the alias points at the newest deployment, so an old tab asking this
+  question gets the new answer.
+
+Two deliberate refusals:
+
+- **It never reloads on its own.** Someone could be halfway through logging a
+  feed at 4am, and having the page vanish under them would be a worse bug than
+  the stale bundle ever was.
+- **A failed check says nothing.** No answer means the network blipped, not that
+  there's an update, and a banner that flickers on every wobble is one people
+  learn to ignore. Local builds are all stamped `dev`, so they never nag either.
+
+The check runs every five minutes and on refocus — a deploy isn't urgent news,
+but coming back to a tab is exactly when you want to know. It's deliberately
+excluded from the post-write refresh, or it would fire on every feed, nappy and
+nap logged.
 
 ## Backups
 

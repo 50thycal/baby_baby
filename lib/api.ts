@@ -27,11 +27,32 @@ export function useEvents(range: RangeKey) {
   return useSWR<EventsPayload>(`/api/events?range=${range}`, fetcher, SHARED_OPTS);
 }
 
-/** After any write, pull both views back in sync. */
-export function refreshAll() {
-  return mutate((key) => typeof key === "string" && key.startsWith("/api/"), undefined, {
-    revalidate: true,
+/**
+ * Which build the server is serving right now, so a stale tab can notice.
+ * Checked rarely — a deploy is not urgent news — but always on refocus, which
+ * is when someone has come back to a tab they left open.
+ */
+export function useVersion() {
+  return useSWR<{ build: string; builtAt: string }>(VERSION_KEY, fetcher, {
+    refreshInterval: 5 * 60_000,
+    revalidateOnFocus: true,
+    keepPreviousData: true,
   });
+}
+
+const VERSION_KEY = "/api/version";
+
+/**
+ * After any write, pull both views back in sync — but not the version check,
+ * which has nothing to do with the data and would otherwise fire on every
+ * single feed, nappy and nap logged.
+ */
+export function refreshAll() {
+  return mutate(
+    (key) => typeof key === "string" && key.startsWith("/api/") && key !== VERSION_KEY,
+    undefined,
+    { revalidate: true },
+  );
 }
 
 type Method = "POST" | "PATCH" | "DELETE";
