@@ -5,6 +5,7 @@ import AdvancedDashboard from "@/components/AdvancedDashboard";
 import Dashboard from "@/components/Dashboard";
 import HomeScreen from "@/components/HomeScreen";
 import { Toaster } from "@/components/Toaster";
+import VersionBar from "@/components/VersionBar";
 import { tick } from "@/lib/haptics";
 
 type Tab = "log" | "basic" | "advanced";
@@ -19,6 +20,8 @@ export default function Page() {
           className="shrink-0 px-5 pb-3"
           style={{ paddingTop: "calc(env(safe-area-inset-top) + 14px)" }}
         >
+          <VersionBar />
+
           <div className="panel flex rounded-full p-1">
             <Tab id="log" active={tab} onSelect={setTab}>
               Log

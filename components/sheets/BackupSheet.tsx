@@ -141,7 +141,10 @@ export default function BackupSheet({ onClose }: { onClose: () => void }) {
                     type="button"
                     onClick={() => restore(row.id)}
                     disabled={busy}
-                    className="press h-11 flex-1 rounded-full bg-danger text-[15px] font-medium text-white disabled:opacity-60"
+                    className="press h-11 flex-1 rounded-full bg-danger text-[15px] font-medium disabled:opacity-60"
+                    // See DeleteButton: `text-white` loses to the unlayered
+                    // `button { color: inherit }` in globals.css.
+                    style={{ color: "#fff" }}
                   >
                     Replace everything
                   </button>
