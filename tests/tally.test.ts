@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { computeTally, milkComparison, sleepComparison } from "../lib/tally";
+import {
+  computeTally,
+  diaperComparison,
+  milkComparison,
+  sleepComparison,
+} from "../lib/tally";
 import type { EventsPayload } from "../lib/types";
 
 const NOW = new Date(2026, 7, 11, 12, 0);
@@ -132,4 +137,40 @@ test("barely any sleep has nothing to compare", () => {
 test("the ladders are ordered, or the wrong rung would be picked", () => {
   const climbing = [355, 1_000, 4_260, 50_000, 150_000].map((v) => milkComparison(v)!.headline);
   assert.equal(new Set(climbing).size, climbing.length, "each step should read differently");
+});
+
+// --- the diaper stack -------------------------------------------------------
+
+test("a small stack is given in feet and inches", () => {
+  const c = diaperComparison(13)!;
+  assert.match(c.headline, /1 ft 1 in tall/);
+  assert.match(c.detail, /47 more to reach a car/);
+});
+
+test("the stack climbs from a car to the Burj Khalifa", () => {
+  assert.match(diaperComparison(60)!.headline, /as tall as a car/);
+  assert.match(diaperComparison(130)!.headline, /single-story house/);
+  assert.match(diaperComparison(400)!.headline, /three-story apartment/);
+  assert.match(diaperComparison(4_000)!.headline, /Statue of Liberty/);
+  assert.match(diaperComparison(8_000)!.headline, /One Kansas City Place/);
+  assert.match(diaperComparison(33_000)!.headline, /Burj Khalifa/);
+});
+
+test("the stack names how many more to the next rung", () => {
+  const c = diaperComparison(130)!;
+  assert.match(c.detail, /more to reach a three-story apartment block/);
+  assert.ok(!c.detail.includes("single-story"), "the next rung shouldn't be the current one");
+});
+
+test("the top of the stack ladder says so instead of naming a next rung", () => {
+  assert.match(diaperComparison(40_000)!.detail, /nothing left to climb/);
+});
+
+test("no diapers has nothing to compare", () => {
+  assert.equal(diaperComparison(0), null);
+});
+
+test("stack rungs each read differently", () => {
+  const climbing = [60, 120, 396, 1_020, 3_660].map((v) => diaperComparison(v)!.headline);
+  assert.equal(new Set(climbing).size, climbing.length);
 });

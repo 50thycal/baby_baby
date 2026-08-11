@@ -181,13 +181,14 @@ have happened between two, so it isn't attached to one.
 
 On the Basic timeline they draw as a thin line with the emoji in a reserved lane
 along the top of the track — no scaling, because there's nothing to scale. They
-are **deliberately not tappable**: they share a track with the feed bars, and a
+**do not respond to a short tap**: they share a track with the feed bars, and a
 tap target over a bar stole the tap, so you'd go to check how big a feed was and
 get the spit-up instead. The bars are what you actually need to open.
 
-(The consequence is that a mis-timed marker can't currently be corrected from
-the timeline. Delete and re-log it, or say the word and it can come back behind
-a long-press.)
+To correct one, **press and hold the emoji** for half a second. Only the emoji
+reacts — never the line — and it sits in a lane above the bars so the two never
+compete. The hold is cancelled by movement, because the timeline scrolls
+sideways and a drag that happens to start on the emoji is a scroll, not a hold.
 
 On the Advanced charts they're dashed verticals behind the curves, so they read
 as "around here" and can't be mistaken for part of the line.
@@ -212,6 +213,11 @@ Raw lifetime figures stop meaning much quickly — nobody has intuition for
 - **Sleep** becomes walking distance from Kansas City at a 2 mph amble: Lenexa,
   Lawrence, Topeka, Columbia, Omaha, St. Louis, Denver, Mount Rushmore, and on
   to the coasts.
+- **Diapers** get stacked into a tower. A stacked diaper is close enough to an
+  inch that the count and the height in inches are the same number, which keeps
+  the arithmetic honest: a car, a house, a three-story block, an eight-story
+  complex, the Statue of Liberty, One Kansas City Place, the Eiffel Tower, the
+  Empire State Building, One World Trade Center, the Burj Khalifa.
 
 Both ladders live at the top of `lib/tally.ts` and are just ordered lists — add
 a rung and it slots in.
