@@ -23,11 +23,7 @@ export function useHomeState() {
   return useSWR<HomeState>("/api/state", fetcher, SHARED_OPTS);
 }
 
-/**
- * `all` isn't one of the dashboard's range buttons — it exists for the export
- * and the all-time tally — but the endpoint serves it, so the hook accepts it.
- */
-export function useEvents(range: RangeKey | "all") {
+export function useEvents(range: RangeKey) {
   return useSWR<EventsPayload>(`/api/events?range=${range}`, fetcher, SHARED_OPTS);
 }
 

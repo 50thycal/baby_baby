@@ -258,7 +258,31 @@ varies enormously and the range is wide by construction.
 ## The two dashboards
 
 **Basic** is the day-to-day view: today's totals at the top, then the range
-buttons and the timeline.
+buttons — 24h, 2d, 3d, 1w, All — and the timeline.
+
+**All** is the odd one out, and worth explaining. The other four have a span
+known in advance, so their pixels-per-hour are tuned by hand; All is a few days
+now and will be a few years eventually, so it works its scale out from the data
+each time (`lib/timeline-scale.ts`):
+
+- It **anchors on the first entry**, not on the server's floor. `range=all`
+  queries from a fixed date in 2000 so the query stays bounded, and drawing from
+  there would be a canvas of empty decades with everything crushed against the
+  right edge.
+- It **fits the whole history into about 4,200px** — a dozen or so phone-widths
+  — never denser than the week view, so All can't out-zoom `24h`.
+- Below roughly 3.5px to the day it **stops shrinking and lets the canvas grow
+  instead**. The two limits disagree past about three years of history and this
+  one wins: a long scroll beats a smear you can't tap. Three years is well past
+  what a newborn tracker is for, so in practice the width budget holds.
+- Gridlines pick their own spacing so labels never collide, and past a day apart
+  they switch from weekday names to dates — "Tue" stops meaning anything once
+  there are nine of them.
+
+The view no longer snaps back to "now" on every poll, either. The canvas widens
+by a sliver every twenty seconds as time passes, and re-pinning on that would
+yank you back mid-scroll — which matters most on All, where you may be two
+months from the right edge looking for something to correct.
 
 The headline used to be a rolling 24 hours, which can't answer "how is she doing
 today" — at 9am a rolling window is still mostly yesterday. It is now anchored to
@@ -283,12 +307,10 @@ boundaries belong to the reader's timezone, not the server's.
 
 ## Copying the data out
 
-**Copy data** on the History screen opens a span picker — 24 hours, 3 days, a
-week, or everything — and puts a compact text log on the clipboard. The
-dashboard's own range buttons stop at a week because that's as much as the
-timeline can usefully draw; handing a whole history to something that will
-analyse it is exactly the case where you want all of it, so the export goes
-further via `range=all`.
+**Copy data** on the Basic screen opens a span picker — 24 hours, 3 days, a
+week, or everything — and puts a compact text log on the clipboard. A shorter
+list than the timeline's range chips, and worded as sentences rather than
+chips: you pick this once, deliberately, rather than flicking between them.
 
 ```
 Baby log · Jul 20, 2026 – Aug 9, 2026 · local time (America/New_York), 24h clock

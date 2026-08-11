@@ -28,7 +28,7 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col gap-3 px-5 pb-4">
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-5 gap-2">
         {RANGES.map((r) => (
           <button
             key={r.key}

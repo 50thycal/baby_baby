@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { clipSleep } from "@/lib/summary";
+import { scaleFor, timelineWindow } from "@/lib/timeline-scale";
 import { fmtClock, fmtDuration, HOUR } from "@/lib/time";
 import {
   DIAPER_EMOJI,
@@ -24,14 +25,6 @@ type Props = {
   onPickTime: (at: Date) => void;
 };
 
-/** Horizontal density and gridline spacing, tuned per range. */
-const LAYOUT: Record<RangeKey, { pxPerHour: number; tickHours: number }> = {
-  "24h": { pxPerHour: 56, tickHours: 3 },
-  "2d": { pxPerHour: 32, tickHours: 6 },
-  "3d": { pxPerHour: 23, tickHours: 6 },
-  "1w": { pxPerHour: 12, tickHours: 12 },
-};
-
 /**
  * A strip along the top of the feed and sleep tracks that belongs to the
  * spit-up / fussy emoji alone. Bars and blocks stop below it, so a marker can
@@ -48,6 +41,8 @@ const TRACKS = [
 
 const AXIS_HEIGHT = 22;
 const GUTTER = 52;
+/** How much the canvas must grow before the view snaps back to "now". */
+const RE_PIN_PX = 40;
 /** Breathing room at both ends so a marker sitting on "now" isn't sliced in half. */
 const PAD = 15;
 
@@ -62,19 +57,27 @@ export default function Timeline({
   const scroller = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLDivElement>(null);
 
-  const start = new Date(data.start).getTime();
-  const end = new Date(data.end).getTime();
-  const { pxPerHour, tickHours } = LAYOUT[range];
+  const { start, end } = timelineWindow(data, range);
+  const { pxPerHour, tickHours } = scaleFor(range, (end - start) / HOUR);
   const span = ((end - start) / HOUR) * pxPerHour;
   const width = span + PAD * 2;
 
   const x = (t: number) => PAD + ((t - start) / HOUR) * pxPerHour;
   const ticks = useMemo(() => buildTicks(start, end, tickHours), [start, end, tickHours]);
 
-  // "Now" is the right-hand edge, and that's what you want to see first.
+  // "Now" is the right-hand edge, and that's where you want to land — but only
+  // when the range changes, not on every poll. The canvas grows by a sliver
+  // every twenty seconds as `now` advances, and re-pinning on that would yank
+  // the view back from anyone scrolled off into the older days. The threshold
+  // is well above that drift and well below a range switch.
+  const pinned = useRef({ range: "", width: -1 });
   useEffect(() => {
     const el = scroller.current;
-    if (el) el.scrollLeft = el.scrollWidth;
+    if (!el) return;
+    const last = pinned.current;
+    if (last.range === range && Math.abs(width - last.width) < RE_PIN_PX) return;
+    pinned.current = { range, width };
+    el.scrollLeft = el.scrollWidth;
   }, [range, width]);
 
   const pickTimeAt = (clientX: number) => {
@@ -262,7 +265,8 @@ function isEmpty(data: EventsPayload) {
     data.feedings.length === 0 &&
     data.sleep.length === 0 &&
     data.diapers.length === 0 &&
-    data.comments.length === 0
+    data.comments.length === 0 &&
+    (data.moments ?? []).length === 0
   );
 }
 
@@ -383,20 +387,34 @@ function buildTicks(start: number, end: number, stepHours: number): Tick[] {
     cursor.setMinutes(0, 0, 0);
   }
 
+  // Past a day apart, weekday names start repeating and stop telling you where
+  // you are; a date does the job instead.
+  const dated = stepHours >= 24;
+
   const ticks: Tick[] = [];
   while (cursor.getTime() <= end && ticks.length < 200) {
     const isDayStart = cursor.getHours() === 0;
     ticks.push({
       t: cursor.getTime(),
       isDayStart,
-      label: isDayStart
-        ? cursor.toLocaleDateString([], { weekday: "short" })
-        : cursor.toLocaleTimeString([], { hour: "numeric" }).replace(/\s?[AP]M/i, (m) =>
+      label: !isDayStart
+        ? cursor.toLocaleTimeString([], { hour: "numeric" }).replace(/\s?[AP]M/i, (m) =>
             m.trim().toLowerCase(),
-          ),
+          )
+        : dated
+          ? cursor.toLocaleDateString([], { month: "short", day: "numeric" })
+          : cursor.toLocaleDateString([], { weekday: "short" }),
     });
+
     cursor.setTime(cursor.getTime() + stepHours * HOUR);
     cursor.setMinutes(0, 0, 0);
+    // Adding milliseconds drifts an hour across a daylight-saving change, and
+    // once it drifts every later gridline is off midnight — over months of
+    // `All` that turns a column of dates into a column of "11pm". Re-snap.
+    if (dated && cursor.getHours() !== 0) {
+      const off = cursor.getHours();
+      cursor.setTime(cursor.getTime() + (off >= 12 ? 24 - off : -off) * HOUR);
+    }
   }
   return ticks;
 }

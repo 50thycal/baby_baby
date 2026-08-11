@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { fail, ok } from "@/lib/http";
 import {
+  ALL_TIME_FLOOR,
   rangeHours,
   RANGES,
   type Comment,
@@ -20,16 +21,11 @@ export async function GET(req: Request) {
     const key = new URL(req.url).searchParams.get("range") ?? "24h";
     const end = new Date();
 
-    // `all` is for the export, not the dashboard — it has no button. The floor
-    // is a fixed date rather than the epoch so the window is still bounded.
-    let start: Date;
-    if (key === "all") {
-      start = new Date("2000-01-01T00:00:00.000Z");
-    } else {
-      const valid = RANGES.some((r) => r.key === key);
-      const hours = rangeHours((valid ? key : "24h") as RangeKey);
-      start = new Date(end.getTime() - hours * 3600_000);
-    }
+    const valid = RANGES.some((r) => r.key === key);
+    const hours = rangeHours((valid ? key : "24h") as RangeKey);
+    // `all` has no fixed width, so it runs from the floor instead.
+    const start =
+      hours === null ? new Date(ALL_TIME_FLOOR) : new Date(end.getTime() - hours * 3600_000);
 
     const sql = await db();
     const [feedings, sleep, diapers, comments, moments] = await Promise.all([
