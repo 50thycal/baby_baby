@@ -7,10 +7,9 @@ import { buildExport, copyText } from "@/lib/export";
 import type { EventsPayload } from "@/lib/types";
 
 /**
- * How much history to copy. The dashboard's own range buttons stop at a week
- * because that's as much as the timeline can usefully draw; this goes further,
- * since handing a whole history to something that will analyse it is exactly
- * the case where you want all of it.
+ * How much history to copy. A shorter list than the timeline's range buttons,
+ * and worded as sentences rather than chips — you pick this once, deliberately,
+ * rather than flicking between them.
  */
 const SPANS = [
   { key: "24h", label: "Last 24 hours" },

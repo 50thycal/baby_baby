@@ -103,17 +103,31 @@ export type HomeState = {
   lastDiaper: Diaper | null;
 };
 
+/**
+ * Labels are short because there are five of them across one phone-width row.
+ * `all` has no fixed width — see `rangeHours`.
+ */
 export const RANGES = [
-  { key: "24h", label: "24 Hours", hours: 24 },
-  { key: "2d", label: "2 Days", hours: 48 },
-  { key: "3d", label: "3 Days", hours: 72 },
-  { key: "1w", label: "1 Week", hours: 168 },
+  { key: "24h", label: "24h", hours: 24 },
+  { key: "2d", label: "2d", hours: 48 },
+  { key: "3d", label: "3d", hours: 72 },
+  { key: "1w", label: "1w", hours: 168 },
+  { key: "all", label: "All", hours: null },
 ] as const;
 
 export type RangeKey = (typeof RANGES)[number]["key"];
 
-export function rangeHours(key: RangeKey): number {
-  return RANGES.find((r) => r.key === key)?.hours ?? 24;
+/**
+ * Where `all` starts. A fixed date rather than the epoch, so the query is still
+ * bounded — but decades before the first nappy, so nothing should draw a
+ * timeline from here. See `timelineWindow`.
+ */
+export const ALL_TIME_FLOOR = "2000-01-01T00:00:00.000Z";
+
+/** `null` means "no fixed width" — the caller falls back to ALL_TIME_FLOOR. */
+export function rangeHours(key: RangeKey): number | null {
+  const found = RANGES.find((r) => r.key === key);
+  return found ? found.hours : 24;
 }
 
 /** Anything tappable on the timeline. */
