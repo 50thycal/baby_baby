@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import CumulativeChart from "@/components/CumulativeChart";
+import GrandTally from "@/components/GrandTally";
 import { addDays, computeStats, cumulativeSeries, startOfDay } from "@/lib/daily";
 import { useEvents } from "@/lib/api";
 import { fmtDuration } from "@/lib/time";
@@ -14,6 +15,9 @@ import { useNow } from "@/lib/useNow";
  */
 export default function AdvancedDashboard() {
   const { data, error, isLoading } = useEvents("1w");
+  // The tally is all-time, so it needs its own window; the charts and averages
+  // stay on a week. Separate SWR keys, both cached.
+  const { data: allTime } = useEvents("all");
   const now = useNow(60_000);
 
   const view = useMemo(() => {
@@ -144,6 +148,8 @@ export default function AdvancedDashboard() {
           into an average drags every figure down.
         </p>
       </div>
+
+      {allTime && <GrandTally data={allTime} now={now} />}
     </div>
   );
 }
