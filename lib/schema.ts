@@ -1,5 +1,5 @@
 /**
- * The whole database. Four tables, no migrations framework.
+ * The whole database, no migrations framework.
  *
  * Every statement is idempotent, so this runs safely on every cold start
  * (see `lib/db.ts`) and via `npm run db:setup`.
@@ -46,6 +46,17 @@ export const SCHEMA_STATEMENTS: string[] = [
      created_at timestamptz NOT NULL DEFAULT now()
    )`,
 
+  // Weigh-ins. Grams, because it's the unit a paediatrician writes down and it
+  // stores as an integer; pounds and ounces are a presentation detail. The
+  // ceiling is far above any baby — it's there to catch a slipped decimal, not
+  // to express an opinion.
+  `CREATE TABLE IF NOT EXISTS weights (
+     id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+     weight_g   integer     NOT NULL CHECK (weight_g > 0 AND weight_g <= 50000),
+     ts         timestamptz NOT NULL,
+     created_at timestamptz NOT NULL DEFAULT now()
+   )`,
+
   // Point-in-time copies of the other tables. The app has no accounts and
   // anyone with the link can delete things, so this is the undo of last resort.
   // The whole dataset is a few hundred rows, so storing it as one JSON document
@@ -69,5 +80,6 @@ export const SCHEMA_STATEMENTS: string[] = [
   `CREATE INDEX IF NOT EXISTS comments_ts_idx ON comments (ts DESC)`,
   `CREATE INDEX IF NOT EXISTS sleep_start_idx ON sleep_sessions (sleep_start DESC)`,
   `CREATE INDEX IF NOT EXISTS moments_ts_idx ON moments (ts DESC)`,
+  `CREATE INDEX IF NOT EXISTS weights_ts_idx ON weights (ts DESC)`,
   `CREATE INDEX IF NOT EXISTS snapshots_taken_at_idx ON snapshots (taken_at DESC)`,
 ];

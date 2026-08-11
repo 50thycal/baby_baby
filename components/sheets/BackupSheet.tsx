@@ -125,6 +125,7 @@ export default function BackupSheet({ onClose }: { onClose: () => void }) {
                 {/* Backups taken before moments existed have no count for them;
                     printing "undefined marks" would be worse than saying nothing. */}
                 {row.counts.moments > 0 && ` · ${plural(row.counts.moments, "mark")}`}
+                {row.counts.weights > 0 && ` · ${plural(row.counts.weights, "weigh-in")}`}
               </div>
 
               {isConfirming ? (

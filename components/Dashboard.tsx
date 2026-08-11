@@ -4,10 +4,12 @@ import { useState } from "react";
 import NotesList from "@/components/NotesList";
 import TodayCard from "@/components/TodayCard";
 import Timeline from "@/components/Timeline";
+import WeightCard from "@/components/WeightCard";
+import WeightHistorySheet from "@/components/sheets/WeightHistorySheet";
 import CommentSheet from "@/components/sheets/CommentSheet";
 import CopySheet from "@/components/sheets/CopySheet";
 import EventDetailSheet from "@/components/sheets/EventDetailSheet";
-import { useEvents } from "@/lib/api";
+import { useEvents, useWeights } from "@/lib/api";
 import { tick } from "@/lib/haptics";
 import { useNow } from "@/lib/useNow";
 import { RANGES, type RangeKey, type TimelineEvent } from "@/lib/types";
@@ -18,7 +20,11 @@ export default function Dashboard() {
   const [selected, setSelected] = useState<TimelineEvent | null>(null);
   const [commentAt, setCommentAt] = useState<Date | null>(null);
   const [copying, setCopying] = useState(false);
+  const [weighIns, setWeighIns] = useState(false);
   const { data, error, isLoading } = useEvents(range);
+  // Weight is a state, not an event — it belongs to no range, so it's fetched
+  // whole and sits above the timeline rather than on it.
+  const { data: weights } = useWeights();
   // The summary is anchored to local midnight, so it needs its own window: at
   // 11pm, yesterday's midnight is already 47 hours back. A week rather than the
   // minimum three days, because the pace line averages several complete days —
@@ -59,6 +65,14 @@ export default function Dashboard() {
       {data && (
         <>
           {recent && <TodayCard data={recent} now={now} />}
+
+          <WeightCard
+            weights={weights}
+            onOpen={() => {
+              tick();
+              setWeighIns(true);
+            }}
+          />
 
           <Timeline
             data={data}
@@ -114,6 +128,9 @@ export default function Dashboard() {
       {selected && <EventDetailSheet event={selected} onClose={() => setSelected(null)} />}
       {commentAt && <CommentSheet at={commentAt} onClose={() => setCommentAt(null)} />}
       {copying && <CopySheet onClose={() => setCopying(false)} />}
+      {weighIns && (
+        <WeightHistorySheet weights={weights ?? []} onClose={() => setWeighIns(false)} />
+      )}
     </div>
   );
 }

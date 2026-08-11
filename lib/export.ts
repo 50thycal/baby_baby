@@ -1,6 +1,7 @@
 import { summarise } from "./summary";
 import { MINUTE } from "./time";
-import type { EventsPayload } from "./types";
+import type { EventsPayload, Weight } from "./types";
+import { fmtOunceChange, fmtWeight, weightTrend } from "./weight";
 
 /**
  * The text behind "Copy data".
@@ -35,7 +36,28 @@ function dateRangeLabel(start: Date, end: Date): string {
   return fmt(start) === fmt(end) ? fmt(start) : `${fmt(start)} – ${fmt(end)}`;
 }
 
-export function buildExport(data: EventsPayload): string {
+/**
+ * Weights arrive separately because they aren't range-scoped — see `Weight` in
+ * types.ts. They're summarised in the header rather than filed under a day: a
+ * weigh-in is a fact about the baby, not about last Tuesday.
+ */
+function buildWeightLine(weights: Weight[]): string | null {
+  const trend = weightTrend(
+    weights.map((w) => ({ grams: w.weight_g, at: new Date(w.ts).getTime() })),
+  );
+  if (!trend) return null;
+
+  const parts = [`weight ${fmtWeight(trend.latest.grams)}`];
+  if (trend.previous) {
+    parts.push(`${fmtOunceChange(trend.changeOz!)} since ${dayLabel(new Date(trend.previous.at))}`);
+  }
+  if (trend.perWeekOz !== null) {
+    parts.push(`${fmtOunceChange(Math.round(trend.perWeekOz))}/wk`);
+  }
+  return `       ${parts.join(" · ")}`;
+}
+
+export function buildExport(data: EventsPayload, weights: Weight[] = []): string {
   const s = summarise(data);
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -99,12 +121,23 @@ export function buildExport(data: EventsPayload): string {
     bucket(at).marks.push(`${m.kind === "spit_up" ? "spit-up" : "fussy"}@${clock(at)}`);
   }
 
+  // Built before the empty check: a birth weight logged before the first feed
+  // is still something, and heading that export "nothing logged" would be a lie.
+  const weightLine = buildWeightLine(weights);
+
   const lines: string[] = [];
   if (!stamps.length) {
-    // Nothing logged. With `range=all` the window starts at the query floor, so
-    // printing it would head an empty export "Jan 1 2000 · 9718 days".
+    // Nothing timed to report. With `range=all` the window starts at the query
+    // floor, so printing it would head an empty export "Jan 1 2000 · 9718 days".
     lines.push(`Baby log · nothing logged · local time (${tz}), 24h clock`);
-    return lines.join("\n") + "\n(nothing logged in this period)";
+    if (weightLine) lines.push(weightLine);
+    // "nothing else" only once something else has in fact been printed.
+    return (
+      lines.join("\n") +
+      (weightLine
+        ? "\n(nothing else logged in this period)"
+        : "\n(nothing logged in this period)")
+    );
   }
   lines.push(`Baby log · ${dateRangeLabel(start, end)} · local time (${tz}), 24h clock`);
 
@@ -135,6 +168,8 @@ export function buildExport(data: EventsPayload): string {
     );
   }
   if (second.length) lines.push(`       ${second.join(" · ")}`);
+
+  if (weightLine) lines.push(weightLine);
 
   lines.push("");
 

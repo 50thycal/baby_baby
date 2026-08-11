@@ -83,6 +83,23 @@ export type Comment = {
   created_at: string;
 };
 
+/**
+ * A weigh-in.
+ *
+ * Not part of `EventsPayload`, and deliberately so: weight is a state rather
+ * than an event. "What does she weigh" is answered by the most recent reading
+ * whatever window you happen to be looking at — range-filtering it would blank
+ * the figure out on a 24h view whenever she was last weighed on Tuesday. It
+ * gets its own endpoint that always returns the lot, which is affordable
+ * because there are only ever a handful.
+ */
+export type Weight = {
+  id: string;
+  weight_g: number;
+  ts: string;
+  created_at: string;
+};
+
 /** Everything the dashboard needs for one time range. */
 export type EventsPayload = {
   start: string;

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Sheet from "@/components/Sheet";
 import { useToast } from "@/components/Toaster";
 import { buildExport, copyText } from "@/lib/export";
-import type { EventsPayload } from "@/lib/types";
+import type { EventsPayload, Weight } from "@/lib/types";
 
 /**
  * How much history to copy. A shorter list than the timeline's range buttons,
@@ -25,11 +25,17 @@ export default function CopySheet({ onClose }: { onClose: () => void }) {
   const copy = async (span: string) => {
     setBusy(span);
     try {
-      const res = await fetch(`/api/events?range=${span}`);
+      // Weights come from their own endpoint — they belong to no range, so
+      // they'd be missing from a 24h export exactly when they matter most.
+      const [res, weightRes] = await Promise.all([
+        fetch(`/api/events?range=${span}`),
+        fetch("/api/weights"),
+      ]);
       if (!res.ok) throw new Error("Couldn't load the data");
       const data = (await res.json()) as EventsPayload;
+      const weights = weightRes.ok ? ((await weightRes.json()) as Weight[]) : [];
 
-      const text = buildExport(data);
+      const text = buildExport(data, weights);
       await copyText(text);
 
       const feeds = data.feedings.length;

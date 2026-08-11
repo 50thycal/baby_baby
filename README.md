@@ -66,13 +66,16 @@ database before pointing the app at it — otherwise it happens on first request
 
 ## Data model
 
-Four tables, no joins (`lib/schema.ts`):
+No joins (`lib/schema.ts`):
 
 ```
 feedings         id, amount_ml, ts, created_at
 sleep_sessions   id, sleep_start, sleep_end (nullable), created_at
 diapers          id, type, ts, created_at
 comments         id, ts, text, reactions (jsonb), created_at
+moments          id, kind, ts, created_at
+weights          id, weight_g, ts, created_at
+snapshots        id, taken_at, reason, counts (jsonb), payload (jsonb)
 ```
 
 `sleep_end IS NULL` means the baby is asleep *right now*. That state has to be
@@ -91,6 +94,14 @@ Diaper types are constrained to `pee | poop | both | massive_blowout`.
 Everything is stored as `timestamptz` (UTC) and rendered in each viewer's own
 timezone.
 
+**Weights are the one thing that isn't an event.** Every other table answers
+"what happened, and when"; a weight answers "what is she", and the answer
+doesn't stop being true when it falls out of the window you're looking at. So
+`weights` is deliberately *not* part of `EventsPayload` — range-filtering it
+would blank the figure out on a 24h view any time she was last weighed on
+Tuesday. It gets `GET /api/weights`, which always returns the lot, and can
+afford to because there are only ever a handful.
+
 ## Screens
 
 **Log** — status in three lines, then three large tiles.
@@ -102,6 +113,12 @@ timezone.
 - **Sleep** starts a session; once running, the tile becomes a live timer and
   the same tile ends it with **Baby's Awake**.
 - **Diaper** is four big buttons, then confirm.
+
+Below the three tiles is a **Weight** row — a full-width button rather than a
+fourth tile. Weighing happens every week or two, not every two hours, and a
+fourth tile would take a quarter of the screen away from the three things
+actually done at 3am. It carries the last recorded weight so you can read it
+without opening anything.
 
 Every timestamp defaults to now and is adjustable by tapping it — a horizontal
 scroll-snap wheel with 5-minute detents, plus `−1h / −30m / −5m / +5m / reset`
@@ -301,6 +318,10 @@ stopped".
 Underneath are averages over **whole days only**. Today is partial by
 definition, and folding half a day into a per-day mean drags every figure down.
 
+Weight appears on both, differently. **Basic** gets two numbers and the gap
+between them — what she is now, what she was before, and the change — because
+that's the whole of what you want at a glance. **Advanced** gets the line.
+
 All of it is computed client-side from one week of events, because the day
 boundaries belong to the reader's timezone, not the server's.
 
@@ -333,6 +354,40 @@ Three decisions:
 - **The header describes the data, not the query.** `range=all` starts at a
   fixed floor, so using it verbatim would head the export
   `Jan 1 2000 – Aug 9 2026 · 9718 days` — wrong, and useless for a per-day rate.
+
+## Weight
+
+**Stored in grams, entered and shown in pounds and ounces.** Grams because it's
+what a paediatrician writes down and because it stores as an integer, so nothing
+floating-point ever reaches the database; pounds and ounces because that's what
+this family says out loud.
+
+That conversion is the one place a silent bug could live — enter 8 lb 4 oz, get
+8 lb 3 oz back a fortnight later, and nobody would notice for months. So
+`tests/weight.test.ts` walks **every ounce from zero to forty pounds** and
+checks each one survives the round trip, rather than trusting that the
+arithmetic happens to work out. Comparisons between weigh-ins are taken in
+ounces too, not by differencing the stored grams: both readings were rounded on
+the way in, and differencing them can land half an ounce out and report a change
+that never happened.
+
+**One wheel, in ounce detents.** The same gesture as the time field, because a
+weigh-in moves by a few ounces and the useful action is a nudge — two separate
+pounds-and-ounces controls would just mean choosing which one to nudge first.
+Its range is absolute, nought to forty pounds, rather than a window around the
+current value: a window would be shorter to scroll but could put a premature
+3 lb, or a toddler, out of reach entirely.
+
+The chips step from the wheel's own position rather than from React state.
+A smooth scroll fires a burst of scroll events on its way to the target, and
+letting those set the value would walk it through every position in between — so
+a second tap mid-animation started from wherever the animation happened to be.
+Tapping "+1 oz" twice quickly gave you one ounce. Caught by a browser test, not
+by reading the code.
+
+Weigh-ins aren't on the timeline — they'd be a track that's empty six days in
+seven — so the Basic card is tappable and opens the list, where any one of them
+can be corrected or deleted.
 
 ## Knowing which build you're on
 
