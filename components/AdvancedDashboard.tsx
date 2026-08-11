@@ -27,8 +27,17 @@ export default function AdvancedDashboard() {
       yesterday: cumulativeSeries(data, yesterdayStart, metric),
     });
 
+    // Today's moments as fractions of the day, for the vertical marks.
+    const marksFor = (kind: "spit_up" | "fussy") =>
+      data.moments
+        .filter((m) => m.kind === kind)
+        .map((m) => (new Date(m.ts).getTime() - todayStart) / 86_400_000)
+        .filter((f) => f >= 0 && f <= 1);
+
     return {
       elapsedFraction,
+      spitUps: marksFor("spit_up"),
+      fussies: marksFor("fussy"),
       feed: pair("feed_ml"),
       sleep: pair("sleep_ms"),
       poop: pair("poop_count"),
@@ -61,12 +70,14 @@ export default function AdvancedDashboard() {
   return (
     <div className="flex flex-col gap-3 px-5 pb-4">
       <CumulativeChart
-        title="Feeding · cumulative mL"
+        title="Feeding · cumulative"
         color="var(--c-feed)"
         today={view.feed.today}
         yesterday={view.feed.yesterday}
         elapsedFraction={view.elapsedFraction}
         format={(v) => `${Math.round(v)}`}
+        marks={view.spitUps}
+        markLabel="spit up"
       />
       <CumulativeChart
         title="Sleep · cumulative"
@@ -75,6 +86,8 @@ export default function AdvancedDashboard() {
         yesterday={view.sleep.yesterday}
         elapsedFraction={view.elapsedFraction}
         format={(v) => `${Math.round(v / 3_600_000)}h`}
+        marks={view.fussies}
+        markLabel="fussy"
       />
       <CumulativeChart
         title="Dirty diapers · cumulative"

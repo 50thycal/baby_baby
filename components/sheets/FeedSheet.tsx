@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import ConfirmButton from "@/components/ConfirmButton";
 import Dial from "@/components/Dial";
+import MomentSheet from "@/components/sheets/MomentSheet";
 import Sheet from "@/components/Sheet";
 import TimeField from "@/components/TimeField";
 import { useToast } from "@/components/Toaster";
@@ -24,6 +25,7 @@ export default function FeedSheet({ onClose, defaultAmount }: Props) {
   // last amount, which is the better guess for the very next bottle. This just
   // says what the recent range has been, so an unusual reading looks unusual.
   const { data: history } = useEvents("1w");
+  const [spitUp, setSpitUp] = useState(false);
   const hint = history ? likelyAmount(history.feedings, new Date()) : null;
 
   return (
@@ -49,7 +51,20 @@ export default function FeedSheet({ onClose, defaultAmount }: Props) {
             }}
           />
         </div>
+
+        {/* A spit-up usually gets noticed while you're logging the feed, so it
+            hangs off this sheet — but it's its own event with its own time,
+            since it might have happened between feeds. */}
+        <button
+          type="button"
+          onClick={() => setSpitUp(true)}
+          className="press mt-1 px-3 py-1 text-[13px] text-muted underline underline-offset-4"
+        >
+          🤢 Log a big spit up
+        </button>
       </div>
+
+      {spitUp && <MomentSheet kind="spit_up" onClose={() => setSpitUp(false)} />}
     </Sheet>
   );
 }

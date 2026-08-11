@@ -166,6 +166,29 @@ Two decisions worth keeping:
 doesn't leave a partial import behind, and skips rows that exactly match
 existing ones, so re-pasting after a half-failure adds only what's missing.
 
+## Spit-ups and fussy spells
+
+Two markers that have a time and nothing else — you only want to know roughly
+when, not how much.
+
+- **Big spit up** is logged from the feed sheet and marks the **feeding** track.
+- **Fussy fussy** is logged from the sleep sheet and marks the **sleep** track.
+
+Both sit in one `moments` table with a `kind`, the way diapers carry a type, so
+a third marker later is a one-line change. Each is its own event with its own
+time: a spit-up usually gets noticed while you're logging a feed, but it might
+have happened between two, so it isn't attached to one.
+
+On the Basic timeline they draw as a full-height line with the emoji on top —
+no scaling, because there's nothing to scale. On the Advanced charts they're
+dashed verticals behind the curves, so they read as "around here" and can't be
+mistaken for part of the line. Tapping one opens it to correct the time or
+delete it, like everything else on the timeline.
+
+They're carried in backups, restores and the Copy data export. Backups taken
+before the feature existed have no count for them, so the list omits the figure
+rather than printing `undefined`.
+
 ## Forecasts
 
 Four short-range predictions, each shown where the decision is made rather than

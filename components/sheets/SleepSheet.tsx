@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import ConfirmButton from "@/components/ConfirmButton";
+import MomentSheet from "@/components/sheets/MomentSheet";
 import Sheet from "@/components/Sheet";
 import TimeField from "@/components/TimeField";
 import { useToast } from "@/components/Toaster";
@@ -18,6 +19,7 @@ type Props = {
 export default function SleepSheet({ onClose, active }: Props) {
   const base = useRef(new Date()).current;
   const [ts, setTs] = useState(base);
+  const [fussy, setFussy] = useState(false);
   const notify = useToast();
 
   const start = active ? new Date(active.sleep_start) : null;
@@ -71,7 +73,19 @@ export default function SleepSheet({ onClose, active }: Props) {
             </p>
           )}
         </div>
+
+        {/* Fussiness belongs to the sleep story rather than the feeding one, so
+            it hangs off this sheet — its own event, with its own time. */}
+        <button
+          type="button"
+          onClick={() => setFussy(true)}
+          className="press mt-1 px-3 py-1 text-[13px] text-muted underline underline-offset-4"
+        >
+          😠 Log fussy fussy
+        </button>
       </div>
+
+      {fussy && <MomentSheet kind="fussy" onClose={() => setFussy(false)} />}
     </Sheet>
   );
 }

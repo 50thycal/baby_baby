@@ -37,7 +37,16 @@ export const SCHEMA_STATEMENTS: string[] = [
      created_at timestamptz NOT NULL DEFAULT now()
    )`,
 
-  // Point-in-time copies of the other four tables. The app has no accounts and
+  // Spit-ups and fussy spells: a time and nothing else. One table with a kind,
+  // like diapers, so adding a third marker later is a one-line change.
+  `CREATE TABLE IF NOT EXISTS moments (
+     id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+     kind       text        NOT NULL CHECK (kind IN ('spit_up', 'fussy')),
+     ts         timestamptz NOT NULL,
+     created_at timestamptz NOT NULL DEFAULT now()
+   )`,
+
+  // Point-in-time copies of the other tables. The app has no accounts and
   // anyone with the link can delete things, so this is the undo of last resort.
   // The whole dataset is a few hundred rows, so storing it as one JSON document
   // per snapshot is cheaper than any cleverer scheme.
@@ -59,5 +68,6 @@ export const SCHEMA_STATEMENTS: string[] = [
   `CREATE INDEX IF NOT EXISTS diapers_ts_idx ON diapers (ts DESC)`,
   `CREATE INDEX IF NOT EXISTS comments_ts_idx ON comments (ts DESC)`,
   `CREATE INDEX IF NOT EXISTS sleep_start_idx ON sleep_sessions (sleep_start DESC)`,
+  `CREATE INDEX IF NOT EXISTS moments_ts_idx ON moments (ts DESC)`,
   `CREATE INDEX IF NOT EXISTS snapshots_taken_at_idx ON snapshots (taken_at DESC)`,
 ];

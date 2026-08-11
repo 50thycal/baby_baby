@@ -37,6 +37,7 @@ const payload = (over: Partial<EventsPayload> = {}): EventsPayload => ({
   sleep: [],
   diapers: [],
   comments: [],
+  moments: [],
   ...over,
 });
 

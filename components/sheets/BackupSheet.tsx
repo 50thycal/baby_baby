@@ -122,6 +122,9 @@ export default function BackupSheet({ onClose }: { onClose: () => void }) {
               <div className="text-[13px] tabular-nums text-muted">
                 {plural(row.counts.feedings, "feed")} · {plural(row.counts.sleep, "sleep")} ·{" "}
                 {plural(row.counts.diapers, "diaper")} · {plural(row.counts.comments, "note")}
+                {/* Backups taken before moments existed have no count for them;
+                    printing "undefined marks" would be worse than saying nothing. */}
+                {row.counts.moments > 0 && ` · ${plural(row.counts.moments, "mark")}`}
               </div>
 
               {isConfirming ? (

@@ -31,6 +31,7 @@ const base: EventsPayload = {
       created_at: iso(2026, 8, 6, 9, 5),
     },
   ],
+  moments: [],
   comments: [
     {
       id: "c1",
@@ -147,4 +148,32 @@ test("an empty all-time export doesn't print the query floor", () => {
   assert.ok(!out.includes("2000"), "query floor shown for an empty export");
   assert.ok(!/\d{4,} days/.test(out), "absurd day count for an empty export");
   assert.match(out, /nothing logged/);
+});
+
+test("spit-ups and fussy spells appear on their day", () => {
+  const out = buildExport({
+    ...base,
+    moments: [
+      { id: "m1", kind: "spit_up", ts: iso(2026, 8, 6, 8, 15), created_at: iso(2026, 8, 6, 8, 15) },
+      { id: "m2", kind: "fussy", ts: iso(2026, 8, 6, 19, 40), created_at: iso(2026, 8, 6, 19, 40) },
+    ],
+  });
+  assert.match(out, /also spit-up@08:15  fussy@19:40/);
+  // The raw enum name should never surface.
+  assert.ok(!out.includes("spit_up"));
+});
+
+test("an export with only moments still describes its own span", () => {
+  const out = buildExport({
+    ...base,
+    feedings: [],
+    sleep: [],
+    diapers: [],
+    comments: [],
+    moments: [
+      { id: "m1", kind: "spit_up", ts: iso(2026, 8, 6, 8, 15), created_at: iso(2026, 8, 6, 8, 15) },
+    ],
+  });
+  assert.ok(!/nothing logged/.test(out), "a moment on its own is still data");
+  assert.match(out, /also spit-up@08:15/);
 });

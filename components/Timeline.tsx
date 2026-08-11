@@ -6,7 +6,11 @@ import { fmtClock, fmtDuration, HOUR } from "@/lib/time";
 import {
   DIAPER_EMOJI,
   DIAPER_LABEL,
+  MOMENT_ACCENT,
+  MOMENT_EMOJI,
+  MOMENT_LABEL,
   type EventsPayload,
+  type Moment,
   type RangeKey,
   type TimelineEvent,
 } from "@/lib/types";
@@ -118,6 +122,19 @@ export default function Timeline({
                   </button>
                 );
               })}
+              {/* Spit-ups: a mark, not a measurement. Drawn over the bars at
+                  full height so it's clear they sit between or during feeds
+                  rather than being a feed of their own. */}
+              {data.moments
+                .filter((m) => m.kind === "spit_up")
+                .map((m) => (
+                  <MomentMark
+                    key={m.id}
+                    moment={m}
+                    left={x(new Date(m.ts).getTime())}
+                    onSelect={onSelect}
+                  />
+                ))}
             </Track>
 
             {/* ---- Sleep: blocks scaled by duration ---- */}
@@ -147,6 +164,16 @@ export default function Timeline({
                   </button>
                 );
               })}
+              {data.moments
+                .filter((m) => m.kind === "fussy")
+                .map((m) => (
+                  <MomentMark
+                    key={m.id}
+                    moment={m}
+                    left={x(new Date(m.ts).getTime())}
+                    onSelect={onSelect}
+                  />
+                ))}
             </Track>
 
             {/* ---- Diapers: icon markers ---- */}
@@ -231,6 +258,45 @@ function isEmpty(data: EventsPayload) {
     data.sleep.length === 0 &&
     data.diapers.length === 0 &&
     data.comments.length === 0
+  );
+}
+
+/**
+ * A spit-up or a fussy spell: a full-height line with its emoji on top.
+ *
+ * Deliberately not scaled by anything — these have no size, only a time, and a
+ * line is the honest way to say "around here". The tap target is wider than the
+ * line so it can still be opened and corrected on a phone.
+ */
+function MomentMark({
+  moment,
+  left,
+  onSelect,
+}: {
+  moment: Moment;
+  left: number;
+  onSelect: (event: TimelineEvent) => void;
+}) {
+  return (
+    <button
+      onClick={() => onSelect({ kind: "moment", data: moment })}
+      className="absolute inset-y-0 flex w-6 flex-col items-center justify-start overflow-hidden"
+      style={{ left: left - 12 }}
+      aria-label={`${MOMENT_LABEL[moment.kind]} at ${fmtClock(moment.ts)}`}
+    >
+      <span
+        className="absolute inset-y-0 w-[2px] rounded-full"
+        style={{ background: MOMENT_ACCENT[moment.kind], opacity: 0.85 }}
+      />
+      {/* The halo keeps the emoji legible where the line crosses a sleep block,
+          and `overflow-hidden` above stops it spilling into the track above. */}
+      <span
+        className="relative mt-[1px] flex h-[15px] w-[15px] items-center justify-center rounded-full text-[10px] leading-none"
+        style={{ background: "var(--c-card)" }}
+      >
+        {MOMENT_EMOJI[moment.kind]}
+      </span>
+    </button>
   );
 }
 
