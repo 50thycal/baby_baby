@@ -8,6 +8,7 @@ import {
   DIAPER_LABEL,
   MOMENT_ACCENT,
   MOMENT_EMOJI,
+  MOMENT_LABEL,
   type EventsPayload,
   type Moment,
   type RangeKey,
@@ -132,7 +133,12 @@ export default function Timeline({
               {data.moments
                 .filter((m) => m.kind === "spit_up")
                 .map((m) => (
-                  <MomentMark key={m.id} moment={m} left={x(new Date(m.ts).getTime())} />
+                  <MomentMark
+                    key={m.id}
+                    moment={m}
+                    left={x(new Date(m.ts).getTime())}
+                    onLongPress={(data) => onSelect({ kind: "moment", data })}
+                  />
                 ))}
             </Track>
 
@@ -166,7 +172,12 @@ export default function Timeline({
               {data.moments
                 .filter((m) => m.kind === "fussy")
                 .map((m) => (
-                  <MomentMark key={m.id} moment={m} left={x(new Date(m.ts).getTime())} />
+                  <MomentMark
+                    key={m.id}
+                    moment={m}
+                    left={x(new Date(m.ts).getTime())}
+                    onLongPress={(data) => onSelect({ kind: "moment", data })}
+                  />
                 ))}
             </Track>
 
@@ -258,23 +269,40 @@ function isEmpty(data: EventsPayload) {
 /**
  * A spit-up or a fussy spell.
  *
- * Deliberately NOT tappable. These sit on the same track as the feed bars, and
- * a tap target over a bar stole the tap — you'd go to check how big a feed was
- * and get the spit-up instead. The bars are the thing you actually need to
- * open, so the marker gets out of the way entirely.
+ * A short tap does nothing: these share a track with the feed bars, and a tap
+ * target over a bar stole the tap — you'd go to check how big a feed was and
+ * get the spit-up instead. Only the emoji reacts, only to a long press, and the
+ * emoji sits in a reserved lane above the bars so the two never compete.
  *
- * The emoji sits in a reserved lane along the top, above the tallest bar, so it
- * never covers one. The line is thin and translucent for the same reason.
+ * The press is cancelled by movement, because the timeline scrolls sideways and
+ * a drag that happens to start on the emoji is a scroll, not a hold.
  */
-function MomentMark({ moment, left }: { moment: Moment; left: number }) {
+const LONG_PRESS_MS = 450;
+const MOVE_TOLERANCE_PX = 8;
+
+function MomentMark({
+  moment,
+  left,
+  onLongPress,
+}: {
+  moment: Moment;
+  left: number;
+  onLongPress: (moment: Moment) => void;
+}) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const origin = useRef<{ x: number; y: number } | null>(null);
+
+  const cancel = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    origin.current = null;
+  };
+
   return (
     <span
       className="pointer-events-none absolute inset-y-0"
       style={{ left: left - 8, width: 16 }}
-      aria-hidden
     >
-      {/* The line starts below the emoji lane and runs to the floor of the
-          track, so it reads as "around this time" without hiding a bar. */}
       <span
         className="absolute left-1/2 w-px -translate-x-1/2 rounded-full"
         style={{
@@ -283,10 +311,33 @@ function MomentMark({ moment, left }: { moment: Moment; left: number }) {
           background: MOMENT_ACCENT[moment.kind],
           opacity: 0.45,
         }}
+        aria-hidden
       />
-      <span className="absolute inset-x-0 top-0 text-center text-[11px] leading-none">
-        {MOMENT_EMOJI[moment.kind]}
-      </span>
+      <button
+        type="button"
+        aria-label={`${MOMENT_LABEL[moment.kind]} at ${fmtClock(moment.ts)} — press and hold to edit`}
+        className="pointer-events-auto absolute inset-x-0 top-0 touch-none select-none text-center text-[11px] leading-none"
+        onContextMenu={(e) => e.preventDefault()}
+        onPointerDown={(e) => {
+          origin.current = { x: e.clientX, y: e.clientY };
+          timer.current = setTimeout(() => onLongPress(moment), LONG_PRESS_MS);
+        }}
+        onPointerMove={(e) => {
+          const from = origin.current;
+          if (!from) return;
+          if (
+            Math.abs(e.clientX - from.x) > MOVE_TOLERANCE_PX ||
+            Math.abs(e.clientY - from.y) > MOVE_TOLERANCE_PX
+          ) {
+            cancel();
+          }
+        }}
+        onPointerUp={cancel}
+        onPointerCancel={cancel}
+        onPointerLeave={cancel}
+      >
+        <span aria-hidden>{MOMENT_EMOJI[moment.kind]}</span>
+      </button>
     </span>
   );
 }

@@ -1,6 +1,12 @@
 "use client";
 
-import { computeTally, milkComparison, sleepComparison, WALK_MPH } from "@/lib/tally";
+import {
+  computeTally,
+  diaperComparison,
+  milkComparison,
+  sleepComparison,
+  WALK_MPH,
+} from "@/lib/tally";
 import { fmtDuration } from "@/lib/time";
 import type { EventsPayload } from "@/lib/types";
 
@@ -14,6 +20,7 @@ export default function GrandTally({ data, now }: { data: EventsPayload; now: Da
   const t = computeTally(data, now);
   const milk = milkComparison(t.milkMl);
   const walk = sleepComparison(t.sleepMs);
+  const stack = diaperComparison(t.diapers);
   const hours = Math.round(t.sleepMs / 3_600_000);
 
   if (t.feeds + t.diapers + t.naps === 0) return null;
@@ -52,7 +59,7 @@ export default function GrandTally({ data, now }: { data: EventsPayload; now: Da
           label="Diapers changed"
           value={t.diapers.toLocaleString()}
           sub={`${t.dirtyDiapers.toLocaleString()} of them dirty`}
-          comparison={null}
+          comparison={stack && { headline: stack.headline, detail: `${stack.detail} · stacked up` }}
         />
       </div>
 

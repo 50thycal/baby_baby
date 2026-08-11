@@ -103,6 +103,27 @@ const PLACE_LADDER: Rung[] = [
   { at: 1_850, label: "Seattle" },
 ];
 
+/**
+ * A stacked diaper is close enough to an inch thick that the count and the
+ * height in inches are the same number — which makes the arithmetic honest and
+ * the ladder easy to sanity-check. Heights below are in inches.
+ */
+export const DIAPER_INCHES = 1;
+
+const STACK_LADDER: Rung[] = [
+  { at: 60, label: "a car" },
+  { at: 120, label: "a single-story house" },
+  { at: 396, label: "a three-story apartment block" },
+  { at: 1_020, label: "an eight-story apartment complex" },
+  { at: 2_160, label: "a fifteen-story building" },
+  { at: 3_660, label: "the Statue of Liberty" },
+  { at: 7_476, label: "One Kansas City Place" },
+  { at: 12_996, label: "the Eiffel Tower" },
+  { at: 17_448, label: "the Empire State Building" },
+  { at: 21_312, label: "One World Trade Center" },
+  { at: 32_604, label: "the Burj Khalifa" },
+];
+
 function rungFor(ladder: Rung[], value: number): Rung | null {
   let found: Rung | null = null;
   for (const rung of ladder) {
@@ -135,6 +156,36 @@ export function milkComparison(milkMl: number): Comparison {
   return {
     headline: multiple ? `${multiple} ${rung.label}` : rung.label,
     detail: next ? `next up: ${next.label}` : "that's the whole ladder",
+  };
+}
+
+/** Feet and inches, because nobody pictures "412 inches". */
+function heightLabel(inches: number): string {
+  const feet = Math.floor(inches / 12);
+  const rest = Math.round(inches % 12);
+  if (feet === 0) return `${rest} in`;
+  return rest ? `${feet} ft ${rest} in` : `${feet} ft`;
+}
+
+/** Every diaper she's been through, stacked into one tower. */
+export function diaperComparison(diapers: number): Comparison {
+  if (diapers <= 0) return null;
+  const inches = diapers * DIAPER_INCHES;
+  const rung = rungFor(STACK_LADDER, inches);
+
+  if (!rung) {
+    return {
+      headline: `${heightLabel(inches)} tall`,
+      detail: `${STACK_LADDER[0].at - diapers} more to reach a car`,
+    };
+  }
+  const multiple = times(inches, rung.at);
+  const next = STACK_LADDER.find((r) => r.at > rung.at);
+  return {
+    headline: multiple ? `${multiple} ${rung.label}` : `as tall as ${rung.label}`,
+    detail: next
+      ? `${(next.at - inches).toLocaleString()} more to reach ${next.label}`
+      : "nothing left to climb",
   };
 }
 
