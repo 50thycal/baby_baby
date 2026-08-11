@@ -6,21 +6,26 @@ import DiaperSheet from "@/components/sheets/DiaperSheet";
 import FeedSheet from "@/components/sheets/FeedSheet";
 import ImportSheet from "@/components/sheets/ImportSheet";
 import SleepSheet from "@/components/sheets/SleepSheet";
-import { useEvents, useHomeState } from "@/lib/api";
+import WeightSheet from "@/components/sheets/WeightSheet";
+import { useEvents, useHomeState, useWeights } from "@/lib/api";
+import { fmtWeight } from "@/lib/weight";
 import { nextFeedWindow, wakeWindow } from "@/lib/predict";
 import { useNow } from "@/lib/useNow";
 import { fmtAgo, fmtClock, fmtDuration } from "@/lib/time";
 import { DIAPER_EMOJI, DIAPER_SHORT, type EventsPayload, type HomeState } from "@/lib/types";
 
-type Which = "feed" | "sleep" | "diaper" | "import" | "backups" | null;
+type Which = "feed" | "sleep" | "diaper" | "weight" | "import" | "backups" | null;
 
 export default function HomeScreen() {
   const { data, error } = useHomeState();
   // A week of history, for the forecasts. Cheap: SWR shares it with the
   // dashboards, and the tiles render without waiting for it.
   const { data: history } = useEvents("1w");
+  const { data: weights } = useWeights();
   const [open, setOpen] = useState<Which>(null);
   const now = useNow(15_000);
+
+  const lastWeight = weights?.length ? weights[weights.length - 1] : null;
 
   const asleep = data?.activeSleep ?? null;
   const close = () => setOpen(null);
@@ -78,6 +83,29 @@ export default function HomeScreen() {
         />
       </div>
 
+      {/* Weighing happens every week or two, not every two hours. A fourth tile
+          would take a quarter of the screen from the three things actually done
+          at 3am, so it gets a full-width row instead — unmistakably a button,
+          plainly the junior one. */}
+      <button
+        type="button"
+        onClick={() => setOpen("weight")}
+        className="press flex h-14 shrink-0 items-center justify-center gap-3 rounded-full border text-[15px] font-medium"
+        style={{
+          background: "var(--c-weight-wash)",
+          color: "var(--c-weight-ink)",
+          borderColor: "var(--c-weight)",
+        }}
+      >
+        <span className="text-xl leading-none" aria-hidden>
+          ⚖️
+        </span>
+        <span className="font-semibold uppercase tracking-[0.08em]">Weight</span>
+        {lastWeight && (
+          <span className="opacity-75">· {fmtWeight(lastWeight.weight_g)}</span>
+        )}
+      </button>
+
       {/* Deliberately small and quiet: both are rare, deliberate errands and
           must never compete with the three things done at 3am. */}
       <div className="-mt-1 flex items-center justify-center gap-1 text-[13px] text-muted">
@@ -103,6 +131,7 @@ export default function HomeScreen() {
       )}
       {open === "sleep" && <SleepSheet onClose={close} active={asleep} />}
       {open === "diaper" && <DiaperSheet onClose={close} />}
+      {open === "weight" && <WeightSheet onClose={close} previous={lastWeight} />}
       {open === "import" && <ImportSheet onClose={close} />}
       {open === "backups" && <BackupSheet onClose={close} />}
     </div>

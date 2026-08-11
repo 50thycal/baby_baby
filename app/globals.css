@@ -32,6 +32,12 @@
   --c-diaper-ink: #234f45;
   --c-diaper-wash: #dee8e3;
 
+  /* A dusty blue: the fourth thing you can log, and the only one that isn't
+     amber, violet or green. */
+  --c-weight: #4a6b8a;
+  --c-weight-ink: #2c4258;
+  --c-weight-wash: #dde4ea;
+
   --c-danger: #ab5a4c;
   --c-danger-wash: #f0e0da;
 }
@@ -58,6 +64,10 @@
     --c-diaper-ink: #8cc4b4;
     --c-diaper-wash: #16241f;
 
+    --c-weight: #6d92b5;
+    --c-weight-ink: #9fbcd6;
+    --c-weight-wash: #171f28;
+
     --c-danger: #c4756a;
     --c-danger-wash: #2b1c19;
   }
@@ -83,6 +93,10 @@
   --color-diaper: var(--c-diaper);
   --color-diaper-ink: var(--c-diaper-ink);
   --color-diaper-wash: var(--c-diaper-wash);
+
+  --color-weight: var(--c-weight);
+  --color-weight-ink: var(--c-weight-ink);
+  --color-weight-wash: var(--c-weight-wash);
 
   --color-danger: var(--c-danger);
   --color-danger-wash: var(--c-danger-wash);

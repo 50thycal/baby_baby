@@ -14,7 +14,7 @@
  */
 import { db } from "./db";
 import { BadRequest } from "./http";
-import type { Comment, Diaper, Feeding, Moment, SleepSession } from "./types";
+import type { Comment, Diaper, Feeding, Moment, SleepSession, Weight } from "./types";
 
 export type SnapshotCounts = {
   feedings: number;
@@ -22,6 +22,7 @@ export type SnapshotCounts = {
   diapers: number;
   comments: number;
   moments: number;
+  weights: number;
 };
 
 export type SnapshotPayload = {
@@ -30,6 +31,7 @@ export type SnapshotPayload = {
   diapers: Diaper[];
   comments: Comment[];
   moments: Moment[];
+  weights: Weight[];
 };
 
 export type SnapshotRow = {
@@ -71,18 +73,21 @@ async function fingerprint(): Promise<{ counts: SnapshotCounts; touched: string 
       (SELECT count(*) FROM diapers)        AS diapers,
       (SELECT count(*) FROM comments)       AS comments,
       (SELECT count(*) FROM moments)        AS moments,
+      (SELECT count(*) FROM weights)        AS weights,
       GREATEST(
         COALESCE((SELECT max(created_at) FROM feedings),       'epoch'::timestamptz),
         COALESCE((SELECT max(created_at) FROM sleep_sessions), 'epoch'::timestamptz),
         COALESCE((SELECT max(created_at) FROM diapers),        'epoch'::timestamptz),
         COALESCE((SELECT max(created_at) FROM comments),       'epoch'::timestamptz),
-        COALESCE((SELECT max(created_at) FROM moments),        'epoch'::timestamptz)
+        COALESCE((SELECT max(created_at) FROM moments),        'epoch'::timestamptz),
+        COALESCE((SELECT max(created_at) FROM weights),        'epoch'::timestamptz)
       ) AS touched`) as {
     feedings: number;
     sleep: number;
     diapers: number;
     comments: number;
     moments: number;
+    weights: number;
     touched: string | null;
   }[];
 
@@ -94,6 +99,7 @@ async function fingerprint(): Promise<{ counts: SnapshotCounts; touched: string 
       diapers: Number(r.diapers),
       comments: Number(r.comments),
       moments: Number(r.moments),
+      weights: Number(r.weights),
     },
     touched: r.touched,
   };
@@ -101,12 +107,13 @@ async function fingerprint(): Promise<{ counts: SnapshotCounts; touched: string 
 
 async function readAll(): Promise<SnapshotPayload> {
   const sql = await db();
-  const [feedings, sleep, diapers, comments, moments] = await Promise.all([
+  const [feedings, sleep, diapers, comments, moments, weights] = await Promise.all([
     sql`SELECT * FROM feedings ORDER BY ts`,
     sql`SELECT * FROM sleep_sessions ORDER BY sleep_start`,
     sql`SELECT * FROM diapers ORDER BY ts`,
     sql`SELECT * FROM comments ORDER BY ts`,
     sql`SELECT * FROM moments ORDER BY ts`,
+    sql`SELECT * FROM weights ORDER BY ts`,
   ]);
   return {
     feedings: feedings as Feeding[],
@@ -114,6 +121,7 @@ async function readAll(): Promise<SnapshotPayload> {
     diapers: diapers as Diaper[],
     comments: comments as Comment[],
     moments: moments as Moment[],
+    weights: weights as Weight[],
   };
 }
 
@@ -127,6 +135,7 @@ export async function captureSnapshot(reason = "auto"): Promise<string> {
     diapers: payload.diapers.length,
     comments: payload.comments.length,
     moments: payload.moments.length,
+    weights: payload.weights.length,
   };
 
   const rows = (await sql`
@@ -161,7 +170,8 @@ export async function maybeSnapshot(): Promise<void> {
 
     const { counts, touched } = await fingerprint();
     const isEmpty =
-      counts.feedings + counts.sleep + counts.diapers + counts.comments + counts.moments === 0;
+      counts.feedings + counts.sleep + counts.diapers + counts.comments + counts.moments + counts.weights ===
+      0;
     if (isEmpty) {
       // Nothing worth preserving yet, but the very first entry shouldn't have to
       // wait out a full check interval before it's protected.
@@ -184,7 +194,8 @@ export async function maybeSnapshot(): Promise<void> {
       prev.sleep !== counts.sleep ||
       prev.diapers !== counts.diapers ||
       prev.comments !== counts.comments ||
-      prev.moments !== counts.moments;
+      prev.moments !== counts.moments ||
+      prev.weights !== counts.weights;
     const editedSince = touched ? new Date(touched).getTime() > takenAt : false;
 
     if (countsChanged || editedSince) await captureSnapshot("auto");
@@ -214,7 +225,10 @@ export async function snapshotBeforeDelete(): Promise<void> {
     }
 
     const { counts } = await fingerprint();
-    if (counts.feedings + counts.sleep + counts.diapers + counts.comments + counts.moments === 0)
+    if (
+      counts.feedings + counts.sleep + counts.diapers + counts.comments + counts.moments + counts.weights ===
+      0
+    )
       return;
 
     await captureSnapshot("before a delete");
@@ -264,6 +278,7 @@ export async function restoreSnapshot(id: string): Promise<SnapshotCounts> {
   await sql`DELETE FROM diapers`;
   await sql`DELETE FROM comments`;
   await sql`DELETE FROM moments`;
+  await sql`DELETE FROM weights`;
 
   if (p.feedings.length) {
     await sql.query(
@@ -324,6 +339,20 @@ export async function restoreSnapshot(id: string): Promise<SnapshotCounts> {
         p.moments.map((r) => r.kind),
         p.moments.map((r) => r.ts),
         p.moments.map((r) => r.created_at),
+      ],
+    );
+  }
+
+  // `?.` because backups taken before weigh-ins existed have no such key.
+  if (p.weights?.length) {
+    await sql.query(
+      `INSERT INTO weights (id, weight_g, ts, created_at)
+       SELECT * FROM unnest($1::uuid[], $2::int[], $3::timestamptz[], $4::timestamptz[])`,
+      [
+        p.weights.map((r) => r.id),
+        p.weights.map((r) => r.weight_g),
+        p.weights.map((r) => r.ts),
+        p.weights.map((r) => r.created_at),
       ],
     );
   }

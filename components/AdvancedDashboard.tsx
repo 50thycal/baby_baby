@@ -3,8 +3,9 @@
 import { useMemo } from "react";
 import CumulativeChart from "@/components/CumulativeChart";
 import GrandTally from "@/components/GrandTally";
+import WeightChart from "@/components/WeightChart";
 import { addDays, computeStats, cumulativeSeries, startOfDay } from "@/lib/daily";
-import { useEvents } from "@/lib/api";
+import { useEvents, useWeights } from "@/lib/api";
 import { fmtDuration } from "@/lib/time";
 import { useNow } from "@/lib/useNow";
 
@@ -18,6 +19,7 @@ export default function AdvancedDashboard() {
   // The tally is all-time, so it needs its own window; the charts and averages
   // stay on a week. Separate SWR keys, both cached.
   const { data: allTime } = useEvents("all");
+  const { data: weights } = useWeights();
   const now = useNow(60_000);
 
   const view = useMemo(() => {
@@ -101,6 +103,8 @@ export default function AdvancedDashboard() {
         elapsedFraction={view.elapsedFraction}
         format={(v) => `${Math.round(v)}`}
       />
+
+      {weights && <WeightChart weights={weights} />}
 
       <div className="panel rounded-[20px] p-4">
         <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-muted">

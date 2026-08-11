@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR, { mutate } from "swr";
-import type { EventsPayload, HomeState, RangeKey } from "./types";
+import type { EventsPayload, HomeState, RangeKey, Weight } from "./types";
 
 async function fetcher<T>(url: string): Promise<T> {
   const res = await fetch(url, { cache: "no-store" });
@@ -25,6 +25,15 @@ export function useHomeState() {
 
 export function useEvents(range: RangeKey) {
   return useSWR<EventsPayload>(`/api/events?range=${range}`, fetcher, SHARED_OPTS);
+}
+
+/**
+ * Every weigh-in, always the lot. Weight is a state rather than an event — the
+ * current figure has to survive whichever range the timeline is showing — and
+ * there are few enough of them that no window is worth the complication.
+ */
+export function useWeights() {
+  return useSWR<Weight[]>("/api/weights", fetcher, SHARED_OPTS);
 }
 
 /**
