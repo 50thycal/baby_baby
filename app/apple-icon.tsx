@@ -1,11 +1,17 @@
 import { ImageResponse } from "next/og";
-import { ACCENT, INK, PAPER } from "@/lib/palette";
+import { ACCENT } from "@/lib/palette";
+import { FOX } from "@/lib/sprites";
 
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
-// iOS needs a raster home-screen icon; generating it from shapes here keeps
-// binary assets out of the repo and needs no font or network fetch.
+/** 180px canvas, 16px sprite: 8px cells leave a 26px margin all round. */
+const CELL = 8;
+
+// iOS needs a raster home-screen icon; building the fox out of divs keeps
+// binary assets out of the repo and needs no font or network fetch. Satori
+// only speaks flexbox, so the sprite is rows of coloured cells rather than
+// SVG rects — same pixels either way.
 export default function AppleIcon() {
   return new ImageResponse(
     (
@@ -14,26 +20,26 @@ export default function AppleIcon() {
           width: "100%",
           height: "100%",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           background: ACCENT,
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            width: 104,
-            height: 104,
-            borderRadius: 52,
-            background: PAPER,
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 22,
-          }}
-        >
-          <div style={{ width: 15, height: 15, borderRadius: 8, background: INK }} />
-          <div style={{ width: 15, height: 15, borderRadius: 8, background: INK }} />
-        </div>
+        {FOX.art.map((row, y) => (
+          <div key={y} style={{ display: "flex" }}>
+            {[...row].map((ch, x) => (
+              <div
+                key={x}
+                style={{
+                  width: CELL,
+                  height: CELL,
+                  background: ch === "." ? "transparent" : FOX.palette[ch],
+                }}
+              />
+            ))}
+          </div>
+        ))}
       </div>
     ),
     size,

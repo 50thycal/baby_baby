@@ -32,7 +32,7 @@ export default function ConfirmButton({ label, accent, onConfirm, disabled }: Pr
   return (
     <div className="w-full">
       {error && (
-        <p className="mb-2 rounded-2xl bg-danger-wash px-4 py-3 text-center text-sm font-medium text-danger">
+        <p className="mb-2 rounded-[10px] bg-danger-wash px-4 py-3 text-center text-sm font-medium text-danger">
           {error}
         </p>
       )}
@@ -40,7 +40,7 @@ export default function ConfirmButton({ label, accent, onConfirm, disabled }: Pr
         type="button"
         onClick={run}
         disabled={busy || disabled}
-        className="press h-16 w-full rounded-full text-xl font-medium disabled:opacity-60"
+        className="press h-16 w-full rounded-[8px] text-xl font-medium disabled:opacity-60"
         style={{ background: accent, color: "#fff" }}
       >
         {busy ? "Saving…" : label}

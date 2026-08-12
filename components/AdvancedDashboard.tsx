@@ -54,7 +54,7 @@ export default function AdvancedDashboard() {
   if (error) {
     return (
       <div className="px-5 pb-4">
-        <p className="rounded-2xl bg-danger-wash px-4 py-3 text-center text-sm font-medium text-danger">
+        <p className="rounded-[10px] bg-danger-wash px-4 py-3 text-center text-sm font-medium text-danger">
           Couldn&apos;t load the numbers.
         </p>
       </div>
@@ -63,8 +63,8 @@ export default function AdvancedDashboard() {
   if (!view || isLoading) {
     return (
       <div className="flex flex-col gap-3 px-5 pb-4">
-        <div className="h-40 animate-pulse rounded-[20px] bg-sunk" />
-        <div className="h-40 animate-pulse rounded-[20px] bg-sunk" />
+        <div className="h-40 animate-pulse rounded-[10px] bg-sunk" />
+        <div className="h-40 animate-pulse rounded-[10px] bg-sunk" />
       </div>
     );
   }
@@ -106,7 +106,7 @@ export default function AdvancedDashboard() {
 
       {weights && <WeightChart weights={weights} />}
 
-      <div className="panel rounded-[20px] p-4">
+      <div className="panel rounded-[10px] p-4">
         <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-muted">
           Averages
           {s.days > 0 && (

@@ -47,11 +47,11 @@ export default function ImportSheet({ onClose }: { onClose: () => void }) {
           rows={8}
           autoFocus
           spellCheck={false}
-          className="w-full resize-y rounded-[18px] bg-sunk p-4 font-mono text-[15px] leading-relaxed outline-none placeholder:text-muted focus:ring-2 focus:ring-ink/20"
+          className="w-full resize-y rounded-[10px] bg-sunk p-4 font-mono text-[15px] leading-relaxed outline-none placeholder:text-muted focus:ring-2 focus:ring-ink/20"
         />
 
         {text.trim() && (
-          <div className="flex flex-col gap-2 rounded-[18px] border border-line p-3">
+          <div className="flex flex-col gap-2 rounded-[10px] border border-line p-3">
             <div className="flex items-baseline justify-between text-[15px]">
               <span className="font-medium">
                 {feedings.length} feed{feedings.length === 1 ? "" : "s"}

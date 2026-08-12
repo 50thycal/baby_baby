@@ -460,19 +460,41 @@ they're driven from the harness rather than checked in.
 
 ## Visual direction
 
-The palette, typography and control language come from the **MBT Awareness
-Loop** app (`50thycal/mbt-app-pilot`): warm paper instead of white, low-contrast
-warm greys, cards barely lighter than the background with a hairline border
-doing the separating, plain system sans at light weights, uppercase eyebrow
-labels, and a 0.985 press dip. Radii and spacing follow it too.
+Woodland critters in soft green and pink, drawn like an 8-bit game — the
+Stardew Valley *style*, not its theme. It shows up in four places:
 
-The deliberate divergence is colour. The reference is monochrome because it has
-a single action; this app has three that need telling apart at a glance in the
-dark, so FEED / SLEEP / DIAPER each carry an accent — desaturated into the same
-earthy family so they sit inside that world rather than shouting over it. The
-emoji supply the personality the spec asked for; the type doesn't have to.
+**The cast** (`lib/sprites.ts`). Every icon is a hand-placed 16×16 pixel
+sprite: a fox for feeding, an owl for sleep (its eyes close while she's
+asleep), a rabbit for diapers, a hedgehog for weight, a frog for spit-ups, a
+cross little squirrel for fussy spells, and droplet/poop/burst objects for the
+diaper types. Sprites are stored as string grids — pixel art lives or dies by
+individual pixels, and a string grid is the only representation you can
+proofread — and rendered as SVG rects (`components/PixelIcon.tsx`), so they
+scale crisply to any size with no binary assets in the repo. The critters keep
+natural fur colours on purpose: tinted to the palette they'd stop reading as
+critters. `tests/sprites.test.ts` checks every grid is exactly 16×16, ASCII
+only, and names no colour its palette doesn't define — a Cyrillic **о** posing
+as a Latin **o** renders as a magenta missing-colour pixel, and that class of
+bug is invisible in source.
 
-Every token is in one block at the top of `app/globals.css`.
+**The palette** (`app/globals.css`, one token block). Sage-cream paper, deep
+forest ink, and the four accents drawn from two families: feed is rose pink,
+sleep deep pine, diaper a yellower leaf green so it can't blur into sleep, and
+weight the darker berry end of the pinks. Dark mode is the same forest after
+dark.
+
+**The chrome.** Chunky 2px outlines, hard offset shadows with no blur (a
+blurred shadow is the one thing pixel art can never have), and tight radii.
+Pressing something translates it into its own shadow, the way an 8-bit button
+goes down a pixel.
+
+**The type.** Labels, headers and tabs are set in Silkscreen (bundled via
+`@fontsource`, no runtime fetch), hung off the one class every micro-label
+already shares. Numbers and body text stay system sans — pixel type at reading
+sizes is a novelty that wears off by the second 3am feed.
+
+The app icon is the fox on deep pine, generated from the same sprite data —
+`app/icon.svg` and `app/apple-icon.tsx` both draw from `lib/sprites.ts`.
 
 ## Notes
 

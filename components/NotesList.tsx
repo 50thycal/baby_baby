@@ -26,7 +26,7 @@ export default function NotesList({ comments, onOpen }: Props) {
         .map((comment) => {
           const at = new Date(comment.ts);
           return (
-            <div key={comment.id} className="panel rounded-[20px] p-4">
+            <div key={comment.id} className="panel rounded-[10px] p-4">
               <button
                 onClick={() => onOpen(comment)}
                 className="press block w-full text-left"
@@ -69,7 +69,7 @@ function Reactions({ comment }: { comment: Comment }) {
                 setPending(null);
               }
             }}
-            className="press flex h-9 items-center gap-1 rounded-full px-3 text-sm font-medium disabled:opacity-60"
+            className="press flex h-9 items-center gap-1 rounded-[8px] px-3 text-sm font-medium disabled:opacity-60"
             style={{
               background: count > 0 ? "var(--c-paper)" : "transparent",
               opacity: count > 0 ? 1 : 0.45,

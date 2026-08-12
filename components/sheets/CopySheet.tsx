@@ -61,7 +61,7 @@ export default function CopySheet({ onClose }: { onClose: () => void }) {
             type="button"
             onClick={() => copy(span.key)}
             disabled={busy !== null}
-            className="panel press h-14 rounded-full text-[15px] font-medium disabled:opacity-60"
+            className="panel press h-14 rounded-[8px] text-[15px] font-medium disabled:opacity-60"
           >
             {busy === span.key ? "Copying…" : span.label}
           </button>

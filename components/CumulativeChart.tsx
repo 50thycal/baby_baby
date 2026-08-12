@@ -100,7 +100,7 @@ export default function CumulativeChart({
   const lastY = y(today[todayCutoff - 1] ?? 0);
 
   return (
-    <div className="panel rounded-[20px] p-3">
+    <div className="panel rounded-[10px] p-3">
       <div className="mb-1 flex items-baseline justify-between gap-2">
         <span
           className="truncate text-[11px] font-medium uppercase tracking-[0.12em]"

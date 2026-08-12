@@ -34,7 +34,7 @@ export default function WeightChart({ weights }: { weights: Weight[] }) {
 
   if (!trend) {
     return (
-      <div className="panel rounded-[20px] p-4">
+      <div className="panel rounded-[10px] p-4">
         <Header />
         <p className="py-4 text-center text-sm text-muted">
           Nothing weighed yet. Log one from the Log screen and the line starts here.
@@ -45,7 +45,7 @@ export default function WeightChart({ weights }: { weights: Weight[] }) {
 
   if (points.length === 1) {
     return (
-      <div className="panel rounded-[20px] p-4">
+      <div className="panel rounded-[10px] p-4">
         <Header />
         <div className="py-2 text-center">
           <div className="text-[26px] font-semibold tabular-nums">
@@ -84,7 +84,7 @@ export default function WeightChart({ weights }: { weights: Weight[] }) {
     new Date(t).toLocaleDateString([], { month: "short", day: "numeric" });
 
   return (
-    <div className="panel rounded-[20px] p-3">
+    <div className="panel rounded-[10px] p-3">
       <Header />
 
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Weight over time">

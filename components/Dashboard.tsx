@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import NotesList from "@/components/NotesList";
+import { BubbleIcon } from "@/components/icons";
 import TodayCard from "@/components/TodayCard";
 import Timeline from "@/components/Timeline";
 import WeightCard from "@/components/WeightCard";
@@ -42,7 +43,7 @@ export default function Dashboard() {
               tick();
               setRange(r.key);
             }}
-            className="press h-11 whitespace-nowrap rounded-full border px-1 text-[12px] font-medium"
+            className="press h-11 whitespace-nowrap rounded-[8px] border px-1 text-[12px] font-medium"
             style={{
               background: range === r.key ? "var(--c-ink)" : "var(--c-card)",
               color: range === r.key ? "var(--c-paper)" : "var(--c-muted)",
@@ -55,12 +56,12 @@ export default function Dashboard() {
       </div>
 
       {error && (
-        <p className="rounded-2xl bg-danger-wash px-4 py-3 text-center text-sm font-medium text-danger">
+        <p className="rounded-[10px] bg-danger-wash px-4 py-3 text-center text-sm font-medium text-danger">
           Couldn&apos;t load the timeline.
         </p>
       )}
 
-      {!data && isLoading && <div className="h-64 animate-pulse panel rounded-[20px]" />}
+      {!data && isLoading && <div className="h-64 animate-pulse panel rounded-[10px]" />}
 
       {data && (
         <>
@@ -98,21 +99,27 @@ export default function Dashboard() {
                 setCommentMode((v) => !v);
               }}
               aria-pressed={commentMode}
-              className="press h-14 flex-1 rounded-full border text-[15px] font-medium"
+              className="press h-14 flex-1 rounded-[8px] border text-[15px] font-medium"
               style={{
                 background: commentMode ? "var(--c-sleep)" : "var(--c-card)",
                 color: commentMode ? "#fff" : "var(--c-ink)",
                 borderColor: commentMode ? "var(--c-sleep)" : "var(--c-line)",
               }}
             >
-              {commentMode ? "Tap the timeline…" : "💬 Comment"}
+              {commentMode ? (
+                "Tap the timeline…"
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <BubbleIcon size={18} /> Comment
+                </span>
+              )}
             </button>
             <button
               onClick={() => {
                 tick();
                 setCopying(true);
               }}
-              className="panel press h-14 flex-1 rounded-full text-[15px] font-medium"
+              className="panel press h-14 flex-1 rounded-[8px] text-[15px] font-medium"
             >
               Copy data
             </button>

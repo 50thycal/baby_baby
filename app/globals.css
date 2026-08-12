@@ -1,75 +1,82 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Palette borrowed from the MBT Awareness Loop app: warm paper rather than
-   white, low-contrast warm greys, and cards that are barely lighter than the
-   background with a hairline border doing the separating.
+   Woodland, in soft green and pink, worn like an 8-bit game.
 
-   Where this app diverges: the reference is monochrome because it has one
-   action. This one has three, and at 3am they need to be told apart without
-   reading, so FEED / SLEEP / DIAPER each get an accent — desaturated into the
-   same earthy family so they sit in the reference's world rather than shouting
-   over it. Dark mode follows the phone's own setting.
+   The ground is a sage cream with deep forest ink; every surface is separated
+   by a chunky 2px outline and a hard offset shadow — no blur anywhere, because
+   a blurred shadow is the one thing pixel art can never have. The four things
+   you can log keep their own accents, all drawn from the two families:
+
+     feed   → rose pink     (milk)
+     sleep  → deep pine     (the woods at night)
+     diaper → fresh leaf    (a yellower green than pine, so they can't blur)
+     weight → dusty berry   (the darker end of the pinks)
+
+   The critters themselves (lib/sprites.ts) keep natural fur colours and sit on
+   these washes. Dark mode is the same forest after dark.
 --------------------------------------------------------------------------- */
 :root {
-  --c-paper: #f4f1ea;
-  --c-card: #fbf9f4;
-  --c-sunk: #ede8dc;
-  --c-ink: #2a2823;
-  --c-muted: #8a877f;
-  --c-line: #e2dccd;
-  --c-veil: rgb(42 40 35 / 0.4);
+  --c-paper: #eff1e4;
+  --c-card: #f8f9ef;
+  --c-sunk: #e2e6cf;
+  --c-ink: #2f3a26;
+  --c-muted: #7f8a70;
+  --c-line: #d3dabc;
+  --c-border: #47543a;
+  --c-shadow: rgb(47 58 38 / 0.16);
+  --c-veil: rgb(35 44 28 / 0.45);
 
-  --c-feed: #b5752a;
-  --c-feed-ink: #6d4415;
-  --c-feed-wash: #efe4d1;
+  --c-feed: #c4708e;
+  --c-feed-ink: #8e4462;
+  --c-feed-wash: #f3dde5;
 
-  --c-sleep: #635ea0;
-  --c-sleep-ink: #3a3766;
-  --c-sleep-wash: #e4e2ec;
+  --c-sleep: #4a7561;
+  --c-sleep-ink: #2e523f;
+  --c-sleep-wash: #dce8dd;
 
-  --c-diaper: #38806f;
-  --c-diaper-ink: #234f45;
-  --c-diaper-wash: #dee8e3;
+  --c-diaper: #7d9a4c;
+  --c-diaper-ink: #55702e;
+  --c-diaper-wash: #e9edd2;
 
-  /* A dusty blue: the fourth thing you can log, and the only one that isn't
-     amber, violet or green. */
-  --c-weight: #4a6b8a;
-  --c-weight-ink: #2c4258;
-  --c-weight-wash: #dde4ea;
+  --c-weight: #915e83;
+  --c-weight-ink: #643957;
+  --c-weight-wash: #ecdfe9;
 
-  --c-danger: #ab5a4c;
-  --c-danger-wash: #f0e0da;
+  --c-danger: #b2544f;
+  --c-danger-wash: #f2dcd8;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --c-paper: #14130f;
-    --c-card: #1c1b16;
-    --c-sunk: #26241d;
-    --c-ink: #ede8dc;
-    --c-muted: #807d75;
-    --c-line: #2a271f;
+    --c-paper: #161a11;
+    --c-card: #1e2317;
+    --c-sunk: #29301e;
+    --c-ink: #e6ead2;
+    --c-muted: #90997c;
+    --c-line: #333c24;
+    --c-border: #505d40;
+    --c-shadow: rgb(0 0 0 / 0.45);
     --c-veil: rgb(0 0 0 / 0.6);
 
-    --c-feed: #cf9345;
-    --c-feed-ink: #e3bc85;
-    --c-feed-wash: #2c2317;
+    --c-feed: #d68ba4;
+    --c-feed-ink: #e7b6c6;
+    --c-feed-wash: #33212a;
 
-    --c-sleep: #8580c4;
-    --c-sleep-ink: #b6b2dd;
-    --c-sleep-wash: #201e2c;
+    --c-sleep: #79ab8d;
+    --c-sleep-ink: #a3ccb2;
+    --c-sleep-wash: #1d2b20;
 
-    --c-diaper: #56a08e;
-    --c-diaper-ink: #8cc4b4;
-    --c-diaper-wash: #16241f;
+    --c-diaper: #a5c06b;
+    --c-diaper-ink: #c6d996;
+    --c-diaper-wash: #262d16;
 
-    --c-weight: #6d92b5;
-    --c-weight-ink: #9fbcd6;
-    --c-weight-wash: #171f28;
+    --c-weight: #bd85ad;
+    --c-weight-ink: #d5aec9;
+    --c-weight-wash: #2b2029;
 
-    --c-danger: #c4756a;
-    --c-danger-wash: #2b1c19;
+    --c-danger: #cf7a6e;
+    --c-danger-wash: #2f1e1a;
   }
 }
 
@@ -101,10 +108,16 @@
   --color-danger: var(--c-danger);
   --color-danger-wash: var(--c-danger-wash);
 
-  /* Same stack as the reference app: plain system sans. A rounded face reads
-     as childish, and the spec asked for personality without that. */
+  --color-border: var(--c-border);
+
+  /* Body stays a plain system sans: pixel type at reading sizes is a novelty
+     that wears off by the second 3am feed. */
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto,
     sans-serif;
+
+  /* The 8-bit voice — labels, headers and tabs only, never numbers or body
+     text. Bundled via @fontsource so no runtime font fetch. */
+  --font-pixel: "Silkscreen", "Courier New", monospace;
 }
 
 /* --------------------------------------------------------------------------- */
@@ -132,23 +145,49 @@ button {
   color: inherit;
 }
 
-/* Press feedback: everything tappable dips slightly. Cheap, and it reads as
-   "the tap registered" without waiting for the network. The 0.985 dip and the
-   80ms/160ms timings are the reference app's. */
+/* Press feedback: tappable things sink into their own hard shadow, the way an
+   8-bit button goes down a pixel. Reads as "the tap registered" without
+   waiting for the network. */
 .press {
   transition:
     transform 80ms ease,
+    box-shadow 80ms ease,
     background 160ms ease;
 }
 .press:active {
-  transform: scale(0.985);
+  transform: translate(2px, 2px);
 }
 
-/* A surface: barely lighter than the paper, separated by a hairline rather
-   than a shadow. The reference leans on this for every card and button. */
+/* A surface: card-coloured, a chunky 2px outline, and a hard offset shadow
+   with no blur — the whole pixel look in one class. */
 .panel {
   background: var(--c-card);
-  border: 1px solid var(--c-line);
+  border: 2px solid var(--c-border);
+  box-shadow: 3px 3px 0 var(--c-shadow);
+}
+.panel.press:active {
+  box-shadow: 1px 1px 0 var(--c-shadow);
+}
+
+/* The same chunky outline + shadow for surfaces that aren't card-coloured —
+   the tinted tiles on the Log screen. */
+.chunk {
+  border: 2px solid var(--c-border);
+  box-shadow: 3px 3px 0 var(--c-shadow);
+}
+.chunk.press:active {
+  box-shadow: 1px 1px 0 var(--c-shadow);
+}
+
+/* Every micro-label in the app is set with Tailwind's `uppercase`; hanging the
+   pixel face on that one class rethemes them all — section headers, tile
+   sub-labels, sheet titles — without touching each component. Letter-spacing
+   is neutralised: Silkscreen carries its own pixel gaps, and tracking on top
+   of them tears words apart. */
+.uppercase,
+.font-pixel {
+  font-family: var(--font-pixel);
+  letter-spacing: 0 !important;
 }
 
 .no-scrollbar {

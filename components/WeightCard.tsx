@@ -19,7 +19,7 @@ export default function WeightCard({
   weights: Weight[] | undefined;
   onOpen: () => void;
 }) {
-  if (!weights) return <div className="h-[92px] animate-pulse rounded-[20px] bg-sunk" />;
+  if (!weights) return <div className="h-[92px] animate-pulse rounded-[10px] bg-sunk" />;
 
   const trend = weightTrend(weights.map((w) => ({ grams: w.weight_g, at: new Date(w.ts).getTime() })));
 
@@ -27,7 +27,7 @@ export default function WeightCard({
     <button
       type="button"
       onClick={onOpen}
-      className="panel press rounded-[20px] p-4 text-left"
+      className="panel press rounded-[10px] p-4 text-left"
       // Describes what tapping does — it opens the list of weigh-ins to correct
       // one. It does not log a new weight; that's the button on the Log screen.
       aria-label={

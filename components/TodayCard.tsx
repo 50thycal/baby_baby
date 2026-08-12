@@ -30,7 +30,7 @@ export default function TodayCard({ data, now }: { data: EventsPayload; now: Dat
         : "var(--c-muted)";
 
   return (
-    <div className="panel rounded-[20px] p-4">
+    <div className="panel rounded-[10px] p-4">
       <div className="grid grid-cols-3 gap-2">
         <Stat
           label="FEEDING"

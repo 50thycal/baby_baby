@@ -6,7 +6,8 @@ import Sheet from "@/components/Sheet";
 import TimeField from "@/components/TimeField";
 import { useToast } from "@/components/Toaster";
 import { send } from "@/lib/api";
-import { MOMENT_ACCENT, MOMENT_EMOJI, MOMENT_LABEL, type MomentKind } from "@/lib/types";
+import { MomentIcon } from "@/components/icons";
+import { MOMENT_ACCENT, MOMENT_LABEL, type MomentKind } from "@/lib/types";
 
 /**
  * Logging a thing that just happened, with no size to it.
@@ -32,11 +33,11 @@ export default function MomentSheet({
     <Sheet onClose={onClose} title={MOMENT_LABEL[kind]} accent={accent}>
       <div className="flex flex-col items-center gap-3">
         <div
-          className="flex h-24 w-24 items-center justify-center rounded-full text-5xl"
+          className="flex h-24 w-24 items-center justify-center rounded-[8px]"
           style={{ background: `color-mix(in srgb, ${accent} 14%, transparent)` }}
           aria-hidden
         >
-          {MOMENT_EMOJI[kind]}
+          <MomentIcon kind={kind} size={64} />
         </div>
         <p className="text-center text-[13px] text-muted">
           Just the time — no amount to record.

@@ -22,7 +22,7 @@ export default function Page() {
         >
           <VersionBar />
 
-          <div className="panel flex rounded-full p-1">
+          <div className="panel flex rounded-[8px] p-1">
             <Tab id="log" active={tab} onSelect={setTab}>
               Log
             </Tab>
@@ -65,7 +65,7 @@ function Tab({
         if (!selected) tick();
         onSelect(id);
       }}
-      className="press h-11 flex-1 rounded-full text-[15px] font-medium"
+      className="press h-11 flex-1 rounded-[8px] font-pixel text-[13px] font-medium"
       style={{
         background: selected ? "var(--c-ink)" : "transparent",
         color: selected ? "var(--c-paper)" : "var(--c-muted)",

@@ -79,7 +79,7 @@ export default function TimeField({ value, onChange, base, accent, label }: Prop
           setOpen((v) => !v);
           tick();
         }}
-        className="press mx-auto flex w-full flex-col items-center rounded-[18px] px-4 py-3"
+        className="press mx-auto flex w-full flex-col items-center rounded-[10px] px-4 py-3"
         style={{ background: open ? "var(--c-sunk)" : "transparent" }}
       >
         {label && (
@@ -107,7 +107,7 @@ export default function TimeField({ value, onChange, base, accent, label }: Prop
           <div className="relative">
             {/* Centre indicator */}
             <div
-              className="pointer-events-none absolute left-1/2 top-1 z-10 h-9 w-[3px] -translate-x-1/2 rounded-full"
+              className="pointer-events-none absolute left-1/2 top-1 z-10 h-9 w-[3px] -translate-x-1/2 rounded-[8px]"
               style={{ background: accent ?? "var(--c-ink)" }}
             />
             <div
@@ -129,7 +129,7 @@ export default function TimeField({ value, onChange, base, accent, label }: Prop
                     style={{ width: ITEM_W }}
                   >
                     <div
-                      className="w-[2px] rounded-full bg-line"
+                      className="w-[2px] rounded-[8px] bg-line"
                       style={{ height: isHour ? 30 : isHalf ? 22 : 14 }}
                     />
                     {/* Absolute so an hour label can overhang its 24px detent. */}
@@ -165,7 +165,7 @@ function Chip({ children, onClick }: { children: React.ReactNode; onClick: () =>
     <button
       type="button"
       onClick={onClick}
-      className="press h-10 min-w-12 rounded-full bg-sunk px-3 text-sm font-medium text-muted"
+      className="press h-10 min-w-12 rounded-[8px] bg-sunk px-3 text-sm font-medium text-muted"
     >
       {children}
     </button>
