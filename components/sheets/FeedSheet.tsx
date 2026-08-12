@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import ConfirmButton from "@/components/ConfirmButton";
 import Dial from "@/components/Dial";
 import MomentSheet from "@/components/sheets/MomentSheet";
+import { MomentIcon } from "@/components/icons";
 import Sheet from "@/components/Sheet";
 import TimeField from "@/components/TimeField";
 import { useToast } from "@/components/Toaster";
@@ -60,7 +61,9 @@ export default function FeedSheet({ onClose, defaultAmount }: Props) {
           onClick={() => setSpitUp(true)}
           className="press mt-1 px-3 py-1 text-[13px] text-muted underline underline-offset-4"
         >
-          🤢 Log a big spit up
+          <span className="flex items-center justify-center gap-2">
+            <MomentIcon kind="spit_up" size={18} /> Log a big spit up
+          </span>
         </button>
       </div>
 

@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import ConfirmButton from "@/components/ConfirmButton";
 import MomentSheet from "@/components/sheets/MomentSheet";
+import { MomentIcon, MoonIcon } from "@/components/icons";
 import Sheet from "@/components/Sheet";
 import TimeField from "@/components/TimeField";
 import { useToast } from "@/components/Toaster";
@@ -38,8 +39,8 @@ export default function SleepSheet({ onClose, active }: Props) {
             </div>
           </div>
         ) : (
-          <div className="mb-1 text-6xl" aria-hidden>
-            😴
+          <div className="mb-1" aria-hidden>
+            <MoonIcon size={64} />
           </div>
         )}
 
@@ -81,7 +82,9 @@ export default function SleepSheet({ onClose, active }: Props) {
           onClick={() => setFussy(true)}
           className="press mt-1 px-3 py-1 text-[13px] text-muted underline underline-offset-4"
         >
-          😠 Log fussy fussy
+          <span className="flex items-center justify-center gap-2">
+            <MomentIcon kind="fussy" size={18} /> Log fussy fussy
+          </span>
         </button>
       </div>
 

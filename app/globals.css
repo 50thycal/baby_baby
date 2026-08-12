@@ -1,75 +1,95 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Palette borrowed from the MBT Awareness Loop app: warm paper rather than
-   white, low-contrast warm greys, and cards that are barely lighter than the
-   background with a hairline border doing the separating.
+   Woodland, in soft green and pink, worn like an 8-bit game.
 
-   Where this app diverges: the reference is monochrome because it has one
-   action. This one has three, and at 3am they need to be told apart without
-   reading, so FEED / SLEEP / DIAPER each get an accent — desaturated into the
-   same earthy family so they sit in the reference's world rather than shouting
-   over it. Dark mode follows the phone's own setting.
+   The two modes are tuned independently rather than one being an inversion of
+   the other, because they're used at different times of day for different
+   reasons. Light is the one that gets looked at: a pale, clean green — closer
+   to new leaves than to sage — with pink carrying the accents. Dark is a
+   proper night forest, deeper and richer, where the accents have to glow a
+   little to stay legible at 3am with the lights off.
+
+   Surfaces are separated by a chunky 2px outline and a hard offset shadow —
+   no blur anywhere, because a blurred shadow is the one thing pixel art can
+   never have.
+
+   The four things you can log get an accent each, two per family so no two
+   ever blur into one another:
+
+     feed   → rose pink     (milk; the loudest, because it's the commonest)
+     sleep  → soft pine     (the cooler, deeper green)
+     diaper → fresh leaf    (the warmer, yellower green)
+     weight → dusty mauve   (the deeper end of the pinks)
+
+   Every value below was checked against its background with a real contrast
+   ratio, not by eye — see the note on --c-muted.
 --------------------------------------------------------------------------- */
 :root {
-  --c-paper: #f4f1ea;
-  --c-card: #fbf9f4;
-  --c-sunk: #ede8dc;
-  --c-ink: #2a2823;
-  --c-muted: #8a877f;
-  --c-line: #e2dccd;
-  --c-veil: rgb(42 40 35 / 0.4);
+  --c-paper: #e7f0e3;
+  --c-card: #f7fbf5;
+  --c-sunk: #d8e7d2;
+  /* Deep enough to read as ink, green enough to belong to the forest. */
+  --c-ink: #26331f;
+  /* Darker than it looks like it needs to be: at #7f8a70 the secondary lines
+     came in at 3:1 against the paper, which is under the 4.5:1 that small
+     text wants. */
+  --c-muted: #5f7057;
+  --c-line: #c8dcc0;
+  --c-border: #55684d;
+  --c-shadow: rgb(38 51 31 / 0.14);
+  --c-veil: rgb(30 42 26 / 0.45);
 
-  --c-feed: #b5752a;
-  --c-feed-ink: #6d4415;
-  --c-feed-wash: #efe4d1;
+  --c-feed: #cd7397;
+  --c-feed-ink: #8f3f63;
+  --c-feed-wash: #fae3ed;
 
-  --c-sleep: #635ea0;
-  --c-sleep-ink: #3a3766;
-  --c-sleep-wash: #e4e2ec;
+  --c-sleep: #4f8a71;
+  --c-sleep-ink: #2f5b47;
+  --c-sleep-wash: #dcecdf;
 
-  --c-diaper: #38806f;
-  --c-diaper-ink: #234f45;
-  --c-diaper-wash: #dee8e3;
+  --c-diaper: #6f9445;
+  --c-diaper-ink: #4f7029;
+  --c-diaper-wash: #e7f2d5;
 
-  /* A dusty blue: the fourth thing you can log, and the only one that isn't
-     amber, violet or green. */
-  --c-weight: #4a6b8a;
-  --c-weight-ink: #2c4258;
-  --c-weight-wash: #dde4ea;
+  --c-weight: #9c648d;
+  --c-weight-ink: #6c3f61;
+  --c-weight-wash: #f2e3ee;
 
-  --c-danger: #ab5a4c;
-  --c-danger-wash: #f0e0da;
+  --c-danger: #b5564f;
+  --c-danger-wash: #fadedb;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --c-paper: #14130f;
-    --c-card: #1c1b16;
-    --c-sunk: #26241d;
-    --c-ink: #ede8dc;
-    --c-muted: #807d75;
-    --c-line: #2a271f;
-    --c-veil: rgb(0 0 0 / 0.6);
+    --c-paper: #111710;
+    --c-card: #1a2218;
+    --c-sunk: #242e21;
+    --c-ink: #e3ecdc;
+    --c-muted: #8a9a80;
+    --c-line: #2d382a;
+    --c-border: #5a7053;
+    --c-shadow: rgb(0 0 0 / 0.5);
+    --c-veil: rgb(0 0 0 / 0.62);
 
-    --c-feed: #cf9345;
-    --c-feed-ink: #e3bc85;
-    --c-feed-wash: #2c2317;
+    --c-feed: #e79bb8;
+    --c-feed-ink: #f2c3d5;
+    --c-feed-wash: #321f29;
 
-    --c-sleep: #8580c4;
-    --c-sleep-ink: #b6b2dd;
-    --c-sleep-wash: #201e2c;
+    --c-sleep: #7cc0a0;
+    --c-sleep-ink: #a9dcc2;
+    --c-sleep-wash: #16261e;
 
-    --c-diaper: #56a08e;
-    --c-diaper-ink: #8cc4b4;
-    --c-diaper-wash: #16241f;
+    --c-diaper: #a9cc70;
+    --c-diaper-ink: #c9e29d;
+    --c-diaper-wash: #202b16;
 
-    --c-weight: #6d92b5;
-    --c-weight-ink: #9fbcd6;
-    --c-weight-wash: #171f28;
+    --c-weight: #c58fb5;
+    --c-weight-ink: #dcb6d2;
+    --c-weight-wash: #2a1e27;
 
-    --c-danger: #c4756a;
-    --c-danger-wash: #2b1c19;
+    --c-danger: #db877b;
+    --c-danger-wash: #2f1c18;
   }
 }
 
@@ -101,10 +121,16 @@
   --color-danger: var(--c-danger);
   --color-danger-wash: var(--c-danger-wash);
 
-  /* Same stack as the reference app: plain system sans. A rounded face reads
-     as childish, and the spec asked for personality without that. */
+  --color-border: var(--c-border);
+
+  /* Body stays a plain system sans: pixel type at reading sizes is a novelty
+     that wears off by the second 3am feed. */
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto,
     sans-serif;
+
+  /* The 8-bit voice — labels, headers and tabs only, never numbers or body
+     text. Bundled via @fontsource so no runtime font fetch. */
+  --font-pixel: "Silkscreen", "Courier New", monospace;
 }
 
 /* --------------------------------------------------------------------------- */
@@ -132,23 +158,49 @@ button {
   color: inherit;
 }
 
-/* Press feedback: everything tappable dips slightly. Cheap, and it reads as
-   "the tap registered" without waiting for the network. The 0.985 dip and the
-   80ms/160ms timings are the reference app's. */
+/* Press feedback: tappable things sink into their own hard shadow, the way an
+   8-bit button goes down a pixel. Reads as "the tap registered" without
+   waiting for the network. */
 .press {
   transition:
     transform 80ms ease,
+    box-shadow 80ms ease,
     background 160ms ease;
 }
 .press:active {
-  transform: scale(0.985);
+  transform: translate(2px, 2px);
 }
 
-/* A surface: barely lighter than the paper, separated by a hairline rather
-   than a shadow. The reference leans on this for every card and button. */
+/* A surface: card-coloured, a chunky 2px outline, and a hard offset shadow
+   with no blur — the whole pixel look in one class. */
 .panel {
   background: var(--c-card);
-  border: 1px solid var(--c-line);
+  border: 2px solid var(--c-border);
+  box-shadow: 3px 3px 0 var(--c-shadow);
+}
+.panel.press:active {
+  box-shadow: 1px 1px 0 var(--c-shadow);
+}
+
+/* The same chunky outline + shadow for surfaces that aren't card-coloured —
+   the tinted tiles on the Log screen. */
+.chunk {
+  border: 2px solid var(--c-border);
+  box-shadow: 3px 3px 0 var(--c-shadow);
+}
+.chunk.press:active {
+  box-shadow: 1px 1px 0 var(--c-shadow);
+}
+
+/* Every micro-label in the app is set with Tailwind's `uppercase`; hanging the
+   pixel face on that one class rethemes them all — section headers, tile
+   sub-labels, sheet titles — without touching each component. Letter-spacing
+   is neutralised: Silkscreen carries its own pixel gaps, and tracking on top
+   of them tears words apart. */
+.uppercase,
+.font-pixel {
+  font-family: var(--font-pixel);
+  letter-spacing: 0 !important;
 }
 
 .no-scrollbar {
@@ -210,12 +262,155 @@ button {
   animation: breathe 2.8s ease-in-out infinite;
 }
 
+/* ---------------------------------------------------------------------------
+   The forest floor (components/Critters.tsx). Everything below is scenery:
+   a walker drifts across the strip by animating `left` (cheap at this size,
+   and percentages track the container), while its two sprite frames are
+   hard-swapped with steps(1) — the way an 8-bit game animates, and the reason
+   nothing here uses easing.
+--------------------------------------------------------------------------- */
+.critter-strip {
+  /* A pixel grass fringe: solid ground line, sparse blades above it. */
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 7px,
+      var(--c-diaper) 7px 9px,
+      transparent 9px 23px,
+      color-mix(in srgb, var(--c-diaper) 55%, transparent) 23px 25px,
+      transparent 25px 37px
+    ),
+    linear-gradient(var(--c-diaper), var(--c-diaper));
+  background-size:
+    100% 7px,
+    100% 3px;
+  background-position:
+    0 calc(100% - 3px),
+    0 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+@keyframes stroll {
+  from {
+    left: -12%;
+  }
+  to {
+    left: 104%;
+  }
+}
+.stroll {
+  animation: stroll 40s linear infinite;
+}
+
+/* Two stacked frames, hard-swapped. */
+@keyframes frame-a {
+  0%,
+  49.9% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes frame-b {
+  0%,
+  49.9% {
+    opacity: 0;
+  }
+  50%,
+  100% {
+    opacity: 1;
+  }
+}
+.frame-a {
+  animation: frame-a var(--frame-dur, 0.7s) steps(1) infinite;
+}
+.frame-b {
+  animation: frame-b var(--frame-dur, 0.7s) steps(1) infinite;
+}
+
+/* The rabbit's bounce and the butterfly's wander, on top of the drift. */
+@keyframes hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+.hop {
+  animation: hop 0.68s ease-in-out infinite;
+}
+@keyframes flutter {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.flutter {
+  animation: flutter 2.6s ease-in-out infinite;
+}
+
+/* The owl blinks: open nearly always, shut for a beat. */
+@keyframes blink-a {
+  0%,
+  88% {
+    opacity: 1;
+  }
+  89%,
+  96% {
+    opacity: 0;
+  }
+  97%,
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes blink-b {
+  0%,
+  88% {
+    opacity: 0;
+  }
+  89%,
+  96% {
+    opacity: 1;
+  }
+  97%,
+  100% {
+    opacity: 0;
+  }
+}
+.blink-a {
+  animation: blink-a 5.5s steps(1) infinite;
+}
+.blink-b {
+  animation: blink-b 5.5s steps(1) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-sheet,
   .animate-veil,
   .animate-pop,
-  .animate-breathe {
+  .animate-breathe,
+  .stroll,
+  .frame-a,
+  .frame-b,
+  .hop,
+  .flutter,
+  .blink-a,
+  .blink-b {
     animation: none;
+  }
+  /* Frame B sits on top when the swap stops; hide it so each critter shows once. */
+  .frame-b,
+  .blink-b {
+    opacity: 0;
   }
   .press:active {
     transform: none;

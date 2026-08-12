@@ -40,7 +40,7 @@ export default function Sheet({ onClose, title, accent, children }: Props) {
         className="animate-sheet relative max-h-[92vh] overflow-y-auto rounded-t-[24px] border-t border-line bg-card px-5 pt-3"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 22px)" }}
       >
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-line" />
+        <div className="mx-auto mb-4 h-1 w-10 rounded-[8px] bg-line" />
         {title && (
           <h2
             className="mb-4 text-center text-[13px] font-medium uppercase tracking-[0.12em]"

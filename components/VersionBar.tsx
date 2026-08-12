@@ -31,7 +31,7 @@ export default function VersionBar() {
           tick();
           window.location.reload();
         }}
-        className="press mb-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-full text-[13px] font-medium"
+        className="press mb-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-[8px] text-[13px] font-medium"
         // Inline, not `text-white`: globals.css has an unlayered
         // `button { color: inherit }`, and unlayered rules beat Tailwind's
         // layered utilities however specific those are.

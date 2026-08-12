@@ -1,5 +1,6 @@
 "use client";
 
+import { BubbleIcon, MomentIcon } from "@/components/icons";
 import {
   computeTally,
   diaperComparison,
@@ -26,7 +27,7 @@ export default function GrandTally({ data, now }: { data: EventsPayload; now: Da
   if (t.feeds + t.diapers + t.naps === 0) return null;
 
   return (
-    <div className="panel rounded-[20px] p-4">
+    <div className="panel rounded-[10px] p-4">
       <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted">
         The Grand Tally
       </div>
@@ -64,14 +65,16 @@ export default function GrandTally({ data, now }: { data: EventsPayload; now: Da
       </div>
 
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-line pt-2 text-[13px] text-muted">
-        <span>
-          🤢 {t.spitUps.toLocaleString()} spit up{t.spitUps === 1 ? "" : "s"}
+        <span className="flex items-center gap-1">
+          <MomentIcon kind="spit_up" size={16} /> {t.spitUps.toLocaleString()} spit up
+          {t.spitUps === 1 ? "" : "s"}
         </span>
-        <span>
-          😠 {t.fussies.toLocaleString()} fussy spell{t.fussies === 1 ? "" : "s"}
+        <span className="flex items-center gap-1">
+          <MomentIcon kind="fussy" size={16} /> {t.fussies.toLocaleString()} fussy spell
+          {t.fussies === 1 ? "" : "s"}
         </span>
-        <span>
-          💬 {t.notes.toLocaleString()} note{t.notes === 1 ? "" : "s"}
+        <span className="flex items-center gap-1">
+          <BubbleIcon size={16} /> {t.notes.toLocaleString()} note{t.notes === 1 ? "" : "s"}
         </span>
       </div>
     </div>

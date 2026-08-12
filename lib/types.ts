@@ -16,13 +16,6 @@ export const DIAPER_SHORT: Record<DiaperType, string> = {
   massive_blowout: "Blowout",
 };
 
-export const DIAPER_EMOJI: Record<DiaperType, string> = {
-  pee: "💧",
-  poop: "💩",
-  both: "💧💩",
-  massive_blowout: "💥",
-};
-
 export type Feeding = {
   id: string;
   amount_ml: number;
@@ -55,11 +48,6 @@ export type MomentKind = (typeof MOMENT_KINDS)[number];
 export const MOMENT_LABEL: Record<MomentKind, string> = {
   spit_up: "Big spit up",
   fussy: "Fussy fussy",
-};
-
-export const MOMENT_EMOJI: Record<MomentKind, string> = {
-  spit_up: "🤢",
-  fussy: "😠",
 };
 
 /** Which track each one belongs to — spit-ups ride with feeding, fussiness with sleep. */

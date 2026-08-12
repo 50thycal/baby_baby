@@ -100,7 +100,7 @@ export default function WeightField({ value, onChange, accent }: Props) {
 
       <div className="relative mt-2">
         <div
-          className="pointer-events-none absolute left-1/2 top-1 z-10 h-9 w-[3px] -translate-x-1/2 rounded-full"
+          className="pointer-events-none absolute left-1/2 top-1 z-10 h-9 w-[3px] -translate-x-1/2 rounded-[8px]"
           style={{ background: accent ?? "var(--c-ink)" }}
         />
         <div
@@ -122,7 +122,7 @@ export default function WeightField({ value, onChange, accent }: Props) {
                 style={{ width: ITEM_W }}
               >
                 <div
-                  className="w-[2px] rounded-full bg-line"
+                  className="w-[2px] rounded-[8px] bg-line"
                   style={{ height: isPound ? 30 : isHalf ? 22 : 14 }}
                 />
                 {/* Absolute so a label can overhang its 20px detent. */}
@@ -155,7 +155,7 @@ function Chip({ children, onClick }: { children: React.ReactNode; onClick: () =>
     <button
       type="button"
       onClick={onClick}
-      className="press h-10 min-w-14 rounded-full bg-sunk px-3 text-sm font-medium text-muted"
+      className="press h-10 min-w-14 rounded-[8px] bg-sunk px-3 text-sm font-medium text-muted"
     >
       {children}
     </button>

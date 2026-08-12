@@ -309,11 +309,31 @@ today" — at 9am a rolling window is still mostly yesterday. It is now anchored
   alarming by construction is a number people stop reading.
 - The line underneath is **all of yesterday** — the figure to end up near.
 
-**Advanced** overlays today's cumulative curve on yesterday's for feeding, sleep
-and dirty diapers, so you can see *where* in the day a difference opened up
-rather than just its size. Yesterday is drawn complete; today stops at the
-current time, because running it flat to the right edge would read as "she
-stopped".
+**Advanced** is two questions stacked.
+
+*How is today going* — today's cumulative curve laid over the days before it,
+for feeding, sleep and dirty diapers, so you can see **where** in the day a
+difference opened up rather than just its size. One **Compare with** toggle at
+the top drives all three charts: yesterday, two days, three days, or the past
+week. Older days fade, so the stack reads as recency rather than as a set of
+equal peers, and they share one legend key — seven keys would take more room
+than the chart. Past days are drawn complete; today stops at the current time,
+because running it flat to the right edge would read as "she stopped".
+
+*Which way is this heading* — **Day by day**, one finished day's total per
+point over a week, a fortnight or everything, with a least-squares line fitted
+through it. Today is left out, the same rule the averages follow: it's partial
+by definition, and a trend drawn through it would report a dip every morning.
+
+The direction is only stated once it has earned it. A fitted line always has
+*some* slope, so without a test every chart announces a trend and an ordinary
+run of days reads as a decline. The rule is that the whole fitted move has to be
+at least as big as the standard deviation of the days it was drawn through —
+which scales with the metric, so there's no per-chart threshold to tune, and a
+noisy count is held to a higher bar than a steady one. Below that it says
+"holding steady", because that's what it is. In practice this is the difference
+between the diaper chart claiming "down 0.1 a day" from pure scatter and
+saying nothing at all.
 
 Underneath are averages over **whole days only**. Today is partial by
 definition, and folding half a day into a per-day mean drags every figure down.
@@ -460,19 +480,63 @@ they're driven from the harness rather than checked in.
 
 ## Visual direction
 
-The palette, typography and control language come from the **MBT Awareness
-Loop** app (`50thycal/mbt-app-pilot`): warm paper instead of white, low-contrast
-warm greys, cards barely lighter than the background with a hairline border
-doing the separating, plain system sans at light weights, uppercase eyebrow
-labels, and a 0.985 press dip. Radii and spacing follow it too.
+Woodland critters in soft green and pink, drawn like an 8-bit game — the
+Stardew Valley *style*, not its theme. It shows up in four places:
 
-The deliberate divergence is colour. The reference is monochrome because it has
-a single action; this app has three that need telling apart at a glance in the
-dark, so FEED / SLEEP / DIAPER each carry an accent — desaturated into the same
-earthy family so they sit inside that world rather than shouting over it. The
-emoji supply the personality the spec asked for; the type doesn't have to.
+**The symbols** (`lib/sprites.ts`, `components/icons.tsx`). Every icon is a
+hand-placed 16×16 pixel sprite of the *thing itself*: a bottle for feeding, a
+crescent moon for sleep (Zs drift off it while she's asleep), an actual diaper
+for diapers, a scale for weight, an arc of milk for spit-ups, a little storm
+cloud for fussy spells, droplet/poop/burst for the diaper types. Items rather
+than faces — a bottle says "feed" the way no animal can. Sprites are stored as
+string grids — pixel art lives or dies by individual pixels, and a string grid
+is the only representation you can proofread — and rendered as SVG rects
+(`components/PixelIcon.tsx`), so they scale crisply to any size with no binary
+assets in the repo. `tests/sprites.test.ts` checks every grid is exactly
+16×16, ASCII only, and names no colour its palette doesn't define — a Cyrillic
+**о** posing as a Latin **o** renders as a magenta missing-colour pixel, and
+that class of bug is invisible in source (it caught exactly this, twice).
 
-Every token is in one block at the top of `app/globals.css`.
+**The critters** (`components/Critters.tsx`). The woodland lives on the forest
+floor, not on the buttons: a grass strip at the bottom of the Log screen and
+below the Grand Tally where a fox trots one way, a rabbit hops the other, a
+hedgehog trundles along behind, a butterfly wanders overhead, and an owl sits
+at the edge and blinks. All of it is CSS keyframes — two sprite frames
+hard-swapped with `steps(1)`, the way an 8-bit game animates, drifting across
+the strip with negative delays so everyone is mid-stroll when the screen
+opens. Nothing re-renders, nothing ticks, and `prefers-reduced-motion` parks
+everyone where they stand. The critters keep natural fur colours on purpose:
+tinted to the palette they'd stop reading as critters.
+
+**The palette** (`app/globals.css`, one token block). The two modes are tuned
+independently rather than one being an inversion of the other, because they're
+used at different times of day for different reasons. Light is the one that
+gets looked at: a pale, clean green — closer to new leaves than to sage — with
+pink carrying the accents. Dark is a proper night forest, deeper and richer,
+where the accents have to glow a little to stay legible at 3am with the lights
+off. Four accents, two per family so no two ever blur together: feed rose pink,
+sleep the cooler soft pine, diaper the warmer fresh leaf, weight the deeper
+dusty mauve.
+
+Every foreground/background pair that actually occurs in the UI is checked
+against a real WCAG contrast ratio rather than by eye — the harness renders
+both palettes as swatches with computed ratios and fails loudly on anything
+under target. It has caught two values that looked perfectly fine: `--c-muted`
+at 3:1 against the paper (secondary text wants 4.5), and the dark mode outline
+at 2.6:1.
+
+**The chrome.** Chunky 2px outlines, hard offset shadows with no blur (a
+blurred shadow is the one thing pixel art can never have), and tight radii.
+Pressing something translates it into its own shadow, the way an 8-bit button
+goes down a pixel.
+
+**The type.** Labels, headers and tabs are set in Silkscreen (bundled via
+`@fontsource`, no runtime fetch), hung off the one class every micro-label
+already shares. Numbers and body text stay system sans — pixel type at reading
+sizes is a novelty that wears off by the second 3am feed.
+
+The app icon is the fox on deep pine, generated from the same sprite data —
+`app/icon.svg` and `app/apple-icon.tsx` both draw from `lib/sprites.ts`.
 
 ## Notes
 

@@ -1,17 +1,31 @@
 "use client";
 
 /**
- * Today's running total laid over yesterday's.
+ * Today's running total laid over the days before it.
  *
- * Both lines start at midnight, so the vertical gap between them at any point
- * is "how far ahead or behind she is versus this time yesterday" — the same
- * question the summary card answers with one number, but you can see where in
- * the day the difference opened up.
+ * Every line starts at midnight, so the vertical gap between today and any
+ * past day is "how far ahead or behind she is versus that point in that day" —
+ * the same question the summary card answers with one number, but you can see
+ * where in the day the difference opened up.
  *
- * Yesterday is drawn as a complete curve, today stops at the current time.
+ * Past days are drawn as complete curves; today stops at the current time.
  * Continuing today's line flat to the right edge would read as "she stopped",
  * which isn't what a partial day means.
+ *
+ * With several past days the older ones fade, so the eye reads the stack as
+ * recency rather than as a set of equal peers. They also share one legend key
+ * rather than getting one each: seven keys would take more room than the chart.
  */
+
+/**
+ * How visible a past day is, by age. The newest keeps the weight yesterday
+ * always had; the oldest stays above 0.2 so a week's worth is still a legible
+ * band rather than a smudge fading into the gridlines.
+ */
+function fade(age: number, total: number): number {
+  if (total <= 1) return 0.8;
+  return 0.8 - (age / (total - 1)) * 0.55;
+}
 
 const W = 320;
 const H = 132;
@@ -63,7 +77,7 @@ function Swatch({
 
 export default function CumulativeChart({
   today,
-  yesterday,
+  previous,
   elapsedFraction,
   color,
   format,
@@ -72,7 +86,8 @@ export default function CumulativeChart({
   markLabel,
 }: {
   today: number[];
-  yesterday: number[];
+  /** Finished days, most recent first. */
+  previous: number[][];
   /** How far through the day we are, 0–1. Today's line stops here. */
   elapsedFraction: number;
   color: string;
@@ -82,7 +97,7 @@ export default function CumulativeChart({
   marks?: number[];
   markLabel?: string;
 }) {
-  const peak = Math.max(1, ...today, ...yesterday);
+  const peak = Math.max(1, ...today, ...previous.flat());
   const plotW = W - PAD_L - PAD_R;
   const plotH = H - PAD_T - PAD_B;
 
@@ -100,7 +115,7 @@ export default function CumulativeChart({
   const lastY = y(today[todayCutoff - 1] ?? 0);
 
   return (
-    <div className="panel rounded-[20px] p-3">
+    <div className="panel rounded-[10px] p-3">
       <div className="mb-1 flex items-baseline justify-between gap-2">
         <span
           className="truncate text-[11px] font-medium uppercase tracking-[0.12em]"
@@ -118,10 +133,12 @@ export default function CumulativeChart({
             <Swatch color={color} />
             today
           </span>
-          <span className="flex items-center gap-1">
-            <Swatch color="var(--c-muted)" dash="3 3" opacity={0.8} />
-            yesterday
-          </span>
+          {previous.length > 0 && (
+            <span className="flex items-center gap-1">
+              <Swatch color="var(--c-muted)" dash="3 3" opacity={0.8} />
+              {previous.length === 1 ? "yesterday" : `past ${previous.length} days`}
+            </span>
+          )}
           {markLabel && marks.length > 0 && (
             <span className="flex items-center gap-1">
               <Swatch color={color} dash="2 2" opacity={0.55} vertical />
@@ -171,15 +188,23 @@ export default function CumulativeChart({
           />
         ))}
 
-        <path
-          d={path(yesterday)}
-          fill="none"
-          stroke="var(--c-muted)"
-          strokeWidth={1.5}
-          strokeDasharray="3 3"
-          opacity={0.8}
-          strokeLinejoin="round"
-        />
+        {/* Oldest first, so the most recent past day is drawn last and sits on
+            top of the fainter ones. */}
+        {previous
+          .map((series, i) => ({ series, age: i }))
+          .reverse()
+          .map(({ series, age }) => (
+            <path
+              key={age}
+              d={path(series)}
+              fill="none"
+              stroke="var(--c-muted)"
+              strokeWidth={1.5}
+              strokeDasharray="3 3"
+              opacity={fade(age, previous.length)}
+              strokeLinejoin="round"
+            />
+          ))}
         <path
           d={path(today, todayCutoff)}
           fill="none"

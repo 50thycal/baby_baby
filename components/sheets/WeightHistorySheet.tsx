@@ -53,7 +53,7 @@ export default function WeightHistorySheet({ weights, onClose }: { weights: Weig
               key={row.id}
               type="button"
               onClick={() => setEditing(row)}
-              className="panel press flex items-baseline justify-between gap-3 rounded-[18px] px-4 py-3 text-left"
+              className="panel press flex items-baseline justify-between gap-3 rounded-[10px] px-4 py-3 text-left"
             >
               <span className="flex min-w-0 flex-col">
                 <span className="text-[17px] font-semibold tabular-nums">

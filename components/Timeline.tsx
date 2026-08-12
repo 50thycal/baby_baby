@@ -4,11 +4,10 @@ import { useEffect, useMemo, useRef } from "react";
 import { clipSleep } from "@/lib/summary";
 import { scaleFor, timelineWindow } from "@/lib/timeline-scale";
 import { fmtClock, fmtDuration, HOUR } from "@/lib/time";
+import { BubbleIcon, DiaperIcon, MomentIcon } from "@/components/icons";
 import {
-  DIAPER_EMOJI,
   DIAPER_LABEL,
   MOMENT_ACCENT,
-  MOMENT_EMOJI,
   MOMENT_LABEL,
   type EventsPayload,
   type Moment,
@@ -90,7 +89,7 @@ export default function Timeline({
   const maxFeed = Math.max(100, ...data.feedings.map((f) => f.amount_ml));
 
   return (
-    <div className="panel rounded-[20px] p-3">
+    <div className="panel rounded-[10px] p-3">
       <div className="flex">
         <div className="shrink-0" style={{ width: GUTTER }}>
           {TRACKS.map((track) => (
@@ -126,7 +125,7 @@ export default function Timeline({
                       </span>
                     )}
                     <span
-                      className="w-2.5 rounded-full bg-feed"
+                      className="w-2.5 rounded-[2px] bg-feed"
                       style={{ height }}
                     />
                   </button>
@@ -158,7 +157,7 @@ export default function Timeline({
                   <button
                     key={s.id}
                     onClick={() => onSelect({ kind: "sleep", data: s })}
-                    className={`absolute flex items-center justify-center overflow-hidden rounded-xl bg-sleep px-1 ${
+                    className={`absolute flex items-center justify-center overflow-hidden rounded-[4px] bg-sleep px-1 ${
                       active ? "animate-breathe" : ""
                     }`}
                     style={{ left, width: blockWidth, top: MOMENT_LANE + 2, bottom: 6 }}
@@ -195,8 +194,8 @@ export default function Timeline({
                   style={{ left: x(new Date(d.ts).getTime()) - 13, width: 26 }}
                   aria-label={`${DIAPER_LABEL[d.type]} at ${fmtClock(d.ts)}`}
                 >
-                  <span className={d.type === "both" ? "text-[11px]" : "text-[17px]"} aria-hidden>
-                    {DIAPER_EMOJI[d.type]}
+                  <span aria-hidden>
+                    <DiaperIcon type={d.type} size={d.type === "both" ? 24 : 18} />
                   </span>
                 </button>
               ))}
@@ -213,8 +212,8 @@ export default function Timeline({
                   style={{ left: x(new Date(c.ts).getTime()) - 12, width: 24 }}
                   aria-label={`Note: ${c.text}`}
                 >
-                  <span className="text-[15px]" aria-hidden>
-                    💬
+                  <span aria-hidden>
+                    <BubbleIcon size={16} />
                   </span>
                 </button>
               ))}
@@ -239,7 +238,7 @@ export default function Timeline({
               <button
                 aria-label="Pick a moment to comment on"
                 onClick={(e) => pickTimeAt(e.clientX)}
-                className="absolute inset-x-0 top-0 rounded-2xl border-2 border-dashed border-sleep/70 bg-sleep/5"
+                className="absolute inset-x-0 top-0 rounded-[10px] border-2 border-dashed border-sleep/70 bg-sleep/5"
                 style={{ height: trackAreaHeight() }}
               />
             )}
@@ -308,7 +307,7 @@ function MomentMark({
       style={{ left: left - 8, width: 16 }}
     >
       <span
-        className="absolute left-1/2 w-px -translate-x-1/2 rounded-full"
+        className="absolute left-1/2 w-px -translate-x-1/2 rounded-[8px]"
         style={{
           top: MOMENT_LANE,
           bottom: 0,
@@ -340,7 +339,9 @@ function MomentMark({
         onPointerCancel={cancel}
         onPointerLeave={cancel}
       >
-        <span aria-hidden>{MOMENT_EMOJI[moment.kind]}</span>
+        <span className="inline-block" aria-hidden>
+          <MomentIcon kind={moment.kind} size={14} />
+        </span>
       </button>
     </span>
   );

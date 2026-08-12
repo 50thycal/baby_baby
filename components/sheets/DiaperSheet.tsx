@@ -7,7 +7,8 @@ import TimeField from "@/components/TimeField";
 import { useToast } from "@/components/Toaster";
 import { send } from "@/lib/api";
 import { tick } from "@/lib/haptics";
-import { DIAPER_EMOJI, DIAPER_LABEL, DIAPER_TYPES, type DiaperType } from "@/lib/types";
+import { DiaperIcon } from "@/components/icons";
+import { DIAPER_LABEL, DIAPER_TYPES, type DiaperType } from "@/lib/types";
 
 export default function DiaperSheet({ onClose }: { onClose: () => void }) {
   const base = useRef(new Date()).current;
@@ -62,15 +63,15 @@ export function DiaperPicker({
             type="button"
             onClick={() => onChange(t)}
             aria-pressed={selected}
-            className="press flex h-28 flex-col items-center justify-center gap-1.5 rounded-[18px] border transition-colors"
+            className="press flex h-28 flex-col items-center justify-center gap-1.5 rounded-[10px] border transition-colors"
             style={{
               background: selected ? "var(--c-diaper)" : "var(--c-diaper-wash)",
               borderColor: selected ? "var(--c-diaper)" : "transparent",
               color: selected ? "#fff" : "var(--c-diaper-ink)",
             }}
           >
-            <span className="text-3xl leading-none" aria-hidden>
-              {DIAPER_EMOJI[t]}
+            <span className="leading-none" aria-hidden>
+              <DiaperIcon type={t} size={36} />
             </span>
             <span className="px-2 text-center text-[15px] font-medium leading-tight">
               {DIAPER_LABEL[t]}

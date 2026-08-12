@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { PAPER, PAPER_DARK } from "@/lib/palette";
+import "@fontsource/silkscreen";
 import "./globals.css";
 
 export const metadata: Metadata = {

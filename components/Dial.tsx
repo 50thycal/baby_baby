@@ -178,7 +178,7 @@ function NudgeButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="press h-12 w-20 rounded-2xl bg-feed-wash text-lg font-medium text-feed-ink disabled:opacity-35"
+      className="press h-12 w-20 rounded-[10px] bg-feed-wash text-lg font-medium text-feed-ink disabled:opacity-35"
     >
       {label}
     </button>

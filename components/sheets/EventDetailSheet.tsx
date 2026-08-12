@@ -10,10 +10,10 @@ import { useToast } from "@/components/Toaster";
 import { DiaperPicker } from "@/components/sheets/DiaperSheet";
 import { send } from "@/lib/api";
 import { fmtDuration } from "@/lib/time";
+import { MomentIcon } from "@/components/icons";
 import {
   DIAPER_LABEL,
   MOMENT_ACCENT,
-  MOMENT_EMOJI,
   MOMENT_LABEL,
   type DiaperType,
   type TimelineEvent,
@@ -221,7 +221,7 @@ function EditComment({
         onChange={(e) => setText(e.target.value)}
         maxLength={280}
         rows={3}
-        className="w-full resize-none rounded-[18px] bg-sunk p-4 text-lg font-medium outline-none focus:ring-2 focus:ring-ink/20"
+        className="w-full resize-none rounded-[10px] bg-sunk p-4 text-lg font-medium outline-none focus:ring-2 focus:ring-ink/20"
       />
       <TimeField value={ts} onChange={setTs} base={original} />
       <ConfirmButton
@@ -263,8 +263,8 @@ function EditMoment({
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className="text-5xl" aria-hidden>
-        {MOMENT_EMOJI[event.kind]}
+      <div aria-hidden>
+        <MomentIcon kind={event.kind} size={56} />
       </div>
       <TimeField value={ts} onChange={setTs} base={original} accent={accent} label="When" />
       <ConfirmButton

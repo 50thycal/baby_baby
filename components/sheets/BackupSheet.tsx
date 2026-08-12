@@ -83,17 +83,17 @@ export default function BackupSheet({ onClose }: { onClose: () => void }) {
           type="button"
           onClick={backUpNow}
           disabled={busy}
-          className="panel press h-12 rounded-full text-[15px] font-medium disabled:opacity-60"
+          className="panel press h-12 rounded-[8px] text-[15px] font-medium disabled:opacity-60"
         >
           Back up now
         </button>
 
         {error && (
-          <p className="rounded-2xl bg-danger-wash px-4 py-3 text-center text-sm font-medium text-danger">
+          <p className="rounded-[10px] bg-danger-wash px-4 py-3 text-center text-sm font-medium text-danger">
             {error}
           </p>
         )}
-        {!rows && !error && <div className="h-32 animate-pulse rounded-[18px] bg-sunk" />}
+        {!rows && !error && <div className="h-32 animate-pulse rounded-[10px] bg-sunk" />}
         {rows?.length === 0 && (
           <p className="py-6 text-center text-sm text-muted">
             No backups yet — one is taken the first time anything is logged.
@@ -104,7 +104,7 @@ export default function BackupSheet({ onClose }: { onClose: () => void }) {
           const when = new Date(row.taken_at);
           const isConfirming = confirming === row.id;
           return (
-            <div key={row.id} className="panel flex flex-col gap-2 rounded-[18px] p-3">
+            <div key={row.id} className="panel flex flex-col gap-2 rounded-[10px] p-3">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="text-[15px] font-medium">
                   {when.toLocaleString([], {
@@ -134,7 +134,7 @@ export default function BackupSheet({ onClose }: { onClose: () => void }) {
                     type="button"
                     onClick={() => setConfirming(null)}
                     disabled={busy}
-                    className="press h-11 flex-1 rounded-full bg-sunk text-[15px] font-medium"
+                    className="press h-11 flex-1 rounded-[8px] bg-sunk text-[15px] font-medium"
                   >
                     Cancel
                   </button>
@@ -142,7 +142,7 @@ export default function BackupSheet({ onClose }: { onClose: () => void }) {
                     type="button"
                     onClick={() => restore(row.id)}
                     disabled={busy}
-                    className="press h-11 flex-1 rounded-full bg-danger text-[15px] font-medium disabled:opacity-60"
+                    className="press h-11 flex-1 rounded-[8px] bg-danger text-[15px] font-medium disabled:opacity-60"
                     // See DeleteButton: `text-white` loses to the unlayered
                     // `button { color: inherit }` in globals.css.
                     style={{ color: "#fff" }}
@@ -154,14 +154,14 @@ export default function BackupSheet({ onClose }: { onClose: () => void }) {
                 <div className="flex gap-2">
                   <a
                     href={`/api/snapshots/${row.id}?download=1`}
-                    className="press flex h-11 flex-1 items-center justify-center rounded-full bg-sunk text-[15px] font-medium text-muted"
+                    className="press flex h-11 flex-1 items-center justify-center rounded-[8px] bg-sunk text-[15px] font-medium text-muted"
                   >
                     Download
                   </a>
                   <button
                     type="button"
                     onClick={() => setConfirming(row.id)}
-                    className="press h-11 flex-1 rounded-full bg-sunk text-[15px] font-medium"
+                    className="press h-11 flex-1 rounded-[8px] bg-sunk text-[15px] font-medium"
                   >
                     Restore
                   </button>

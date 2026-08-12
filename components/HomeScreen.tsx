@@ -6,13 +6,15 @@ import DiaperSheet from "@/components/sheets/DiaperSheet";
 import FeedSheet from "@/components/sheets/FeedSheet";
 import ImportSheet from "@/components/sheets/ImportSheet";
 import SleepSheet from "@/components/sheets/SleepSheet";
+import CritterStrip from "@/components/Critters";
+import { BottleIcon, MoonIcon, NappyIcon, ScaleIcon } from "@/components/icons";
 import WeightSheet from "@/components/sheets/WeightSheet";
 import { useEvents, useHomeState, useWeights } from "@/lib/api";
 import { fmtWeight } from "@/lib/weight";
 import { nextFeedWindow, wakeWindow } from "@/lib/predict";
 import { useNow } from "@/lib/useNow";
 import { fmtAgo, fmtClock, fmtDuration } from "@/lib/time";
-import { DIAPER_EMOJI, DIAPER_SHORT, type EventsPayload, type HomeState } from "@/lib/types";
+import { DIAPER_SHORT, type EventsPayload, type HomeState } from "@/lib/types";
 
 type Which = "feed" | "sleep" | "diaper" | "weight" | "import" | "backups" | null;
 
@@ -37,7 +39,7 @@ export default function HomeScreen() {
       <div className="flex flex-1 flex-col gap-3">
         <ActionTile
           label="FEED"
-          emoji="🍼"
+          icon={<BottleIcon size={44} />}
           accent="var(--c-feed)"
           wash="var(--c-feed-wash)"
           ink="var(--c-feed-ink)"
@@ -48,7 +50,7 @@ export default function HomeScreen() {
         {asleep ? (
           <ActionTile
             label="SLEEPING"
-            emoji="😴"
+            icon={<MoonIcon size={44} zzz />}
             accent="var(--c-sleep)"
             wash="var(--c-sleep)"
             ink="#fff"
@@ -59,7 +61,7 @@ export default function HomeScreen() {
         ) : (
           <ActionTile
             label="SLEEP"
-            emoji="🌙"
+            icon={<MoonIcon size={44} />}
             accent="var(--c-sleep)"
             wash="var(--c-sleep-wash)"
             ink="var(--c-sleep-ink)"
@@ -74,7 +76,7 @@ export default function HomeScreen() {
 
         <ActionTile
           label="DIAPER"
-          emoji="🧷"
+          icon={<NappyIcon size={44} />}
           accent="var(--c-diaper)"
           wash="var(--c-diaper-wash)"
           ink="var(--c-diaper-ink)"
@@ -90,21 +92,20 @@ export default function HomeScreen() {
       <button
         type="button"
         onClick={() => setOpen("weight")}
-        className="press flex h-14 shrink-0 items-center justify-center gap-3 rounded-full border text-[15px] font-medium"
+        className="chunk press flex h-14 shrink-0 items-center justify-center gap-3 rounded-[8px] text-[15px] font-medium"
         style={{
           background: "var(--c-weight-wash)",
           color: "var(--c-weight-ink)",
-          borderColor: "var(--c-weight)",
         }}
       >
-        <span className="text-xl leading-none" aria-hidden>
-          ⚖️
-        </span>
+        <ScaleIcon size={26} />
         <span className="font-semibold uppercase tracking-[0.08em]">Weight</span>
         {lastWeight && (
           <span className="opacity-75">· {fmtWeight(lastWeight.weight_g)}</span>
         )}
       </button>
+
+      <CritterStrip />
 
       {/* Deliberately small and quiet: both are rare, deliberate errands and
           must never compete with the three things done at 3am. */}
@@ -158,13 +159,13 @@ function StatusStrip({
 }) {
   if (error) {
     return (
-      <p className="rounded-2xl bg-danger-wash px-4 py-3 text-center text-sm font-medium text-danger">
+      <p className="rounded-[10px] bg-danger-wash px-4 py-3 text-center text-sm font-medium text-danger">
         Can&apos;t reach the database right now.
       </p>
     );
   }
   if (!state) {
-    return <div className="h-[76px] animate-pulse rounded-2xl bg-sunk" />;
+    return <div className="h-[76px] animate-pulse rounded-[10px] bg-sunk" />;
   }
 
   const asleep = state.activeSleep;
@@ -218,7 +219,7 @@ function StatusStrip({
         label="Last diaper"
         value={
           state.lastDiaper
-            ? `${fmtAgo(state.lastDiaper.ts, now)} — ${DIAPER_EMOJI[state.lastDiaper.type]} ${DIAPER_SHORT[state.lastDiaper.type]}`
+            ? `${fmtAgo(state.lastDiaper.ts, now)} — ${DIAPER_SHORT[state.lastDiaper.type]}`
             : "nothing logged yet"
         }
       />
@@ -250,7 +251,7 @@ function StatusLine({
 
 function ActionTile({
   label,
-  emoji,
+  icon,
   accent,
   wash,
   ink,
@@ -259,7 +260,7 @@ function ActionTile({
   onClick,
 }: {
   label: string;
-  emoji: string;
+  icon: React.ReactNode;
   accent: string;
   wash: string;
   ink: string;
@@ -267,21 +268,31 @@ function ActionTile({
   filled?: boolean;
   onClick: () => void;
 }) {
-  // The accent lives in the hairline itself rather than a stripe down the edge:
-  // the reference separates everything with a border, never a shadow or a bar.
+  // The icon sits in its own outlined slot, the way an item sits in an
+  // inventory square. It gives the symbol somewhere to be — without it the
+  // sprite floated in the wash with the label a long way off to the right.
   return (
     <button
       type="button"
       onClick={onClick}
-      className="press relative flex min-h-[104px] flex-1 items-center gap-4 overflow-hidden rounded-[20px] border px-6 text-left"
+      className="chunk press relative flex min-h-[100px] flex-1 items-center gap-4 overflow-hidden rounded-[10px] px-5 text-left"
       style={{ background: wash, color: ink, borderColor: accent }}
     >
-      <span className={`text-4xl leading-none ${filled ? "animate-breathe" : ""}`} aria-hidden>
-        {emoji}
+      <span
+        className={`flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-[8px] ${
+          filled ? "animate-breathe" : ""
+        }`}
+        style={{
+          background: "color-mix(in srgb, var(--c-card) 62%, transparent)",
+          border: `2px solid color-mix(in srgb, ${accent} 40%, transparent)`,
+        }}
+        aria-hidden
+      >
+        {icon}
       </span>
-      <span className="flex min-w-0 flex-col">
-        <span className="text-3xl font-semibold tracking-[-0.01em]">{label}</span>
-        {detail && <span className="truncate text-[13px] font-normal opacity-75">{detail}</span>}
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="font-pixel text-2xl font-semibold">{label}</span>
+        {detail && <span className="truncate text-[13px] font-normal opacity-80">{detail}</span>}
       </span>
     </button>
   );
