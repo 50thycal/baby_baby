@@ -309,11 +309,31 @@ today" — at 9am a rolling window is still mostly yesterday. It is now anchored
   alarming by construction is a number people stop reading.
 - The line underneath is **all of yesterday** — the figure to end up near.
 
-**Advanced** overlays today's cumulative curve on yesterday's for feeding, sleep
-and dirty diapers, so you can see *where* in the day a difference opened up
-rather than just its size. Yesterday is drawn complete; today stops at the
-current time, because running it flat to the right edge would read as "she
-stopped".
+**Advanced** is two questions stacked.
+
+*How is today going* — today's cumulative curve laid over the days before it,
+for feeding, sleep and dirty diapers, so you can see **where** in the day a
+difference opened up rather than just its size. One **Compare with** toggle at
+the top drives all three charts: yesterday, two days, three days, or the past
+week. Older days fade, so the stack reads as recency rather than as a set of
+equal peers, and they share one legend key — seven keys would take more room
+than the chart. Past days are drawn complete; today stops at the current time,
+because running it flat to the right edge would read as "she stopped".
+
+*Which way is this heading* — **Day by day**, one finished day's total per
+point over a week, a fortnight or everything, with a least-squares line fitted
+through it. Today is left out, the same rule the averages follow: it's partial
+by definition, and a trend drawn through it would report a dip every morning.
+
+The direction is only stated once it has earned it. A fitted line always has
+*some* slope, so without a test every chart announces a trend and an ordinary
+run of days reads as a decline. The rule is that the whole fitted move has to be
+at least as big as the standard deviation of the days it was drawn through —
+which scales with the metric, so there's no per-chart threshold to tune, and a
+noisy count is held to a higher bar than a steady one. Below that it says
+"holding steady", because that's what it is. In practice this is the difference
+between the diaper chart claiming "down 0.1 a day" from pure scatter and
+saying nothing at all.
 
 Underneath are averages over **whole days only**. Today is partial by
 definition, and folding half a day into a per-day mean drags every figure down.

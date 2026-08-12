@@ -120,6 +120,114 @@ export function cumulativeSeries(
   return points;
 }
 
+export type DailyPoint = { dayStart: number; value: number };
+
+/**
+ * One finished day's total per point, oldest first.
+ *
+ * Today is deliberately absent. It is partial by definition, so plotting it
+ * would put a dip at the right-hand end of every chart every single morning,
+ * and a trend fitted through that dip would report a decline that isn't real.
+ * The same rule the averages panel already follows.
+ *
+ * `days` is a cap, not a promise: a database three days old returns three
+ * points however far back you ask.
+ */
+export function dailyTotals(
+  data: EventsPayload,
+  metric: Metric,
+  now: Date,
+  days: number | "all",
+): DailyPoint[] {
+  const todayStart = startOfDay(now).getTime();
+
+  const earliest = [
+    ...data.feedings.map((f) => new Date(f.ts).getTime()),
+    ...data.sleep.map((s) => new Date(s.sleep_start).getTime()),
+    ...data.diapers.map((d) => new Date(d.ts).getTime()),
+  ].sort((a, b) => a - b)[0];
+  if (earliest === undefined) return [];
+
+  const firstDay = startOfDay(new Date(earliest)).getTime();
+  const available = Math.round((todayStart - firstDay) / 86_400_000);
+  if (available < 1) return [];
+
+  const wanted = days === "all" ? available : Math.min(days, available);
+
+  const points: DailyPoint[] = [];
+  for (let i = wanted; i >= 1; i--) {
+    // Built with addDays rather than by subtracting milliseconds so the points
+    // stay on local midnight across a daylight-saving change.
+    const from = addDays(now, -i).getTime();
+    const to = addDays(now, -i + 1).getTime();
+    points.push({ dayStart: from, value: metricValue(totalsBetween(data, from, to), metric) });
+  }
+  return points;
+}
+
+export type Trend = {
+  /** Change per day, in the metric's own unit. */
+  slope: number;
+  /** Fitted value at the first and last point — the line to draw. */
+  from: number;
+  to: number;
+  /**
+   * Whether the direction is worth saying out loud: is the whole fitted move
+   * bigger than the day-to-day scatter it was drawn through?
+   *
+   * A least-squares line always has *some* slope, so without this every chart
+   * announces a direction, and a run of ordinary days reads as a decline. The
+   * comparison is against the standard deviation of the values themselves,
+   * which means it scales with the metric — no per-chart threshold to tune,
+   * and a noisy count is held to a higher bar than a steady one.
+   */
+  significant: boolean;
+};
+
+/**
+ * Least-squares fit through the daily totals.
+ *
+ * Ordinary regression rather than a moving average: with a week of points a
+ * moving average is nearly the raw line, and the question being asked here is
+ * "which way is this going", which is exactly what a slope answers.
+ *
+ * Fewer than three points has no trend worth stating — two points always make
+ * a perfectly straight line, and drawing one would dress noise up as direction.
+ */
+export function linearFit(points: DailyPoint[]): Trend | null {
+  if (points.length < 3) return null;
+
+  const n = points.length;
+  const xs = points.map((_, i) => i);
+  const ys = points.map((p) => p.value);
+  const meanX = xs.reduce((a, b) => a + b, 0) / n;
+  const meanY = ys.reduce((a, b) => a + b, 0) / n;
+
+  let num = 0;
+  let den = 0;
+  for (let i = 0; i < n; i++) {
+    num += (xs[i] - meanX) * (ys[i] - meanY);
+    den += (xs[i] - meanX) ** 2;
+  }
+  if (den === 0) return null;
+
+  const slope = num / den;
+  const intercept = meanY - slope * meanX;
+
+  const variance = ys.reduce((sum, y) => sum + (y - meanY) ** 2, 0) / n;
+  const spread = Math.sqrt(variance);
+  const move = Math.abs(slope * (n - 1));
+
+  return {
+    slope,
+    from: intercept,
+    to: intercept + slope * (n - 1),
+    // A perfectly flat series has no scatter and no slope; that's steady, not
+    // significant, so the `> 0` guard keeps 0 >= 0 from claiming a direction.
+    significant: move > 0 && move >= spread,
+  };
+}
+
 export type Stats = {
   days: number;
   feedsPerDay: number | null;
