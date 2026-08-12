@@ -268,21 +268,31 @@ function ActionTile({
   filled?: boolean;
   onClick: () => void;
 }) {
-  // The accent lives in the hairline itself rather than a stripe down the edge:
-  // the reference separates everything with a border, never a shadow or a bar.
+  // The icon sits in its own outlined slot, the way an item sits in an
+  // inventory square. It gives the symbol somewhere to be — without it the
+  // sprite floated in the wash with the label a long way off to the right.
   return (
     <button
       type="button"
       onClick={onClick}
-      className="chunk press relative flex min-h-[104px] flex-1 items-center gap-4 overflow-hidden rounded-[10px] px-6 text-left"
+      className="chunk press relative flex min-h-[100px] flex-1 items-center gap-4 overflow-hidden rounded-[10px] px-5 text-left"
       style={{ background: wash, color: ink, borderColor: accent }}
     >
-      <span className={`leading-none ${filled ? "animate-breathe" : ""}`} aria-hidden>
+      <span
+        className={`flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-[8px] ${
+          filled ? "animate-breathe" : ""
+        }`}
+        style={{
+          background: "color-mix(in srgb, var(--c-card) 62%, transparent)",
+          border: `2px solid color-mix(in srgb, ${accent} 40%, transparent)`,
+        }}
+        aria-hidden
+      >
         {icon}
       </span>
-      <span className="flex min-w-0 flex-col">
+      <span className="flex min-w-0 flex-col gap-0.5">
         <span className="font-pixel text-2xl font-semibold">{label}</span>
-        {detail && <span className="truncate text-[13px] font-normal opacity-75">{detail}</span>}
+        {detail && <span className="truncate text-[13px] font-normal opacity-80">{detail}</span>}
       </span>
     </button>
   );

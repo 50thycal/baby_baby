@@ -488,11 +488,22 @@ opens. Nothing re-renders, nothing ticks, and `prefers-reduced-motion` parks
 everyone where they stand. The critters keep natural fur colours on purpose:
 tinted to the palette they'd stop reading as critters.
 
-**The palette** (`app/globals.css`, one token block). Sage-cream paper, deep
-forest ink, and the four accents drawn from two families: feed is rose pink,
-sleep deep pine, diaper a yellower leaf green so it can't blur into sleep, and
-weight the darker berry end of the pinks. Dark mode is the same forest after
-dark.
+**The palette** (`app/globals.css`, one token block). The two modes are tuned
+independently rather than one being an inversion of the other, because they're
+used at different times of day for different reasons. Light is the one that
+gets looked at: a pale, clean green — closer to new leaves than to sage — with
+pink carrying the accents. Dark is a proper night forest, deeper and richer,
+where the accents have to glow a little to stay legible at 3am with the lights
+off. Four accents, two per family so no two ever blur together: feed rose pink,
+sleep the cooler soft pine, diaper the warmer fresh leaf, weight the deeper
+dusty mauve.
+
+Every foreground/background pair that actually occurs in the UI is checked
+against a real WCAG contrast ratio rather than by eye — the harness renders
+both palettes as swatches with computed ratios and fails loudly on anything
+under target. It has caught two values that looked perfectly fine: `--c-muted`
+at 3:1 against the paper (secondary text wants 4.5), and the dark mode outline
+at 2.6:1.
 
 **The chrome.** Chunky 2px outlines, hard offset shadows with no blur (a
 blurred shadow is the one thing pixel art can never have), and tight radii.

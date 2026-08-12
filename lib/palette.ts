@@ -12,9 +12,9 @@
  * `app/icon.svg` is a static file and can't import this; if you change PAPER,
  * INK or ACCENT, change it there too.
  */
-export const PAPER = "#eff1e4";
-export const PAPER_DARK = "#161a11";
-export const INK = "#2f3a26";
+export const PAPER = "#e7f0e3";
+export const PAPER_DARK = "#111710";
+export const INK = "#26331f";
 
-/** Deep pine — the ground the app-icon fox sits on. */
-export const ACCENT = "#4a7561";
+/** Soft pine — the ground the app-icon fox sits on. */
+export const ACCENT = "#4f8a71";
