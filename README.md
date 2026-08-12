@@ -463,19 +463,30 @@ they're driven from the harness rather than checked in.
 Woodland critters in soft green and pink, drawn like an 8-bit game — the
 Stardew Valley *style*, not its theme. It shows up in four places:
 
-**The cast** (`lib/sprites.ts`). Every icon is a hand-placed 16×16 pixel
-sprite: a fox for feeding, an owl for sleep (its eyes close while she's
-asleep), a rabbit for diapers, a hedgehog for weight, a frog for spit-ups, a
-cross little squirrel for fussy spells, and droplet/poop/burst objects for the
-diaper types. Sprites are stored as string grids — pixel art lives or dies by
-individual pixels, and a string grid is the only representation you can
-proofread — and rendered as SVG rects (`components/PixelIcon.tsx`), so they
-scale crisply to any size with no binary assets in the repo. The critters keep
-natural fur colours on purpose: tinted to the palette they'd stop reading as
-critters. `tests/sprites.test.ts` checks every grid is exactly 16×16, ASCII
-only, and names no colour its palette doesn't define — a Cyrillic **о** posing
-as a Latin **o** renders as a magenta missing-colour pixel, and that class of
-bug is invisible in source.
+**The symbols** (`lib/sprites.ts`, `components/icons.tsx`). Every icon is a
+hand-placed 16×16 pixel sprite of the *thing itself*: a bottle for feeding, a
+crescent moon for sleep (Zs drift off it while she's asleep), an actual diaper
+for diapers, a scale for weight, an arc of milk for spit-ups, a little storm
+cloud for fussy spells, droplet/poop/burst for the diaper types. Items rather
+than faces — a bottle says "feed" the way no animal can. Sprites are stored as
+string grids — pixel art lives or dies by individual pixels, and a string grid
+is the only representation you can proofread — and rendered as SVG rects
+(`components/PixelIcon.tsx`), so they scale crisply to any size with no binary
+assets in the repo. `tests/sprites.test.ts` checks every grid is exactly
+16×16, ASCII only, and names no colour its palette doesn't define — a Cyrillic
+**о** posing as a Latin **o** renders as a magenta missing-colour pixel, and
+that class of bug is invisible in source (it caught exactly this, twice).
+
+**The critters** (`components/Critters.tsx`). The woodland lives on the forest
+floor, not on the buttons: a grass strip at the bottom of the Log screen and
+below the Grand Tally where a fox trots one way, a rabbit hops the other, a
+hedgehog trundles along behind, a butterfly wanders overhead, and an owl sits
+at the edge and blinks. All of it is CSS keyframes — two sprite frames
+hard-swapped with `steps(1)`, the way an 8-bit game animates, drifting across
+the strip with negative delays so everyone is mid-stroll when the screen
+opens. Nothing re-renders, nothing ticks, and `prefers-reduced-motion` parks
+everyone where they stand. The critters keep natural fur colours on purpose:
+tinted to the palette they'd stop reading as critters.
 
 **The palette** (`app/globals.css`, one token block). Sage-cream paper, deep
 forest ink, and the four accents drawn from two families: feed is rose pink,

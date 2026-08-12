@@ -1,52 +1,50 @@
 import PixelIcon from "@/components/PixelIcon";
 import {
+  BOTTLE,
   BUBBLE,
   BURST,
   DROPLET,
-  FOX,
-  FROG,
-  HEDGEHOG,
-  OWL,
-  OWL_ASLEEP,
+  MOON,
+  MOON_ZZZ,
+  NAPPY,
   POOP,
-  RABBIT,
-  SQUIRREL,
+  SCALE,
+  SPIT,
+  STORM,
 } from "@/lib/sprites";
 import type { DiaperType, MomentKind } from "@/lib/types";
 
 /**
- * The cast, mapped to their jobs. One module owns the assignments so nothing
- * ever shows a rabbit for a feed:
+ * The symbols, mapped to their jobs. Items rather than faces — a bottle says
+ * "feed" the way no animal can — while the critters themselves live on the
+ * forest floor (`components/Critters.tsx`) as scenery, not signage.
  *
- *   fox      → feeding        owl      → sleep (eyes shut while she's down)
- *   rabbit   → diapers        hedgehog → weight
- *   frog     → a big spit up  squirrel → fussy fussy
- *
- * The diaper *types* stay objects rather than critters — a droplet and a poop
- * are instantly literal in a way no animal can be.
+ *   bottle → feeding          moon   → sleep (Zs drift off it while she's down)
+ *   nappy  → diapers          scale  → weight
+ *   spit-up → an arc of milk  fussy  → a little storm cloud
  */
 
-export function FoxIcon({ size, className }: { size: number; className?: string }) {
-  return <PixelIcon sprite={FOX} size={size} className={className} />;
+export function BottleIcon({ size, className }: { size: number; className?: string }) {
+  return <PixelIcon sprite={BOTTLE} size={size} className={className} />;
 }
 
-export function OwlIcon({ size, asleep, className }: { size: number; asleep?: boolean; className?: string }) {
-  return <PixelIcon sprite={asleep ? OWL_ASLEEP : OWL} size={size} className={className} />;
+export function MoonIcon({ size, zzz, className }: { size: number; zzz?: boolean; className?: string }) {
+  return <PixelIcon sprite={zzz ? MOON_ZZZ : MOON} size={size} className={className} />;
 }
 
-export function RabbitIcon({ size, className }: { size: number; className?: string }) {
-  return <PixelIcon sprite={RABBIT} size={size} className={className} />;
+export function NappyIcon({ size, className }: { size: number; className?: string }) {
+  return <PixelIcon sprite={NAPPY} size={size} className={className} />;
 }
 
-export function HedgehogIcon({ size, className }: { size: number; className?: string }) {
-  return <PixelIcon sprite={HEDGEHOG} size={size} className={className} />;
+export function ScaleIcon({ size, className }: { size: number; className?: string }) {
+  return <PixelIcon sprite={SCALE} size={size} className={className} />;
 }
 
 export function BubbleIcon({ size, className }: { size: number; className?: string }) {
   return <PixelIcon sprite={BUBBLE} size={size} className={className} />;
 }
 
-const MOMENT_SPRITE = { spit_up: FROG, fussy: SQUIRREL } as const;
+const MOMENT_SPRITE = { spit_up: SPIT, fussy: STORM } as const;
 
 export function MomentIcon({ kind, size, className }: { kind: MomentKind; size: number; className?: string }) {
   return <PixelIcon sprite={MOMENT_SPRITE[kind]} size={size} className={className} />;

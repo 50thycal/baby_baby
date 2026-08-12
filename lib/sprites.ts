@@ -80,28 +80,6 @@ export const OWL_ASLEEP: Sprite = {
   ),
 };
 
-export const RABBIT: Sprite = {
-  palette: { o: O, g: "#bcaa93", p: "#e4a7b7", w: "#f6ead2", b: "#33261a", n: "#d2708d" },
-  art: [
-    "...oo.....oo....",
-    "..ogpo...ogpo...",
-    "..ogpo...ogpo...",
-    "..ogpo...ogpo...",
-    "..oggooooooggo..",
-    ".oggggggggggggo.",
-    "oggggggggggggggo",
-    "oggbbggggggbbggo",
-    "oggggggnnggggggo",
-    "ogggggwwwwgggggo",
-    ".ogggwwwwwwgggo.",
-    ".oggggwwwwggggo.",
-    "..oggggggggggo..",
-    "...oggggggggo...",
-    "....oooooooo....",
-    "................",
-  ],
-};
-
 export const HEDGEHOG: Sprite = {
   palette: { o: O, s: "#6b4f33", d: "#8b6a45", t: "#e0c297", b: "#33261a", n: "#b05a6e" },
   art: [
@@ -120,51 +98,6 @@ export const HEDGEHOG: Sprite = {
     "..oo.oo...oo.oo.",
     "................",
     "................",
-    "................",
-  ],
-};
-
-export const FROG: Sprite = {
-  palette: { o: O, g: "#7aa653", w: "#f6ead2", b: "#33261a", l: "#e4a7b7" },
-  art: [
-    "................",
-    "................",
-    "................",
-    "..ooo......ooo..",
-    ".ogwbo....obwgo.",
-    "oogggoooooogggoo",
-    "oggggggggggggggo",
-    "oggggggggggggggo",
-    "ogllggggggggllgo",
-    "ogggggbbbbgggggo",
-    ".oggggggggggggo.",
-    "..oooooooooooo..",
-    "................",
-    "................",
-    "................",
-    "................",
-  ],
-};
-
-/** Cross little squirrel — the fussy marker. */
-export const SQUIRREL: Sprite = {
-  palette: { o: O, q: "#9d6a48", Q: "#c08d62", w: "#f6ead2", b: "#33261a" },
-  art: [
-    "................",
-    "..ooo......ooo..",
-    ".oqqqo....oqqqo.",
-    ".oqqqooooooqqqo.",
-    "oqqqqqqqqqqqqqqo",
-    "oqqbqqqqqqqqbqqo",
-    "oqqqbqqqqqqbqqqo",
-    "oqqbbqqqqqqbbqqo",
-    "oQqqqqwwwwqqqqQo",
-    "oQqqqwwbbwwqqqQo",
-    ".oqqqwwwwwwqqqo.",
-    ".oqqqqwbbwqqqqo.",
-    "..oqqqqqqqqqqo..",
-    "...oqqqqqqqqo...",
-    "....oooooooo....",
     "................",
   ],
 };
@@ -248,6 +181,291 @@ export const BUBBLE: Sprite = {
     "....owwo........",
     "....owo.........",
     "....oo..........",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+  ],
+};
+
+/* --- The symbols: what the buttons wear. Items, not faces. ----------------- */
+
+export const BOTTLE: Sprite = {
+  palette: { o: O, t: "#d98aa4", c: "#c4708e", w: "#e9efe4", m: "#f4e9d0", k: "#c9bda1" },
+  art: [
+    "......oooo......",
+    ".....otttto.....",
+    ".....otttto.....",
+    "....occcccco....",
+    "....occcccco....",
+    "...oooooooooo...",
+    "...owwwwwwwwo...",
+    "...owwwwwwwwo...",
+    "...owmmmmmkwo...",
+    "...owmmmmmmwo...",
+    "...owmmmmmkwo...",
+    "...owmmmmmmwo...",
+    "...owmmmmmkwo...",
+    "....owwwwwwo....",
+    ".....oooooo.....",
+    "................",
+  ],
+};
+
+export const MOON: Sprite = {
+  palette: { o: O, y: "#e8c14d", s: "#f2d78a" },
+  art: [
+    "................",
+    ".....ooooo......",
+    "...ooyyyyyo.....",
+    "..oyyyyyyyo.....",
+    "..oyyyyooo......",
+    ".oyyyyo.....ss..",
+    ".oyyyo.....ssss.",
+    ".oyyyo......ss..",
+    ".oyyyo..........",
+    ".oyyyyo.........",
+    "..oyyyyooo......",
+    "..oyyyyyyyo.....",
+    "...ooyyyyyo.....",
+    ".....ooooo......",
+    "................",
+    "................",
+  ],
+};
+
+/** The same moon with little Zs drifting off it — shown while she's asleep. */
+export const MOON_ZZZ: Sprite = {
+  palette: { o: O, y: "#e8c14d", z: "#f2d78a" },
+  art: [
+    "................",
+    ".....ooooo......",
+    "...ooyyyyyo.....",
+    "..oyyyyyyyo.....",
+    "..oyyyyooo.zzz..",
+    ".oyyyyo.....z...",
+    ".oyyyo.....zzz..",
+    ".oyyyo..........",
+    ".oyyyo.......zzz",
+    ".oyyyyo.......z.",
+    "..oyyyyooo...zzz",
+    "..oyyyyyyyo.....",
+    "...ooyyyyyo.....",
+    ".....ooooo......",
+    "................",
+    "................",
+  ],
+};
+
+export const NAPPY: Sprite = {
+  palette: { o: O, w: "#f6f1e2", a: "#dfe6c8", p: "#7d9a4c" },
+  art: [
+    "................",
+    "oo............oo",
+    "oaooooooooooooao",
+    "oaaaaaappaaaaaao",
+    "oaaaaaappaaaaaao",
+    "oooooooooooooooo",
+    ".owwwwwwwwwwwwo.",
+    ".oowwwwwwwwwwoo.",
+    "..owwwwwwwwwwo..",
+    "..oowwwwwwwwoo..",
+    "...owwwwwwwwo...",
+    "....owwwwwwo....",
+    "....oowwwwoo....",
+    ".....owwwwo.....",
+    "......oooo......",
+    "................",
+  ],
+};
+
+export const SCALE: Sprite = {
+  palette: { o: O, b: "#4a7561", w: "#f6f1e2", n: "#33261a" },
+  art: [
+    "................",
+    "................",
+    "..oooooooooooo..",
+    "..obbbbbbbbbbo..",
+    "..oooooooooooo..",
+    ".....obbbbo.....",
+    "....obbbbbbo....",
+    "...obwwwwwwbo...",
+    "...obwwnnwwbo...",
+    "...obwwwwwwbo...",
+    "..obbbbbbbbbbo..",
+    "..oooooooooooo..",
+    "................",
+    "................",
+    "................",
+    "................",
+  ],
+};
+
+/** A little arc of milk coming back up — the spit-up marker. */
+export const SPIT: Sprite = {
+  palette: { o: O, m: "#ecd9a6" },
+  art: [
+    "...........oo...",
+    "..........ommo..",
+    "..........ommo..",
+    "...........oo...",
+    "................",
+    "....ooo.........",
+    "...ommmo........",
+    "...ommmo........",
+    "....ooo.........",
+    "................",
+    "oo..............",
+    "ommmmo..........",
+    "ommmmo..........",
+    "ommmmo..........",
+    ".oooo...........",
+    "................",
+  ],
+};
+
+/** A small storm — the fussy marker. */
+export const STORM: Sprite = {
+  palette: { o: O, g: "#a7aa9b", y: "#e8c14d" },
+  art: [
+    "................",
+    "................",
+    "....oooo........",
+    "...oggggoo......",
+    "..oggggggoo.....",
+    ".oggggggggggo...",
+    ".oggggggggggo...",
+    "..oooooooooo....",
+    "......oyyo......",
+    ".....oyyo.......",
+    "......oyyo......",
+    ".......oyo......",
+    "........o.......",
+    "................",
+    "................",
+    "................",
+  ],
+};
+
+/* --- The walkers: critters that live on the forest floor. ------------------ */
+
+export const FOX_WALK_A: Sprite = {
+  palette: { o: O, r: "#cd7342", w: "#f6ead2", b: "#33261a" },
+  art: [
+    "................",
+    "................",
+    "..........oo....",
+    "..........oroo..",
+    ".........orrrro.",
+    "oo.......orrbro.",
+    "owoo....oorrrrro",
+    "owwrooorrrrrrwbo",
+    ".owrrrrrrrrrwwoo",
+    "..oorrrrrrrrroo.",
+    "...orrrrrrrrro..",
+    "...orro..orro...",
+    "...orro..orro...",
+    "...oo.o..oo.o...",
+    "................",
+    "................",
+  ],
+};
+
+export const FOX_WALK_B: Sprite = {
+  palette: FOX_WALK_A.palette,
+  art: [
+    "................",
+    "................",
+    "..........oo....",
+    "..........oroo..",
+    ".........orrrro.",
+    "oo.......orrbro.",
+    "owoo....oorrrrro",
+    "owwrooorrrrrrwbo",
+    ".owrrrrrrrrrwwoo",
+    "..oorrrrrrrrroo.",
+    "...orrrrrrrrro..",
+    "....orro.orro...",
+    "....orro.orro...",
+    "....oo...oo.....",
+    "................",
+    "................",
+  ],
+};
+
+export const RABBIT_HOP_A: Sprite = {
+  palette: { o: O, g: "#bcaa93", p: "#e4a7b7", w: "#f6ead2", b: "#33261a" },
+  art: [
+    "................",
+    "...oo...oo......",
+    "..ogpo.ogpo.....",
+    "..ogpo.ogpo.....",
+    "..oggogoggo.....",
+    "..oggggggggo....",
+    "..ogggggbggo....",
+    "..oggggggggoo...",
+    ".ogggggggggggo..",
+    "owoggggggggggo..",
+    "owoggggggggggo..",
+    ".oggggggggggo...",
+    "..oggo.oggo.....",
+    "...oo...oo......",
+    "................",
+    "................",
+  ],
+};
+
+/** Mid-hop: legs tucked. The bounce itself is CSS. */
+export const RABBIT_HOP_B: Sprite = {
+  palette: RABBIT_HOP_A.palette,
+  art: RABBIT_HOP_A.art.map((row, i) =>
+    i === 12 ? "..oggggggggo...." : i === 13 ? "...oooooooo....." : row,
+  ),
+};
+
+/** The hedgehog's other stride — HEDGEHOG itself is frame A. */
+export const HEDGEHOG_B: Sprite = {
+  palette: HEDGEHOG.palette,
+  art: HEDGEHOG.art.map((row, i) => (i === 12 ? ".oo.oo...oo.oo.." : row)),
+};
+
+export const BUTTERFLY_A: Sprite = {
+  palette: { o: O, p: "#d98aa4", b: "#33261a" },
+  art: [
+    "................",
+    "................",
+    "................",
+    "................",
+    ".opo......opo...",
+    "opppo....opppo..",
+    "oppppo..oppppo..",
+    ".opppobbopppo...",
+    "..opobbbbopo....",
+    "....obbo........",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+  ],
+};
+
+export const BUTTERFLY_B: Sprite = {
+  palette: BUTTERFLY_A.palette,
+  art: [
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "..opo....opo....",
+    "..oppo..oppo....",
+    "...opobbopo.....",
+    "....obbbbo......",
+    "....obbo........",
     "................",
     "................",
     "................",

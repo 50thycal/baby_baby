@@ -6,7 +6,8 @@ import DiaperSheet from "@/components/sheets/DiaperSheet";
 import FeedSheet from "@/components/sheets/FeedSheet";
 import ImportSheet from "@/components/sheets/ImportSheet";
 import SleepSheet from "@/components/sheets/SleepSheet";
-import { FoxIcon, HedgehogIcon, OwlIcon, RabbitIcon } from "@/components/icons";
+import CritterStrip from "@/components/Critters";
+import { BottleIcon, MoonIcon, NappyIcon, ScaleIcon } from "@/components/icons";
 import WeightSheet from "@/components/sheets/WeightSheet";
 import { useEvents, useHomeState, useWeights } from "@/lib/api";
 import { fmtWeight } from "@/lib/weight";
@@ -38,7 +39,7 @@ export default function HomeScreen() {
       <div className="flex flex-1 flex-col gap-3">
         <ActionTile
           label="FEED"
-          icon={<FoxIcon size={44} />}
+          icon={<BottleIcon size={44} />}
           accent="var(--c-feed)"
           wash="var(--c-feed-wash)"
           ink="var(--c-feed-ink)"
@@ -49,7 +50,7 @@ export default function HomeScreen() {
         {asleep ? (
           <ActionTile
             label="SLEEPING"
-            icon={<OwlIcon size={44} asleep />}
+            icon={<MoonIcon size={44} zzz />}
             accent="var(--c-sleep)"
             wash="var(--c-sleep)"
             ink="#fff"
@@ -60,7 +61,7 @@ export default function HomeScreen() {
         ) : (
           <ActionTile
             label="SLEEP"
-            icon={<OwlIcon size={44} />}
+            icon={<MoonIcon size={44} />}
             accent="var(--c-sleep)"
             wash="var(--c-sleep-wash)"
             ink="var(--c-sleep-ink)"
@@ -75,7 +76,7 @@ export default function HomeScreen() {
 
         <ActionTile
           label="DIAPER"
-          icon={<RabbitIcon size={44} />}
+          icon={<NappyIcon size={44} />}
           accent="var(--c-diaper)"
           wash="var(--c-diaper-wash)"
           ink="var(--c-diaper-ink)"
@@ -97,12 +98,14 @@ export default function HomeScreen() {
           color: "var(--c-weight-ink)",
         }}
       >
-        <HedgehogIcon size={26} />
+        <ScaleIcon size={26} />
         <span className="font-semibold uppercase tracking-[0.08em]">Weight</span>
         {lastWeight && (
           <span className="opacity-75">· {fmtWeight(lastWeight.weight_g)}</span>
         )}
       </button>
+
+      <CritterStrip />
 
       {/* Deliberately small and quiet: both are rare, deliberate errands and
           must never compete with the three things done at 3am. */}

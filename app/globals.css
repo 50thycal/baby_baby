@@ -249,12 +249,155 @@ button {
   animation: breathe 2.8s ease-in-out infinite;
 }
 
+/* ---------------------------------------------------------------------------
+   The forest floor (components/Critters.tsx). Everything below is scenery:
+   a walker drifts across the strip by animating `left` (cheap at this size,
+   and percentages track the container), while its two sprite frames are
+   hard-swapped with steps(1) — the way an 8-bit game animates, and the reason
+   nothing here uses easing.
+--------------------------------------------------------------------------- */
+.critter-strip {
+  /* A pixel grass fringe: solid ground line, sparse blades above it. */
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 7px,
+      var(--c-diaper) 7px 9px,
+      transparent 9px 23px,
+      color-mix(in srgb, var(--c-diaper) 55%, transparent) 23px 25px,
+      transparent 25px 37px
+    ),
+    linear-gradient(var(--c-diaper), var(--c-diaper));
+  background-size:
+    100% 7px,
+    100% 3px;
+  background-position:
+    0 calc(100% - 3px),
+    0 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+@keyframes stroll {
+  from {
+    left: -12%;
+  }
+  to {
+    left: 104%;
+  }
+}
+.stroll {
+  animation: stroll 40s linear infinite;
+}
+
+/* Two stacked frames, hard-swapped. */
+@keyframes frame-a {
+  0%,
+  49.9% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes frame-b {
+  0%,
+  49.9% {
+    opacity: 0;
+  }
+  50%,
+  100% {
+    opacity: 1;
+  }
+}
+.frame-a {
+  animation: frame-a var(--frame-dur, 0.7s) steps(1) infinite;
+}
+.frame-b {
+  animation: frame-b var(--frame-dur, 0.7s) steps(1) infinite;
+}
+
+/* The rabbit's bounce and the butterfly's wander, on top of the drift. */
+@keyframes hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+.hop {
+  animation: hop 0.68s ease-in-out infinite;
+}
+@keyframes flutter {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.flutter {
+  animation: flutter 2.6s ease-in-out infinite;
+}
+
+/* The owl blinks: open nearly always, shut for a beat. */
+@keyframes blink-a {
+  0%,
+  88% {
+    opacity: 1;
+  }
+  89%,
+  96% {
+    opacity: 0;
+  }
+  97%,
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes blink-b {
+  0%,
+  88% {
+    opacity: 0;
+  }
+  89%,
+  96% {
+    opacity: 1;
+  }
+  97%,
+  100% {
+    opacity: 0;
+  }
+}
+.blink-a {
+  animation: blink-a 5.5s steps(1) infinite;
+}
+.blink-b {
+  animation: blink-b 5.5s steps(1) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-sheet,
   .animate-veil,
   .animate-pop,
-  .animate-breathe {
+  .animate-breathe,
+  .stroll,
+  .frame-a,
+  .frame-b,
+  .hop,
+  .flutter,
+  .blink-a,
+  .blink-b {
     animation: none;
+  }
+  /* Frame B sits on top when the swap stops; hide it so each critter shows once. */
+  .frame-b,
+  .blink-b {
+    opacity: 0;
   }
   .press:active {
     transform: none;

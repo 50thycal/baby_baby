@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import ConfirmButton from "@/components/ConfirmButton";
 import MomentSheet from "@/components/sheets/MomentSheet";
-import { MomentIcon, OwlIcon } from "@/components/icons";
+import { MomentIcon, MoonIcon } from "@/components/icons";
 import Sheet from "@/components/Sheet";
 import TimeField from "@/components/TimeField";
 import { useToast } from "@/components/Toaster";
@@ -40,7 +40,7 @@ export default function SleepSheet({ onClose, active }: Props) {
           </div>
         ) : (
           <div className="mb-1" aria-hidden>
-            <OwlIcon size={64} asleep />
+            <MoonIcon size={64} />
           </div>
         )}
 

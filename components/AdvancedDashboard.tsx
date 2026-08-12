@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import CritterStrip from "@/components/Critters";
 import CumulativeChart from "@/components/CumulativeChart";
 import GrandTally from "@/components/GrandTally";
 import WeightChart from "@/components/WeightChart";
@@ -154,6 +155,8 @@ export default function AdvancedDashboard() {
       </div>
 
       {allTime && <GrandTally data={allTime} now={now} />}
+
+      <CritterStrip />
     </div>
   );
 }
