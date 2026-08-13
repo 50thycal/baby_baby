@@ -120,6 +120,84 @@ export function cumulativeSeries(
   return points;
 }
 
+/** Which log a metric is drawn from — see `coverageStart`. */
+export type LogKind = "feedings" | "sleep" | "diapers";
+
+export function metricKind(metric: Metric): LogKind {
+  switch (metric) {
+    case "feed_ml":
+    case "feed_count":
+      return "feedings";
+    case "sleep_ms":
+      return "sleep";
+    case "diaper_count":
+    case "poop_count":
+      return "diapers";
+  }
+}
+
+/**
+ * A day with no entries in the first four hours wasn't being watched from
+ * midnight. A newborn feeds, sleeps and fills nappies right through the small
+ * hours, so a genuine full day of logging always has *something* before 4am;
+ * if the first record lands at two in the afternoon, logging started at two in
+ * the afternoon.
+ */
+const LATE_START_MS = 4 * 3_600_000;
+
+const nextDay = (ms: number) => {
+  const d = new Date(ms);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
+};
+
+/** When each kind of record first covers a day, and from what moment in it. */
+function firstRecordIn(data: EventsPayload, kind: LogKind, from: number, to: number): number | null {
+  if (kind === "sleep") {
+    // A nap that began the previous evening covers this day from midnight, so
+    // the clipped start is the honest answer rather than `sleep_start`.
+    const starts = data.sleep
+      .map((s) => clipSleep(s, from, to))
+      .filter((x): x is { from: number; to: number } => x !== null)
+      .map((x) => x.from);
+    return starts.length ? Math.min(...starts) : null;
+  }
+  const rows = kind === "feedings" ? data.feedings : data.diapers;
+  const times = rows.map((r) => new Date(r.ts).getTime()).filter((t) => t >= from && t < to);
+  return times.length ? Math.min(...times) : null;
+}
+
+/**
+ * The first day this kind of record can be read as a whole day.
+ *
+ * The three logs didn't all start on the same day: feeds were written down from
+ * birth, sleep and nappies weeks later. Counting a day as "0 hours of sleep"
+ * because nobody was writing sleep down yet isn't a quiet day, it's no data —
+ * and averaged in, or fitted through, it invents a climb that never happened.
+ *
+ * So each metric begins where its own log begins, and the first day is dropped
+ * too if that day was only half watched. Only the leading edge is trimmed: a
+ * gap in the middle is a day someone forgot, which is real and stays a zero.
+ *
+ * Returns null when that kind has never been logged at all.
+ */
+export function coverageStart(data: EventsPayload, kind: LogKind, now: Date): number | null {
+  const todayStart = startOfDay(now).getTime();
+
+  const stamps =
+    kind === "sleep"
+      ? data.sleep.map((s) => new Date(s.sleep_start).getTime())
+      : (kind === "feedings" ? data.feedings : data.diapers).map((r) => new Date(r.ts).getTime());
+  if (!stamps.length) return null;
+
+  const firstDay = startOfDay(new Date(Math.min(...stamps))).getTime();
+  if (firstDay >= todayStart) return null;
+
+  const covered = firstRecordIn(data, kind, firstDay, nextDay(firstDay));
+  if (covered === null) return nextDay(firstDay);
+
+  return covered - firstDay > LATE_START_MS ? nextDay(firstDay) : firstDay;
+}
+
 export type DailyPoint = { dayStart: number; value: number };
 
 /**
@@ -141,14 +219,13 @@ export function dailyTotals(
 ): DailyPoint[] {
   const todayStart = startOfDay(now).getTime();
 
-  const earliest = [
-    ...data.feedings.map((f) => new Date(f.ts).getTime()),
-    ...data.sleep.map((s) => new Date(s.sleep_start).getTime()),
-    ...data.diapers.map((d) => new Date(d.ts).getTime()),
-  ].sort((a, b) => a - b)[0];
-  if (earliest === undefined) return [];
+  // Not "since the log began" but "since *this* log began": feeds were written
+  // down from birth, sleep and nappies later, and a run of zeroes from before
+  // anyone was recording sleep would drag the fitted line into a climb that
+  // never happened.
+  const firstDay = coverageStart(data, metricKind(metric), now);
+  if (firstDay === null) return [];
 
-  const firstDay = startOfDay(new Date(earliest)).getTime();
   const available = Math.round((todayStart - firstDay) / 86_400_000);
   if (available < 1) return [];
 
@@ -263,17 +340,13 @@ export function sleepClock(
   const totals = new Array<number>(slotCount).fill(0);
 
   const todayStart = startOfDay(now).getTime();
-  // How far back the log goes, not how far back *sleep* goes: a day when
-  // nobody logged a nap is still a day, and it belongs in the denominator as a
-  // day she wasn't recorded asleep. Same measure `dailyTotals` uses.
-  const earliest = [
-    ...data.feedings.map((f) => new Date(f.ts).getTime()),
-    ...data.sleep.map((s) => new Date(s.sleep_start).getTime()),
-    ...data.diapers.map((d) => new Date(d.ts).getTime()),
-  ].sort((a, b) => a - b)[0];
-  if (earliest === undefined) return { slots: totals, dayCount: 0, slotMinutes };
+  // Days before anyone was writing sleep down aren't days she was awake — they
+  // are days with no data, and averaging them in flattens every band. Days
+  // *after* that with nothing logged are kept: those are days someone forgot,
+  // which is a real thing that happened.
+  const firstDay = coverageStart(data, "sleep", now);
+  if (firstDay === null) return { slots: totals, dayCount: 0, slotMinutes };
 
-  const firstDay = startOfDay(new Date(earliest)).getTime();
   const available = Math.round((todayStart - firstDay) / 86_400_000);
   if (available < 1) return { slots: totals, dayCount: 0, slotMinutes };
 
@@ -354,7 +427,12 @@ export function typicalSleepWindow(fractions: number[], threshold = 0.5): ClockW
 }
 
 export type Stats = {
+  /** The widest of the three windows below — 0 means nothing to average yet. */
   days: number;
+  /** Whole days each log has actually covered. They differ; see `coverageStart`. */
+  feedDays: number;
+  sleepDays: number;
+  diaperDays: number;
   feedsPerDay: number | null;
   mlPerDay: number | null;
   avgFeedMl: number | null;
@@ -378,17 +456,31 @@ const NIGHT_TO = 6;
  * Averages over whole days only. Today is excluded: it is partial by
  * definition, and folding a half day into a per-day mean drags every figure
  * down for no reason.
+ *
+ * Each of the three groups is divided by its *own* number of covered days. The
+ * logs didn't start together, and a shared denominator would report her sleeping
+ * nine hours a day purely because the weeks before anyone wrote sleep down are
+ * still in the divisor — while the chart directly above says seventeen. Same
+ * screen, same baby, two answers.
  */
 export function computeStats(data: EventsPayload, now: Date): Stats {
   const todayStart = startOfDay(now).getTime();
-  const earliest = [
-    ...data.feedings.map((f) => new Date(f.ts).getTime()),
-    ...data.sleep.map((s) => new Date(s.sleep_start).getTime()),
-    ...data.diapers.map((d) => new Date(d.ts).getTime()),
-  ].sort((a, b) => a - b)[0];
+
+  const spanOf = (kind: LogKind) => {
+    const from = coverageStart(data, kind, now);
+    if (from === null) return { from: todayStart, days: 0 };
+    return { from, days: Math.max(0, Math.round((todayStart - from) / 86_400_000)) };
+  };
+
+  const feed = spanOf("feedings");
+  const sleep = spanOf("sleep");
+  const diaper = spanOf("diapers");
 
   const empty: Stats = {
     days: 0,
+    feedDays: 0,
+    sleepDays: 0,
+    diaperDays: 0,
     feedsPerDay: null,
     mlPerDay: null,
     avgFeedMl: null,
@@ -403,18 +495,17 @@ export function computeStats(data: EventsPayload, now: Date): Stats {
     poopsPerDay: null,
     nightFeedsPerNight: null,
   };
-  if (earliest === undefined) return empty;
+  const days = Math.max(feed.days, sleep.days, diaper.days);
+  if (days < 1) return empty;
 
-  const firstFullDay = startOfDay(new Date(earliest)).getTime();
-  const days = Math.round((todayStart - firstFullDay) / 86_400_000);
-  if (days < 1) return { ...empty, days: 0 };
-
-  const window = totalsBetween(data, firstFullDay, todayStart);
+  const feedWindow = totalsBetween(data, feed.from, todayStart);
+  const sleepWindow = totalsBetween(data, sleep.from, todayStart);
+  const diaperWindow = totalsBetween(data, diaper.from, todayStart);
 
   // Feed spacing, across complete days only.
   const feedTimes = data.feedings
     .map((f) => new Date(f.ts).getTime())
-    .filter((t) => t >= firstFullDay && t < todayStart)
+    .filter((t) => t >= feed.from && t < todayStart)
     .sort((a, b) => a - b);
   const avgBetweenFeedsMs =
     feedTimes.length >= 2
@@ -423,7 +514,7 @@ export function computeStats(data: EventsPayload, now: Date): Stats {
 
   // Naps, and the gaps between them.
   const naps = data.sleep
-    .map((s) => clipSleep(s, firstFullDay, todayStart))
+    .map((s) => clipSleep(s, sleep.from, todayStart))
     .filter((x): x is { from: number; to: number } => x !== null)
     .sort((a, b) => a.from - b.from);
   const napDurations = naps.map((n) => n.to - n.from);
@@ -439,21 +530,26 @@ export function computeStats(data: EventsPayload, now: Date): Stats {
   }).length;
 
   const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+  /** A rate needs days to divide by; without them there is no answer, not zero. */
+  const per = (total: number, over: number) => (over > 0 ? total / over : null);
 
   return {
     days,
-    feedsPerDay: window.feedCount / days,
-    mlPerDay: window.feedingMl / days,
-    avgFeedMl: window.feedCount ? window.feedingMl / window.feedCount : null,
+    feedDays: feed.days,
+    sleepDays: sleep.days,
+    diaperDays: diaper.days,
+    feedsPerDay: per(feedWindow.feedCount, feed.days),
+    mlPerDay: per(feedWindow.feedingMl, feed.days),
+    avgFeedMl: feedWindow.feedCount ? feedWindow.feedingMl / feedWindow.feedCount : null,
     avgBetweenFeedsMs,
-    sleepPerDayMs: window.sleepMs / days,
-    awakePerDayMs: 86_400_000 - window.sleepMs / days,
+    sleepPerDayMs: per(sleepWindow.sleepMs, sleep.days),
+    awakePerDayMs: sleep.days > 0 ? 86_400_000 - sleepWindow.sleepMs / sleep.days : null,
     avgNapMs: mean(napDurations),
     avgAwakeStretchMs: mean(awakeGaps),
     longestSleepMs: napDurations.length ? Math.max(...napDurations) : 0,
-    napsPerDay: naps.length / days,
-    diapersPerDay: window.diaperCount / days,
-    poopsPerDay: window.poopCount / days,
-    nightFeedsPerNight: nightFeeds / days,
+    napsPerDay: per(naps.length, sleep.days),
+    diapersPerDay: per(diaperWindow.diaperCount, diaper.days),
+    poopsPerDay: per(diaperWindow.poopCount, diaper.days),
+    nightFeedsPerNight: per(nightFeeds, feed.days),
   };
 }

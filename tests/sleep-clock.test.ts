@@ -59,18 +59,31 @@ test("two days average rather than add up", () => {
   assert.equal(at3, 1);
 });
 
-test("a day with no sleep logged still counts as a day", () => {
-  // Two days of history — established by a feed on the older one — but a nap
-  // recorded on only one of them. That's a half, not a whole: the quiet day is
-  // a day she wasn't recorded asleep, not a day that never happened.
-  const older = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate() - 2, 9, 0);
+test("a quiet day in the middle still counts as a day", () => {
+  // Sleep logged three days back and one day back, nothing in between. The
+  // quiet day is a day nobody wrote a nap down, not a day that never happened,
+  // so it stays in the divisor: two days of three, not two of two.
+  const data = payload({ sleep: [nap(3, 2, 4, "a"), nap(1, 2, 4, "b")] });
+  const clock = sleepClock(data, NOW, "all");
+  assert.equal(clock.dayCount, 3);
+  assert.equal(clock.slots[Math.round((3 * 60) / clock.slotMinutes)], 2 / 3);
+});
+
+test("days from before sleep was ever logged are not counted", () => {
+  // Feeds go back a fortnight, sleep only started being written down two days
+  // ago. Those twelve earlier days aren't days she was awake — they're days
+  // with no data, and averaging them in would flatten every band to nothing.
+  const feedAt = (daysAgo: number, h: number) => {
+    const d = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate() - daysAgo, h, 0);
+    return { id: `f${daysAgo}`, amount_ml: 60, ts: d.toISOString(), created_at: d.toISOString() };
+  };
   const data = payload({
-    sleep: [nap(1, 2, 4)],
-    feedings: [{ id: "f", amount_ml: 60, ts: older.toISOString(), created_at: older.toISOString() }],
+    sleep: [nap(2, 1, 4, "a"), nap(1, 2, 4, "b")],
+    feedings: Array.from({ length: 14 }, (_, i) => feedAt(i, 9)),
   });
-  const clock = sleepClock(data, NOW, 2);
+  const clock = sleepClock(data, NOW, "all");
   assert.equal(clock.dayCount, 2);
-  assert.equal(clock.slots[Math.round((3 * 60) / clock.slotMinutes)], 0.5);
+  assert.equal(clock.slots[Math.round((3 * 60) / clock.slotMinutes)], 1, "asleep at 3am both days");
 });
 
 test("a slot she is asleep for only part of counts only that part", () => {
@@ -84,11 +97,14 @@ test("a slot she is asleep for only part of counts only that part", () => {
 });
 
 test("a nap across midnight lands on both days, in the right places", () => {
-  // 23:00 to 01:00 on the night between two days back and one day back.
+  // 23:00 to 01:00 on the night between two days back and one day back. The
+  // early nap on the older day is what makes it a counted day at all: a day
+  // whose first sleep is at 11pm reads as one where logging began at 11pm.
   const start = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate() - 2, 23, 0);
   const end = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate() - 1, 1, 0);
   const data = payload({
     sleep: [
+      nap(2, 3, 3.5, "early"),
       { id: "x", sleep_start: start.toISOString(), sleep_end: end.toISOString(), created_at: start.toISOString() },
     ],
   });
