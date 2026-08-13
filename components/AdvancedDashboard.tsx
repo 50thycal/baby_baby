@@ -4,9 +4,17 @@ import { useMemo, useState } from "react";
 import CritterStrip from "@/components/Critters";
 import CumulativeChart from "@/components/CumulativeChart";
 import GrandTally from "@/components/GrandTally";
+import SleepClock from "@/components/SleepClock";
 import TrendChart from "@/components/TrendChart";
 import WeightChart from "@/components/WeightChart";
-import { addDays, computeStats, cumulativeSeries, dailyTotals, startOfDay } from "@/lib/daily";
+import {
+  addDays,
+  computeStats,
+  cumulativeSeries,
+  dailyTotals,
+  sleepClock,
+  startOfDay,
+} from "@/lib/daily";
 import { useEvents, useWeights } from "@/lib/api";
 import { tick } from "@/lib/haptics";
 import { fmtDuration } from "@/lib/time";
@@ -30,6 +38,17 @@ const OVERLAYS = [
   { key: 7, label: "1 week" },
 ] as const;
 
+/** How many days the sleep clock averages over. */
+const CLOCK_SPANS = [
+  { key: 1, label: "1d" },
+  { key: 2, label: "2d" },
+  { key: 3, label: "3d" },
+  { key: 7, label: "1w" },
+  { key: "all", label: "All" },
+] as const;
+
+type ClockSpan = (typeof CLOCK_SPANS)[number]["key"];
+
 /** How far back the daily-totals charts reach. */
 const SPANS = [
   { key: 7, label: "1 week" },
@@ -42,6 +61,7 @@ type Span = (typeof SPANS)[number]["key"];
 export default function AdvancedDashboard() {
   const [overlay, setOverlay] = useState<number>(1);
   const [span, setSpan] = useState<Span>(7);
+  const [clockSpan, setClockSpan] = useState<ClockSpan>(7);
 
   // One all-time fetch feeds everything here: a week's overlay needs eight days,
   // and "All" on the trends needs the lot. SWR shares this key with the tally.
@@ -79,9 +99,10 @@ export default function AdvancedDashboard() {
       trendFeed: dailyTotals(data, "feed_ml", now, span),
       trendSleep: dailyTotals(data, "sleep_ms", now, span),
       trendPoop: dailyTotals(data, "poop_count", now, span),
+      clock: sleepClock(data, now, clockSpan),
       stats: computeStats(data, now),
     };
-  }, [data, now, overlay, span]);
+  }, [data, now, overlay, span, clockSpan]);
 
   if (error) {
     return (
@@ -142,6 +163,16 @@ export default function AdvancedDashboard() {
         elapsedFraction={view.elapsedFraction}
         format={(v) => `${Math.round(v)}`}
       />
+
+      <div className="mt-1 flex flex-col gap-3">
+        <Toggle
+          label="When she sleeps · average of"
+          options={CLOCK_SPANS}
+          value={clockSpan}
+          onChange={(v) => setClockSpan(v as ClockSpan)}
+        />
+        <SleepClock clock={view.clock} />
+      </div>
 
       <div className="mt-1 flex flex-col gap-3">
         <Toggle
@@ -261,8 +292,10 @@ function Toggle<T extends string | number>({
   value: T;
   onChange: (next: T) => void;
 }) {
+  // Grouped and named: there are now two toggles on the page that both offer
+  // "All", and without this a screen reader announces two identical buttons.
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5" role="group" aria-label={label}>
       <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted">
         {label}
       </span>
