@@ -18,16 +18,34 @@ const payload = (over: Partial<EventsPayload> = {}): EventsPayload => ({
   ...over,
 });
 
-/** A feed of `ml` at noon, `daysAgo` days back. */
-const feed = (ml: number, daysAgo: number) => {
-  const d = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate() - daysAgo, 12, 0);
-  return { id: `f${daysAgo}-${ml}`, amount_ml: ml, ts: d.toISOString(), created_at: d.toISOString() };
+/** A feed of `ml` at `hour` (noon unless said otherwise), `daysAgo` days back. */
+const feed = (ml: number, daysAgo: number, hour = 12) => {
+  const d = new Date(
+    new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate() - daysAgo, 0, 0).getTime() +
+      hour * HOUR,
+  );
+  return {
+    id: `f${daysAgo}-${ml}-${hour}`,
+    amount_ml: ml,
+    ts: d.toISOString(),
+    created_at: d.toISOString(),
+  };
 };
+
+/**
+ * A series starts where its log starts, and a first day whose earliest record
+ * lands hours after midnight is dropped as a day logging began part-way through
+ * (see `coverageStart`). These fixtures write one feed a day at noon, so without
+ * something in the small hours of the oldest day every case below would lose it
+ * — to the rule, not to the behaviour under test. A 0 mL entry anchors the
+ * window without moving any total.
+ */
+const anchor = (daysAgo: number) => feed(0, daysAgo, 0.5);
 
 // --- dailyTotals -------------------------------------------------------------
 
 test("one point per finished day, oldest first", () => {
-  const data = payload({ feedings: [feed(100, 1), feed(200, 2), feed(300, 3)] });
+  const data = payload({ feedings: [feed(100, 1), feed(200, 2), feed(300, 3), anchor(3)] });
   const pts = dailyTotals(data, "feed_ml", NOW, 7);
   assert.deepEqual(pts.map((p) => p.value), [300, 200, 100]);
 });
@@ -35,26 +53,26 @@ test("one point per finished day, oldest first", () => {
 test("today is left out, however much has been logged", () => {
   // A partial day at the right-hand end would show a dip every morning, and a
   // trend fitted through it would report a decline that isn't real.
-  const data = payload({ feedings: [feed(999, 0), feed(100, 1), feed(200, 2)] });
+  const data = payload({ feedings: [feed(999, 0), feed(100, 1), feed(200, 2), anchor(2)] });
   const pts = dailyTotals(data, "feed_ml", NOW, 7);
   assert.ok(!pts.some((p) => p.value === 999), "today leaked into the series");
   assert.equal(pts.length, 2);
 });
 
 test("the day count is a cap, not a promise", () => {
-  const data = payload({ feedings: [feed(100, 1), feed(200, 2)] });
+  const data = payload({ feedings: [feed(100, 1), feed(200, 2), anchor(2)] });
   assert.equal(dailyTotals(data, "feed_ml", NOW, 30).length, 2, "only two days exist");
 });
 
 test("all asks for every finished day there is", () => {
-  const data = payload({ feedings: [feed(50, 1), feed(50, 9)] });
+  const data = payload({ feedings: [feed(50, 1), feed(50, 9), anchor(9)] });
   assert.equal(dailyTotals(data, "feed_ml", NOW, "all").length, 9);
 });
 
 test("days in the middle with nothing logged are zeros, not gaps", () => {
   // Dropping them would compress the x-axis and make a two-day gap look like
   // one day, which is exactly the sort of thing that flatters a trend.
-  const data = payload({ feedings: [feed(100, 1), feed(300, 4)] });
+  const data = payload({ feedings: [feed(100, 1), feed(300, 4), anchor(4)] });
   const pts = dailyTotals(data, "feed_ml", NOW, 7);
   assert.deepEqual(pts.map((p) => p.value), [300, 0, 0, 100]);
 });

@@ -207,10 +207,13 @@ export default function AdvancedDashboard() {
         <p className="-mt-1 text-[11px] leading-snug text-muted">
           One point per finished day. Today is left out — it&apos;s partial by
           definition, and a trend drawn through it would report a dip every
-          morning. The dashed line is a least-squares fit across the whole
-          window, so one unusual day nudges it rather than defining it. A
-          direction is only named once the whole fitted move is bigger than the
-          day-to-day scatter; below that it says steady, because it is.
+          morning. Each chart starts the day its own log started, which is why
+          they can cover different stretches: days from before anyone was
+          writing sleep down aren&apos;t quiet days, they&apos;re days with no
+          data. The dashed line is a least-squares fit across the whole window,
+          so one unusual day nudges it rather than defining it. A direction is
+          only named once the whole fitted move is bigger than the day-to-day
+          scatter; below that it says steady, because it is.
         </p>
 
         {/* Weight belongs with the long-arc charts rather than the daily ones,
@@ -222,11 +225,6 @@ export default function AdvancedDashboard() {
       <div className="panel rounded-[10px] p-4">
         <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-muted">
           Averages
-          {s.days > 0 && (
-            <span className="ml-1 normal-case tracking-normal">
-              · {s.days} full day{s.days === 1 ? "" : "s"}
-            </span>
-          )}
         </div>
 
         {s.days === 0 ? (
@@ -238,14 +236,14 @@ export default function AdvancedDashboard() {
           // feeds" onto two lines, which reads as a wrapping bug rather than a
           // layout choice.
           <div className="flex flex-col gap-3">
-            <Group color="var(--c-feed)" title="Feeding">
+            <Group color="var(--c-feed)" title="Feeding" days={s.feedDays}>
               <Row label="Milk a day" value={`${num(s.mlPerDay, 0)} mL`} />
               <Row label="Feeds a day" value={num(s.feedsPerDay)} />
               <Row label="Average feed" value={`${num(s.avgFeedMl, 0)} mL`} />
               <Row label="Typical gap between feeds" value={hrs(s.avgBetweenFeedsMs)} />
               <Row label="Night feeds (10pm–6am)" value={num(s.nightFeedsPerNight)} />
             </Group>
-            <Group color="var(--c-sleep)" title="Sleep">
+            <Group color="var(--c-sleep)" title="Sleep" days={s.sleepDays}>
               <Row label="Asleep a day" value={hrs(s.sleepPerDayMs)} />
               <Row label="Awake a day" value={hrs(s.awakePerDayMs)} />
               <Row label="Naps a day" value={num(s.napsPerDay)} />
@@ -253,7 +251,7 @@ export default function AdvancedDashboard() {
               <Row label="Average awake stretch" value={hrs(s.avgAwakeStretchMs)} />
               <Row label="Longest sleep" value={hrs(s.longestSleepMs)} />
             </Group>
-            <Group color="var(--c-diaper)" title="Diapers">
+            <Group color="var(--c-diaper)" title="Diapers" days={s.diaperDays}>
               <Row label="Diapers a day" value={num(s.diapersPerDay)} />
               <Row label="Dirty ones a day" value={num(s.poopsPerDay)} />
             </Group>
@@ -262,7 +260,8 @@ export default function AdvancedDashboard() {
 
         <p className="mt-3 border-t border-line pt-2 text-[11px] leading-snug text-muted">
           Whole days only — today is still in progress, and folding half a day
-          into an average drags every figure down.
+          into an average drags every figure down. Each group counts from the day
+          its own log started, which is why the day counts differ.
         </p>
       </div>
 
@@ -327,19 +326,33 @@ function Toggle<T extends string | number>({
   );
 }
 
+/**
+ * Each group carries its own day count, because each is divided by a different
+ * one — the three logs began weeks apart. Printing them per group is the honest
+ * version: a single figure at the top of the panel would be right for one group
+ * and quietly wrong for the other two.
+ */
 function Group({
   title,
   color,
+  days,
   children,
 }: {
   title: string;
   color: string;
+  days: number;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <div className="text-[10px] font-medium uppercase tracking-[0.12em]" style={{ color }}>
-        {title}
+      <div
+        className="flex items-baseline justify-between gap-2 text-[10px] font-medium uppercase tracking-[0.12em]"
+        style={{ color }}
+      >
+        <span>{title}</span>
+        <span className="whitespace-nowrap normal-case tracking-normal text-muted">
+          {days === 0 ? "not logged yet" : `${days} day${days === 1 ? "" : "s"}`}
+        </span>
       </div>
       {children}
     </div>

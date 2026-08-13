@@ -131,8 +131,11 @@ test("both days' series have the same length so they can be overlaid", () => {
 test("averages exclude today, which is only half over", () => {
   const data = payload({
     feedings: [
-      // Two complete days: 8th and 9th, 100 mL each.
-      feed("a", 100, at(2026, 8, 8, 10)),
+      // Two complete days: 8th and 9th, 100 mL each. The 8th's feed is in the
+      // small hours so the day reads as watched from midnight — a first day
+      // whose earliest entry is late morning is dropped as one where logging
+      // only started at that point.
+      feed("a", 100, at(2026, 8, 8, 1)),
       feed("b", 100, at(2026, 8, 9, 10)),
       // Today — must not drag the average down.
       feed("c", 10, at(2026, 8, 10, 9)),
@@ -160,16 +163,17 @@ test("no data at all doesn't throw", () => {
 test("night feeds count the 10pm–6am window across midnight", () => {
   const data = payload({
     feedings: [
+      feed("n0", 10, at(2026, 8, 8, 2)), // night — and the day's earliest entry
+      feed("d2", 10, at(2026, 8, 8, 6)), // day (boundary: 6am is morning)
       feed("n1", 10, at(2026, 8, 8, 23)), // night
       feed("n2", 10, at(2026, 8, 9, 3)), // night
       feed("d1", 10, at(2026, 8, 9, 13)), // day
-      feed("n3", 10, at(2026, 8, 9, 22)), // night (boundary)
-      feed("d2", 10, at(2026, 8, 8, 6)), // day (boundary)
+      feed("n3", 10, at(2026, 8, 9, 22)), // night (boundary: 10pm is night)
     ],
   });
   const s = computeStats(data, NOW);
   assert.equal(s.days, 2);
-  assert.equal(s.nightFeedsPerNight, 1.5, "3 night feeds over 2 days");
+  assert.equal(s.nightFeedsPerNight, 2, "4 night feeds over 2 days");
 });
 
 test("awake stretches are the gaps between naps, not the naps", () => {
