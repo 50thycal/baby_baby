@@ -320,6 +320,21 @@ equal peers, and they share one legend key — seven keys would take more room
 than the chart. Past days are drawn complete; today stops at the current time,
 because running it flat to the right edge would read as "she stopped".
 
+*When does she sleep* — **When she sleeps**, every finished day folded onto one
+midnight-to-midnight axis, asking of each fifteen minutes: on what share of
+those days was she asleep then? Averaged over one day, two, three, a week or
+everything. It's the only chart drawn wider than the screen and scrolled
+sideways — a whole day squeezed into 320px gives each slot about three pixels,
+too fine to read — and it opens on the evening, because the interesting band is
+the night and a midnight-to-midnight axis puts the night at both ends. The
+percentage axis is pinned outside the scroller so the scale stays readable
+however far along you've scrolled.
+
+Underneath it names the longest stretch above half. That scan is **circular**:
+the answer is nearly always a night, and a scan that stopped at the end of the
+array would report 22:00–05:00 as two short runs and pick the wrong one as the
+longest.
+
 *Which way is this heading* — **Day by day**, one finished day's total per
 point over a week, a fortnight or everything, with a least-squares line fitted
 through it. Today is left out, the same rule the averages follow: it's partial

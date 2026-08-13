@@ -228,6 +228,131 @@ export function linearFit(points: DailyPoint[]): Trend | null {
   };
 }
 
+export type SleepClock = {
+  /**
+   * One entry per slot from local midnight, each the share of the selected days
+   * she was asleep during that slot. 1 means asleep then on every day of the
+   * window, 0 means never.
+   */
+  slots: number[];
+  /** How many finished days went into the average. */
+  dayCount: number;
+  slotMinutes: number;
+};
+
+/**
+ * When in the day she actually sleeps, averaged across recent days.
+ *
+ * Folds every finished day onto one midnight-to-midnight axis and asks, for
+ * each slot: on what share of those days was she asleep at this time? Totals
+ * and averages say *how much* she sleeps; this is the only thing that says
+ * *when*, which is the question you're really asking at 9pm.
+ *
+ * Finished days only, the same rule the trends follow. A partial today would
+ * drag every slot after the current hour toward zero and make the afternoon
+ * look like a time she never sleeps.
+ */
+export function sleepClock(
+  data: EventsPayload,
+  now: Date,
+  days: number | "all",
+  slotMinutes = 15,
+): SleepClock {
+  const slotMs = slotMinutes * 60_000;
+  const slotCount = Math.round(86_400_000 / slotMs);
+  const totals = new Array<number>(slotCount).fill(0);
+
+  const todayStart = startOfDay(now).getTime();
+  // How far back the log goes, not how far back *sleep* goes: a day when
+  // nobody logged a nap is still a day, and it belongs in the denominator as a
+  // day she wasn't recorded asleep. Same measure `dailyTotals` uses.
+  const earliest = [
+    ...data.feedings.map((f) => new Date(f.ts).getTime()),
+    ...data.sleep.map((s) => new Date(s.sleep_start).getTime()),
+    ...data.diapers.map((d) => new Date(d.ts).getTime()),
+  ].sort((a, b) => a - b)[0];
+  if (earliest === undefined) return { slots: totals, dayCount: 0, slotMinutes };
+
+  const firstDay = startOfDay(new Date(earliest)).getTime();
+  const available = Math.round((todayStart - firstDay) / 86_400_000);
+  if (available < 1) return { slots: totals, dayCount: 0, slotMinutes };
+
+  const dayCount = days === "all" ? available : Math.min(days, available);
+
+  for (let i = dayCount; i >= 1; i--) {
+    const from = addDays(now, -i).getTime();
+    const to = addDays(now, -i + 1).getTime();
+
+    for (const nap of data.sleep) {
+      const clipped = clipSleep(nap, from, to);
+      if (!clipped) continue;
+
+      // Offsets from that day's local midnight. A daylight-saving day is 23 or
+      // 25 hours long; clamping to the 24-hour grid keeps the axis honest and
+      // costs at most one hour, once or twice a year.
+      const startOffset = clipped.from - from;
+      const endOffset = clipped.to - from;
+      const firstSlot = Math.max(0, Math.floor(startOffset / slotMs));
+      const lastSlot = Math.min(slotCount - 1, Math.ceil(endOffset / slotMs) - 1);
+
+      for (let s = firstSlot; s <= lastSlot; s++) {
+        const overlap =
+          Math.min(endOffset, (s + 1) * slotMs) - Math.max(startOffset, s * slotMs);
+        if (overlap > 0) totals[s] += overlap;
+      }
+    }
+  }
+
+  return {
+    // Clamped: two sleep sessions can overlap if someone edited one to run
+    // across another, and a bar past 100% would draw outside the chart.
+    slots: totals.map((ms) => Math.min(1, ms / (slotMs * dayCount))),
+    dayCount,
+    slotMinutes,
+  };
+}
+
+export type ClockWindow = { fromSlot: number; toSlot: number; slotCount: number };
+
+/**
+ * The longest stretch she's usually asleep for.
+ *
+ * Scanned circularly, because the answer is nearly always a night — a run from
+ * 22:00 to 05:00 is one stretch, and a scan that stopped at the end of the
+ * array would report it as two short ones and pick the wrong stretch as the
+ * longest.
+ *
+ * `toSlot` is exclusive and may be less than `fromSlot` when the run wraps.
+ */
+export function typicalSleepWindow(fractions: number[], threshold = 0.5): ClockWindow | null {
+  const n = fractions.length;
+  if (n === 0) return null;
+
+  const asleep = fractions.map((f) => f >= threshold);
+  if (asleep.every((a) => !a)) return null;
+  if (asleep.every((a) => a)) return { fromSlot: 0, toSlot: n, slotCount: n };
+
+  // Start from a slot that begins a run, so no run is split by the array's end.
+  const start = asleep.findIndex((a, i) => a && !asleep[(i - 1 + n) % n]);
+
+  let best: ClockWindow | null = null;
+  let i = 0;
+  while (i < n) {
+    const at = (start + i) % n;
+    if (!asleep[at]) {
+      i++;
+      continue;
+    }
+    let len = 0;
+    while (len < n && asleep[(start + i + len) % n]) len++;
+    if (!best || len > best.slotCount) {
+      best = { fromSlot: at, toSlot: (at + len) % n, slotCount: len };
+    }
+    i += len;
+  }
+  return best;
+}
+
 export type Stats = {
   days: number;
   feedsPerDay: number | null;
