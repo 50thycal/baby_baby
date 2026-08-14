@@ -325,10 +325,20 @@ midnight-to-midnight axis, asking of each fifteen minutes: on what share of
 those days was she asleep then? Averaged over one day, two, three, a week or
 everything. It's the only chart drawn wider than the screen and scrolled
 sideways — a whole day squeezed into 320px gives each slot about three pixels,
-too fine to read — and it opens on the evening, because the interesting band is
-the night and a midnight-to-midnight axis puts the night at both ends. The
-percentage axis is pinned outside the scroller so the scale stays readable
+too fine to read — and it opens with **now** on screen, a third from the left.
+The percentage axis is pinned outside the scroller so the scale stays readable
 however far along you've scrolled.
+
+The grid reads at two weights: a solid labelled rule every two hours, and a
+lighter dashed one on the hours between, so you can place a band without
+counting pixels. Both sit *behind* the bars — a rule drawn over a band looks
+like a gap in it.
+
+A dark red line marks the current time, labelled rather than left to colour
+alone, and the panel says how often she was asleep at this hour across the days
+on screen. That figure is a base rate and says so: it answers "is this usually
+a sleeping time", not "is she asleep". Whether she's actually down right now is
+a fact, and the Log screen answers it from one.
 
 Underneath it names the longest stretch above half. That scan is **circular**:
 the answer is nearly always a night, and a scan that stopped at the end of the

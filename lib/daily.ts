@@ -385,6 +385,29 @@ export function sleepClock(
   };
 }
 
+/** Which slot of the clock a moment falls in. */
+export function slotAt(clock: SleepClock, at: Date): number {
+  const minutes = at.getHours() * 60 + at.getMinutes();
+  return Math.min(clock.slots.length - 1, Math.floor(minutes / clock.slotMinutes));
+}
+
+/**
+ * The share of recent days she was asleep at this time of day.
+ *
+ * A base rate, not a live reading: it says "on 3 of the last 4 days she was
+ * down at half nine", which is the useful thing to know when you're deciding
+ * whether to start the bedtime routine. It does not know whether she is
+ * actually asleep right now — the Log screen answers that, and answers it from
+ * a fact rather than a frequency.
+ *
+ * Null when there are no finished days to average, rather than 0: no data is
+ * not the same claim as "never".
+ */
+export function oddsAsleepAt(clock: SleepClock, at: Date): number | null {
+  if (clock.dayCount === 0) return null;
+  return clock.slots[slotAt(clock, at)] ?? null;
+}
+
 export type ClockWindow = { fromSlot: number; toSlot: number; slotCount: number };
 
 /**

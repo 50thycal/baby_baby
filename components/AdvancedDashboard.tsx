@@ -171,7 +171,7 @@ export default function AdvancedDashboard() {
           value={clockSpan}
           onChange={(v) => setClockSpan(v as ClockSpan)}
         />
-        <SleepClock clock={view.clock} />
+        <SleepClock clock={view.clock} now={now} />
       </div>
 
       <div className="mt-1 flex flex-col gap-3">
