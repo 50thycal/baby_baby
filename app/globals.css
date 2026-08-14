@@ -58,6 +58,11 @@
 
   --c-danger: #b5564f;
   --c-danger-wash: #fadedb;
+
+  /* "You are here" on the sleep clock. Deliberately the one red on a page of
+     greens and pinks — it marks a moment rather than a measurement, and must
+     not read as another series. */
+  --c-now: #9b1f27;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -90,6 +95,10 @@
 
     --c-danger: #db877b;
     --c-danger-wash: #2f1c18;
+
+    /* Still unmistakably red, but lifted: a true dark red disappears into a
+       near-black ground, and this line's whole job is being findable. */
+    --c-now: #f2635c;
   }
 }
 
@@ -120,6 +129,8 @@
 
   --color-danger: var(--c-danger);
   --color-danger-wash: var(--c-danger-wash);
+
+  --color-now: var(--c-now);
 
   --color-border: var(--c-border);
 

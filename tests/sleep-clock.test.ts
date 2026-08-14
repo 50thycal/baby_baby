@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { sleepClock, typicalSleepWindow } from "../lib/daily";
+import { oddsAsleepAt, sleepClock, slotAt, typicalSleepWindow } from "../lib/daily";
 import type { EventsPayload } from "../lib/types";
 
 const NOW = new Date(2026, 7, 12, 14, 30);
@@ -140,6 +140,46 @@ test("no fraction can exceed one", () => {
   const data = payload({ sleep: [nap(1, 2, 6), nap(1, 3, 5, "overlap")] });
   const clock = sleepClock(data, NOW, 1);
   assert.ok(clock.slots.every((f) => f <= 1), `max was ${Math.max(...clock.slots)}`);
+});
+
+// --- the odds right now -------------------------------------------------------
+
+test("the odds read the slot the moment falls in", () => {
+  // Asleep 2–4 on both of the last two days, so 3am is a certainty and 3pm is
+  // never.
+  const data = payload({ sleep: [nap(1, 2, 4), nap(2, 2, 4, "b")] });
+  const clock = sleepClock(data, NOW, 2);
+  const at = (h: number, m = 0) => new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate(), h, m);
+
+  assert.equal(oddsAsleepAt(clock, at(3)), 1);
+  assert.equal(oddsAsleepAt(clock, at(15)), 0);
+});
+
+test("a half-kept habit reads as a half", () => {
+  // Down at 3am on one of the two days. The older day's early nap is what makes
+  // it a counted day at all — a day whose first sleep is at 8am reads as one
+  // where logging began at 8am.
+  const data = payload({ sleep: [nap(1, 2, 4), nap(2, 1, 1.5, "b")] });
+  const clock = sleepClock(data, NOW, 2);
+  const at3 = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate(), 3, 0);
+  assert.equal(oddsAsleepAt(clock, at3), 0.5);
+});
+
+test("no finished days has no odds, rather than odds of zero", () => {
+  // "Never asleep at this hour" is a claim about her; no data isn't.
+  const clock = sleepClock(payload(), NOW, 7);
+  assert.equal(oddsAsleepAt(clock, NOW), null);
+});
+
+test("the slot is the one the clock time falls inside, not the nearest", () => {
+  const clock = sleepClock(payload({ sleep: [nap(1, 2, 4)] }), NOW, 1, 15);
+  const at = (h: number, m: number) =>
+    new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate(), h, m);
+
+  assert.equal(slotAt(clock, at(0, 0)), 0);
+  assert.equal(slotAt(clock, at(0, 14)), 0, "still inside the first quarter hour");
+  assert.equal(slotAt(clock, at(0, 15)), 1);
+  assert.equal(slotAt(clock, at(23, 59)), 95, "the last slot of the day, not off the end");
 });
 
 // --- typicalSleepWindow -------------------------------------------------------
