@@ -350,6 +350,15 @@ point over a week, a fortnight or everything, with a least-squares line fitted
 through it. Today is left out, the same rule the averages follow: it's partial
 by definition, and a trend drawn through it would report a dip every morning.
 
+The sleep chart carries **both halves of the day** — asleep in pine, awake in
+ochre. Awake isn't measured, because nothing logs it: it's the day minus what
+was slept, taking day length from the calendar so the weekend the clocks change
+doesn't invent an hour. That makes the two lines mirror images that cross at the
+half-day mark, which is the point — it shows at a glance which side of half she
+is on, and when that flipped. Only asleep gets a fitted line: the other one's
+slope is the same number negated, and two mirrored dashes say one thing twice.
+The footer names which line it means for the same reason.
+
 The direction is only stated once it has earned it. A fitted line always has
 *some* slope, so without a test every chart announces a trend and an ordinary
 run of days reads as a decline. The rule is that the whole fitted move has to be

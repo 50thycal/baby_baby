@@ -242,6 +242,22 @@ export function dailyTotals(
   return points;
 }
 
+/**
+ * The other side of each day: everything that wasn't sleep.
+ *
+ * Derived rather than measured — nothing logs "awake" — so it is exactly the
+ * day minus what was slept, and it inherits the same blind spot: a nap nobody
+ * wrote down shows up here as time she was up. Day length comes from the
+ * calendar rather than being assumed to be 24 hours, so the weekend the clocks
+ * change doesn't invent or lose an hour.
+ */
+export function awakeTotals(sleep: DailyPoint[]): DailyPoint[] {
+  return sleep.map((p) => {
+    const dayMs = addDays(new Date(p.dayStart), 1).getTime() - p.dayStart;
+    return { dayStart: p.dayStart, value: Math.max(0, dayMs - p.value) };
+  });
+}
+
 export type Trend = {
   /** Change per day, in the metric's own unit. */
   slope: number;

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { dailyTotals, linearFit, type DailyPoint } from "../lib/daily";
+import { awakeTotals, dailyTotals, linearFit, type DailyPoint } from "../lib/daily";
 import type { EventsPayload } from "../lib/types";
 
 const HOUR = 3_600_000;
@@ -103,6 +103,39 @@ test("sleep totals come through in milliseconds", () => {
   });
   const pts = dailyTotals(data, "sleep_ms", NOW, 3);
   assert.equal(pts[pts.length - 1].value, 3 * HOUR);
+});
+
+// --- awakeTotals -------------------------------------------------------------
+
+test("awake is the day minus what was slept", () => {
+  const day = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate() - 1).getTime();
+  const [awake] = awakeTotals([{ dayStart: day, value: 10 * HOUR }]);
+  assert.equal(awake.value, 14 * HOUR);
+  assert.equal(awake.dayStart, day, "and lands on the same day");
+});
+
+test("the two halves add up to the day, whatever the day is", () => {
+  const sleep = [3, 2, 1].map((d) => ({
+    dayStart: new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate() - d).getTime(),
+    value: (8 + d) * HOUR,
+  }));
+  for (const [i, a] of awakeTotals(sleep).entries()) {
+    const dayMs =
+      new Date(new Date(a.dayStart).getFullYear(), new Date(a.dayStart).getMonth(),
+        new Date(a.dayStart).getDate() + 1).getTime() - a.dayStart;
+    assert.equal(sleep[i].value + a.value, dayMs);
+  }
+});
+
+test("a day of nothing but sleep leaves no awake time, never a negative one", () => {
+  const day = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate() - 1).getTime();
+  // 25 hours is impossible but reachable: two overlapping sessions, edited by
+  // two people. A negative bar would draw off the bottom of the chart.
+  assert.equal(awakeTotals([{ dayStart: day, value: 25 * HOUR }])[0].value, 0);
+});
+
+test("no sleep days, no awake days", () => {
+  assert.deepEqual(awakeTotals([]), []);
 });
 
 // --- linearFit ---------------------------------------------------------------

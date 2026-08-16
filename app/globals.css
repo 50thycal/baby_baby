@@ -48,6 +48,11 @@
   --c-sleep-ink: #2f5b47;
   --c-sleep-wash: #dcecdf;
 
+  /* Awake is the other half of the same day, so it wants a colour that reads
+     against the pine green without joining the accent set — a warm ochre,
+     daylight to sleep's dusk. */
+  --c-awake: #a8712a;
+
   --c-diaper: #6f9445;
   --c-diaper-ink: #4f7029;
   --c-diaper-wash: #e7f2d5;
@@ -85,6 +90,8 @@
     --c-sleep-ink: #a9dcc2;
     --c-sleep-wash: #16261e;
 
+    --c-awake: #dda85c;
+
     --c-diaper: #a9cc70;
     --c-diaper-ink: #c9e29d;
     --c-diaper-wash: #202b16;
@@ -118,6 +125,8 @@
   --color-sleep: var(--c-sleep);
   --color-sleep-ink: var(--c-sleep-ink);
   --color-sleep-wash: var(--c-sleep-wash);
+
+  --color-awake: var(--c-awake);
 
   --color-diaper: var(--c-diaper);
   --color-diaper-ink: var(--c-diaper-ink);

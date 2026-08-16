@@ -9,6 +9,7 @@ import TrendChart from "@/components/TrendChart";
 import WeightChart from "@/components/WeightChart";
 import {
   addDays,
+  awakeTotals,
   computeStats,
   cumulativeSeries,
   dailyTotals,
@@ -82,6 +83,8 @@ export default function AdvancedDashboard() {
       ),
     });
 
+    const sleepDays = dailyTotals(data, "sleep_ms", now, span);
+
     // Today's moments as fractions of the day, for the vertical marks.
     const marksFor = (kind: "spit_up" | "fussy") =>
       data.moments
@@ -97,7 +100,10 @@ export default function AdvancedDashboard() {
       sleep: pair("sleep_ms"),
       poop: pair("poop_count"),
       trendFeed: dailyTotals(data, "feed_ml", now, span),
-      trendSleep: dailyTotals(data, "sleep_ms", now, span),
+      trendSleep: sleepDays,
+      // Derived from the very points sleep is drawn from, so the two lines can
+      // never disagree about which days exist.
+      trendAwake: awakeTotals(sleepDays),
       trendPoop: dailyTotals(data, "poop_count", now, span),
       clock: sleepClock(data, now, clockSpan),
       stats: computeStats(data, now),
@@ -190,9 +196,11 @@ export default function AdvancedDashboard() {
           describeSlope={(perDay) => rate(perDay, `${Math.abs(Math.round(perDay))} mL`)}
         />
         <TrendChart
-          title="Sleep a day"
+          title="Asleep and awake a day"
           color="var(--c-sleep)"
           points={view.trendSleep}
+          companion={{ points: view.trendAwake, color: "var(--c-awake)", label: "awake" }}
+          seriesLabel="asleep"
           format={(v) => `${Math.round(v / 3_600_000)}h`}
           describeSlope={(perDay) => rate(perDay, fmtDuration(Math.abs(perDay)))}
         />
