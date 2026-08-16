@@ -85,6 +85,13 @@ export type Weight = {
   id: string;
   weight_g: number;
   ts: string;
+  /**
+   * The one weigh-in from before the app existed. Flagged rather than inferred
+   * from being the earliest row: the moment someone logs an ordinary weigh-in
+   * before backfilling this, "earliest" would name a real reading and offer to
+   * overwrite it. At most one row can carry it.
+   */
+  is_birth: boolean;
   created_at: string;
 };
 
