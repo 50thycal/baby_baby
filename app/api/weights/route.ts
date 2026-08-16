@@ -39,12 +39,24 @@ export async function POST(req: Request) {
     const ts = parseTimestamp(body.ts);
 
     const sql = await db();
+    const isBirth = body.is_birth === true;
     const rows = (await sql`
-      INSERT INTO weights (weight_g, ts) VALUES (${grams}, ${ts.toISOString()})
+      INSERT INTO weights (weight_g, ts, is_birth)
+      VALUES (${grams}, ${ts.toISOString()}, ${isBirth})
       RETURNING *`) as Weight[];
 
     return ok(rows[0], 201);
   } catch (err) {
+    // A second birth weight isn't a correction — the existing row is the one to
+    // edit. Hand it back so the client can say so rather than showing a raw
+    // constraint name.
+    if (isUniqueViolation(err)) {
+      return ok({ error: "A birth weight is already recorded" }, 409);
+    }
     return fail(err);
   }
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as { code?: string }).code === "23505";
 }

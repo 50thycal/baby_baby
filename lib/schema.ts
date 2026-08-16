@@ -80,6 +80,15 @@ export const SCHEMA_STATEMENTS: string[] = [
   `CREATE INDEX IF NOT EXISTS comments_ts_idx ON comments (ts DESC)`,
   `CREATE INDEX IF NOT EXISTS sleep_start_idx ON sleep_sessions (sleep_start DESC)`,
   `CREATE INDEX IF NOT EXISTS moments_ts_idx ON moments (ts DESC)`,
+  // Which row is the birth weight, rather than inferring it from being the
+  // earliest. Inferring would be wrong the moment someone logs a weigh-in
+  // before backfilling the birth weight — the app would offer to overwrite a
+  // real reading. Additive and defaulted, so existing rows need nothing.
+  `ALTER TABLE weights ADD COLUMN IF NOT EXISTS is_birth boolean NOT NULL DEFAULT false`,
+
+  // At most one. A second birth weight isn't a correction, it's a mistake.
+  `CREATE UNIQUE INDEX IF NOT EXISTS weights_single_birth ON weights ((is_birth)) WHERE is_birth`,
+
   `CREATE INDEX IF NOT EXISTS weights_ts_idx ON weights (ts DESC)`,
   `CREATE INDEX IF NOT EXISTS snapshots_taken_at_idx ON snapshots (taken_at DESC)`,
 ];

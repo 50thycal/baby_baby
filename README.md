@@ -74,7 +74,7 @@ sleep_sessions   id, sleep_start, sleep_end (nullable), created_at
 diapers          id, type, ts, created_at
 comments         id, ts, text, reactions (jsonb), created_at
 moments          id, kind, ts, created_at
-weights          id, weight_g, ts, created_at
+weights          id, weight_g, ts, is_birth, created_at
 snapshots        id, taken_at, reason, counts (jsonb), payload (jsonb)
 ```
 
@@ -113,6 +113,17 @@ afford to because there are only ever a handful.
 - **Sleep** starts a session; once running, the tile becomes a live timer and
   the same tile ends it with **Baby's Awake**.
 - **Diaper** is four big buttons, then confirm.
+
+A quiet **Birth weight** link sits with the other rare errands. It takes a
+typed date and typed pounds/ounces rather than the wheel and the time field —
+it's a number copied off a hospital band weeks after the fact, and the ±hours
+wheel can't reach back that far anyway. It files an ordinary weigh-in, so the
+weight chart starts its arc where the baby did.
+
+The row carries `is_birth` rather than the app inferring "the earliest weight".
+Inferring would be wrong the moment someone logs a weigh-in before backfilling
+this, and the app would then offer to overwrite a real reading. A partial
+unique index permits at most one.
 
 Below the three tiles is a **Weight** row — a full-width button rather than a
 fourth tile. Weighing happens every week or two, not every two hours, and a

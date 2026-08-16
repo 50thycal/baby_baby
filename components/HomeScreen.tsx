@@ -8,6 +8,7 @@ import ImportSheet from "@/components/sheets/ImportSheet";
 import SleepSheet from "@/components/sheets/SleepSheet";
 import CritterStrip from "@/components/Critters";
 import { BottleIcon, MoonIcon, NappyIcon, ScaleIcon } from "@/components/icons";
+import BirthWeightSheet from "@/components/sheets/BirthWeightSheet";
 import WeightSheet from "@/components/sheets/WeightSheet";
 import { useEvents, useHomeState, useWeights } from "@/lib/api";
 import { fmtWeight } from "@/lib/weight";
@@ -16,7 +17,7 @@ import { useNow } from "@/lib/useNow";
 import { fmtAgo, fmtClock, fmtDuration } from "@/lib/time";
 import { DIAPER_SHORT, type EventsPayload, type HomeState } from "@/lib/types";
 
-type Which = "feed" | "sleep" | "diaper" | "weight" | "import" | "backups" | null;
+type Which = "feed" | "sleep" | "diaper" | "weight" | "birth" | "import" | "backups" | null;
 
 export default function HomeScreen() {
   const { data, error } = useHomeState();
@@ -28,6 +29,7 @@ export default function HomeScreen() {
   const now = useNow(15_000);
 
   const lastWeight = weights?.length ? weights[weights.length - 1] : null;
+  const birthWeight = weights?.find((w) => w.is_birth) ?? null;
 
   const asleep = data?.activeSleep ?? null;
   const close = () => setOpen(null);
@@ -107,24 +109,23 @@ export default function HomeScreen() {
 
       <CritterStrip />
 
-      {/* Deliberately small and quiet: both are rare, deliberate errands and
-          must never compete with the three things done at 3am. */}
-      <div className="-mt-1 flex items-center justify-center gap-1 text-[13px] text-muted">
-        <button
-          type="button"
-          onClick={() => setOpen("import")}
-          className="press px-3 py-1 underline underline-offset-4"
+      {/* Deliberately small and quiet: all three are rare, deliberate errands
+          and must never compete with the things done at 3am. Spaced rather
+          than separated by dots — there are enough of them now to wrap on a
+          narrow phone, and a dot separator strands itself at the end of a
+          line when it does. */}
+      <div className="-mt-1 flex flex-wrap items-center justify-center gap-x-2 text-[13px] text-muted">
+        <Errand onClick={() => setOpen("import")}>Import from a paper log</Errand>
+        <Errand onClick={() => setOpen("backups")}>Backups</Errand>
+        {/* A one-off backfill, so it belongs with the other errands rather than
+            beside the weight row. Once it's on file it carries the figure —
+            both a receipt and the way back in to fix a typo. */}
+        <Errand
+          onClick={() => setOpen("birth")}
+          after={birthWeight ? fmtWeight(birthWeight.weight_g) : undefined}
         >
-          Import from a paper log
-        </button>
-        <span aria-hidden>·</span>
-        <button
-          type="button"
-          onClick={() => setOpen("backups")}
-          className="press px-3 py-1 underline underline-offset-4"
-        >
-          Backups
-        </button>
+          Birth weight
+        </Errand>
       </div>
 
       {open === "feed" && (
@@ -133,9 +134,34 @@ export default function HomeScreen() {
       {open === "sleep" && <SleepSheet onClose={close} active={asleep} />}
       {open === "diaper" && <DiaperSheet onClose={close} />}
       {open === "weight" && <WeightSheet onClose={close} previous={lastWeight} />}
+      {open === "birth" && <BirthWeightSheet onClose={close} existing={birthWeight} />}
       {open === "import" && <ImportSheet onClose={close} />}
       {open === "backups" && <BackupSheet onClose={close} />}
     </div>
+  );
+}
+
+/**
+ * One of the quiet errands under the tiles.
+ *
+ * The underline sits on an inner span rather than the button, because
+ * text-decoration draws through descendants and a child can't switch it off —
+ * `no-underline` on the value would have no effect with the rule on the parent.
+ */
+function Errand({
+  onClick,
+  after,
+  children,
+}: {
+  onClick: () => void;
+  after?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button type="button" onClick={onClick} className="press px-2 py-1">
+      <span className="underline underline-offset-4">{children}</span>
+      {after && <span className="ml-1">· {after}</span>}
+    </button>
   );
 }
 
