@@ -4,6 +4,8 @@ import {
   computeTally,
   diaperComparison,
   milkComparison,
+  SLEEPERS,
+  sleeperFor,
   sleepComparison,
 } from "../lib/tally";
 import type { EventsPayload } from "../lib/types";
@@ -111,27 +113,56 @@ test("no milk at all has nothing to compare", () => {
   assert.equal(milkComparison(0), null);
 });
 
-test("sleep turns into walking distance from Kansas City", () => {
-  // 10 hours at 2 mph is 20 miles — past Lenexa, not yet Lawrence.
-  const c = sleepComparison(10 * HOUR)!;
-  assert.match(c.headline, /Lenexa/);
-  assert.match(c.detail, /Lawrence/);
-  assert.match(c.detail, /\d+ more miles/);
+// --- who else sleeps like that ----------------------------------------------
+
+test("the animal is matched on her average day, not her lifetime total", () => {
+  const c = sleepComparison(15 * HOUR)!;
+  assert.match(c.headline, /sloth/);
+  assert.match(c.detail, /15\.0 h a day/);
+  assert.match(c.detail, /they get 15/);
 });
 
-test("a long sleep total reaches further down the list", () => {
-  // 300 hours at 2 mph is 600 miles.
-  assert.match(sleepComparison(300 * HOUR)!.headline, /Denver/);
+test("she moves down the list as she needs less sleep", () => {
+  const seen = [20, 18, 15, 12, 10, 8].map((h) => sleepComparison(h * HOUR)!.headline);
+  assert.deepEqual(seen, [
+    "Sleeps like a koala",
+    "Sleeps like a hedgehog",
+    "Sleeps like a sloth",
+    "Sleeps like an owl",
+    "Sleeps like a fox",
+    "Sleeps like a rabbit",
+  ]);
 });
 
-test("before the first landmark it still says something useful", () => {
-  // 2 hours is 4 miles — short of Lenexa.
-  const c = sleepComparison(2 * HOUR)!;
-  assert.match(c.headline, /miles out of Kansas City/);
+test("an in-between average lands on the nearest animal", () => {
+  // 17.4 rounds toward the armadillo at 17, 17.6 toward the hedgehog at 18.
+  assert.match(sleepComparison(17.4 * HOUR)!.headline, /armadillo/);
+  assert.match(sleepComparison(17.6 * HOUR)!.headline, /hedgehog/);
 });
 
-test("barely any sleep has nothing to compare", () => {
-  assert.equal(sleepComparison(60_000), null);
+test("every hour from eight to twenty has somebody on it", () => {
+  for (let h = 8; h <= 20; h++) {
+    assert.equal(sleeperFor(h).hours, h, `nobody sleeps ${h} hours`);
+  }
+  assert.equal(SLEEPERS.length, 13);
+});
+
+test("the ladder is ordered, sleepiest first", () => {
+  const hours = SLEEPERS.map((x) => x.hours);
+  assert.deepEqual(hours, [...hours].sort((a, b) => b - a));
+  assert.equal(new Set(SLEEPERS.map((x) => x.name)).size, SLEEPERS.length, "no repeats");
+});
+
+test("off the ends of the ladder she clamps rather than falling off", () => {
+  assert.match(sleepComparison(23 * HOUR)!.headline, /koala/);
+  assert.match(sleepComparison(3 * HOUR)!.headline, /rabbit/);
+});
+
+test("no finished day yet means no animal, rather than the sleepless one", () => {
+  // "She sleeps like a rabbit" from an empty divisor would be a claim about
+  // her, not a gap in the data.
+  assert.equal(sleepComparison(null), null);
+  assert.equal(sleepComparison(0), null);
 });
 
 test("the ladders are ordered, or the wrong rung would be picked", () => {
