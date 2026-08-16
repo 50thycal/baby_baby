@@ -8,6 +8,7 @@
  * ordered, and the biggest rung she's passed is the one that gets shown, so the
  * comparison keeps changing on its own.
  */
+import { coverageStart, startOfDay, totalsBetween } from "./daily";
 import { clipSleep } from "./summary";
 import type { EventsPayload } from "./types";
 
@@ -22,6 +23,11 @@ export type Tally = {
   fussies: number;
   notes: number;
   days: number;
+  /**
+   * Her average day, which is what the animal is matched against. Null until
+   * there is a finished day of sleep to average.
+   */
+  sleepPerDayMs: number | null;
 };
 
 const POOPY = new Set(["poop", "both", "massive_blowout"]);
@@ -45,7 +51,21 @@ export function computeTally(data: EventsPayload, now: Date): Tally {
   ];
   const first = stamps.length ? Math.min(...stamps) : now.getTime();
 
+  // The average that picks the animal needs a denominator counting only days
+  // sleep was actually being written down — the same rule the averages panel
+  // follows, and for the same reason: a fortnight from before anyone logged
+  // sleep would halve her average and drop her several animals. Today is left
+  // out too, being partial; without that she would start every morning as a
+  // rabbit and climb back to a hedgehog by bedtime.
+  const sleepFrom = coverageStart(data, "sleep", now);
+  const todayStart = startOfDay(now).getTime();
+  const sleepDays = sleepFrom === null ? 0 : Math.round((todayStart - sleepFrom) / 86_400_000);
+
   return {
+    sleepPerDayMs:
+      sleepFrom !== null && sleepDays > 0
+        ? totalsBetween(data, sleepFrom, todayStart).sleepMs / sleepDays
+        : null,
     milkMl,
     feeds: data.feedings.length,
     sleepMs,
@@ -80,28 +100,45 @@ const VOLUME_LADDER: Rung[] = [
 ];
 
 /**
- * Walking distance from Kansas City at an amble, so the sleep total turns into
- * somewhere you'd have got to. Miles from KC, roughly.
+ * Who else sleeps like that.
+ *
+ * One animal per hour from twenty down to eight, so her average always lands on
+ * exactly one and the match moves as she grows — she starts up near a koala and
+ * works her way down the list over the first year, which is the whole point of
+ * it. The figures are the usual cited daily averages and are not worth
+ * defending to a decimal place; what matters is that the ladder is ordered and
+ * that every hour in the range has somebody standing on it.
  */
-export const WALK_MPH = 2;
+export type Sleeper = { hours: number; name: string; article: string };
 
-const PLACE_LADDER: Rung[] = [
-  { at: 12, label: "Lenexa" },
-  { at: 30, label: "Lawrence" },
-  { at: 60, label: "Topeka" },
-  { at: 125, label: "Columbia" },
-  { at: 185, label: "Omaha" },
-  { at: 250, label: "St. Louis" },
-  { at: 320, label: "Wichita and back" },
-  { at: 375, label: "Sioux Falls" },
-  { at: 440, label: "Minneapolis" },
-  { at: 510, label: "Chicago" },
-  { at: 600, label: "Denver" },
-  { at: 800, label: "Mount Rushmore" },
-  { at: 1_200, label: "New York City" },
-  { at: 1_600, label: "Los Angeles" },
-  { at: 1_850, label: "Seattle" },
+export const SLEEPERS: Sleeper[] = [
+  { hours: 20, name: "koala", article: "a" },
+  { hours: 19, name: "brown bat", article: "a" },
+  { hours: 18, name: "hedgehog", article: "a" },
+  { hours: 17, name: "armadillo", article: "an" },
+  { hours: 16, name: "dormouse", article: "a" },
+  { hours: 15, name: "sloth", article: "a" },
+  { hours: 14, name: "squirrel", article: "a" },
+  { hours: 13, name: "chipmunk", article: "a" },
+  { hours: 12, name: "owl", article: "an" },
+  { hours: 11, name: "raccoon", article: "a" },
+  { hours: 10, name: "fox", article: "a" },
+  { hours: 9, name: "badger", article: "a" },
+  { hours: 8, name: "rabbit", article: "a" },
 ];
+
+/**
+ * The animal whose day is closest to hers.
+ *
+ * Clamped at both ends rather than left open: above twenty she is simply the
+ * sleepiest thing on the list, and below eight something has gone wrong with
+ * the logging rather than with her.
+ */
+export function sleeperFor(hoursPerDay: number): Sleeper {
+  return SLEEPERS.reduce((best, s) =>
+    Math.abs(s.hours - hoursPerDay) < Math.abs(best.hours - hoursPerDay) ? s : best,
+  );
+}
 
 /**
  * A stacked diaper is close enough to an inch thick that the count and the
@@ -189,17 +226,20 @@ export function diaperComparison(diapers: number): Comparison {
   };
 }
 
-export function sleepComparison(sleepMs: number): Comparison {
-  const hours = sleepMs / 3_600_000;
-  const miles = hours * WALK_MPH;
-  if (miles < 1) return null;
+/**
+ * Not a total but a rate: the animal is about the shape of her day, so it takes
+ * the per-day average rather than the lifetime sum. Null until a finished day
+ * exists to average — with nothing to divide, "she sleeps like a rabbit" would
+ * be a claim rather than a gap.
+ */
+export function sleepComparison(sleepPerDayMs: number | null): Comparison {
+  if (sleepPerDayMs === null || sleepPerDayMs <= 0) return null;
 
-  const rung = rungFor(PLACE_LADDER, miles);
-  const next = rung ? PLACE_LADDER.find((r) => r.at > rung.at) : PLACE_LADDER[0];
+  const hours = sleepPerDayMs / 3_600_000;
+  const who = sleeperFor(hours);
   return {
-    headline: rung
-      ? `walked past ${rung.label}`
-      : `${Math.round(miles)} miles out of Kansas City`,
-    detail: next ? `${Math.round(next.at - miles)} more miles to ${next.label}` : "coast to coast",
+    headline: `Sleeps like ${who.article} ${who.name}`,
+    detail: `${hours.toFixed(1)} h a day · they get ${who.hours}`,
   };
 }
+

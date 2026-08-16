@@ -1,13 +1,7 @@
 "use client";
 
 import { BubbleIcon, MomentIcon } from "@/components/icons";
-import {
-  computeTally,
-  diaperComparison,
-  milkComparison,
-  sleepComparison,
-  WALK_MPH,
-} from "@/lib/tally";
+import { computeTally, diaperComparison, milkComparison, sleepComparison } from "@/lib/tally";
 import { fmtDuration } from "@/lib/time";
 import type { EventsPayload } from "@/lib/types";
 
@@ -20,9 +14,13 @@ import type { EventsPayload } from "@/lib/types";
 export default function GrandTally({ data, now }: { data: EventsPayload; now: Date }) {
   const t = computeTally(data, now);
   const milk = milkComparison(t.milkMl);
-  const walk = sleepComparison(t.sleepMs);
+  const sleeper = sleepComparison(t.sleepPerDayMs);
   const stack = diaperComparison(t.diapers);
-  const hours = Math.round(t.sleepMs / 3_600_000);
+
+  // The headline is already in hours; days are what make a lifetime total land.
+  // "190h" is a number you skim past — "eight solid days" isn't. Restated
+  // rather than repeated: the "=" says it's the same quantity in a bigger unit.
+  const daysAsleep = (t.sleepMs / 86_400_000).toFixed(1);
 
   if (t.feeds + t.diapers + t.naps === 0) return null;
 
@@ -47,13 +45,8 @@ export default function GrandTally({ data, now }: { data: EventsPayload; now: Da
           color="var(--c-sleep)"
           label="Time asleep"
           value={fmtDuration(t.sleepMs)}
-          sub={`${t.naps.toLocaleString()} sleep${t.naps === 1 ? "" : "s"} · ${hours.toLocaleString()} hours`}
-          comparison={
-            walk && {
-              headline: walk.headline,
-              detail: `${walk.detail} · at a ${WALK_MPH} mph amble`,
-            }
-          }
+          sub={`= ${daysAsleep} days · ${t.naps.toLocaleString()} sleep${t.naps === 1 ? "" : "s"}`}
+          comparison={sleeper}
         />
         <Big
           color="var(--c-diaper)"

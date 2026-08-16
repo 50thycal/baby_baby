@@ -237,17 +237,25 @@ Raw lifetime figures stop meaning much quickly — nobody has intuition for
   gallon of milk, a 12-pack, a car's fuel tank, a bathtub, eventually an Olympic
   pool. The largest rung she's passed is the one shown, and the next one is
   named so there's something to aim at.
-- **Sleep** becomes walking distance from Kansas City at a 2 mph amble: Lenexa,
-  Lawrence, Topeka, Columbia, Omaha, St. Louis, Denver, Mount Rushmore, and on
-  to the coasts.
+- **Sleep** is given twice over — `190h 54m = 8.0 days` — because hours are the
+  unit you think in for one night and days are the unit that makes a lifetime
+  total land. Underneath, the animal whose day is closest to hers: one per hour
+  from a koala at twenty down to a rabbit at eight, so she starts near the top
+  and works her way down the list over the first year. That's the point of it —
+  the other two comparisons climb as she grows, and this one walks.
+
+  It's matched on her **average day**, not the lifetime total, and the average
+  divides by days sleep was actually being logged (see `coverageStart`). Dividing
+  by every day since the first entry would halve it and drop her several animals;
+  including today, which is partial, would start her every morning as a rabbit.
 - **Diapers** get stacked into a tower. A stacked diaper is close enough to an
   inch that the count and the height in inches are the same number, which keeps
   the arithmetic honest: a car, a house, a three-story block, an eight-story
   complex, the Statue of Liberty, One Kansas City Place, the Eiffel Tower, the
   Empire State Building, One World Trade Center, the Burj Khalifa.
 
-Both ladders live at the top of `lib/tally.ts` and are just ordered lists — add
-a rung and it slots in.
+All three lists live at the top of `lib/tally.ts` and are just ordered arrays —
+add a rung or an animal and it slots in.
 
 ## Forecasts
 
