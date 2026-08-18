@@ -128,10 +128,14 @@ export default function TrendChart({
           />
         )}
 
-        {/* The companion goes first, so where the two cross it's the series the
+        {/* The companion goes first, so where the two meet it's the series the
             footer talks about that stays on top. It gets no fitted line of its
-            own: where it's the remainder of the primary, its slope is that
-            slope negated, and two mirrored dashes say one thing twice. */}
+            own. Where it's the remainder of the primary — awake against asleep
+            — its slope is that slope negated, and two mirrored dashes say one
+            thing twice. Where it isn't, as with the dirty nappies inside the
+            total, a second dashed line would need a second sentence in the
+            footer to say which direction belonged to which, and there is no
+            room for that at 320px. */}
         {companion && companion.points.length >= 2 && (
           <path
             d={line(companion.points)}

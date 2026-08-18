@@ -108,6 +108,7 @@ export default function AdvancedDashboard() {
       // never disagree about which days exist.
       trendAwake: awakeTotals(sleepDays),
       trendDiapers: dailyTotals(data, "diaper_count", now, span),
+      trendDirty: dailyTotals(data, "poop_count", now, span),
       clock: sleepClock(data, now, clockSpan),
       stats: computeStats(data, now),
     };
@@ -211,6 +212,8 @@ export default function AdvancedDashboard() {
           title="Diapers a day"
           color="var(--c-diaper)"
           points={view.trendDiapers}
+          companion={{ points: view.trendDirty, color: "var(--c-dirty)", label: "dirty" }}
+          seriesLabel="diapers"
           format={(v) => `${Math.round(v)}`}
           describeSlope={(perDay) => rate(perDay, Math.abs(perDay).toFixed(1))}
         />

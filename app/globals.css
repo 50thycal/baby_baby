@@ -57,6 +57,14 @@
   --c-diaper-ink: #4f7029;
   --c-diaper-wash: #e7f2d5;
 
+  /* The dirty ones, drawn over the total on the same chart. A deeper shade of
+     the leaf green was the tidy first choice and measured badly: leaf against
+     diaper-ink separates by only 11.8 in OKLab where plain sight wants 15, and
+     the dark pair is worse at 8.5 and fails colourblind simulation outright.
+     Brown clears both — 18.4 light, 16.1 dark, and 10.4 at the tightest under
+     deuteranopia against a floor of 8. */
+  --c-dirty: #7c5230;
+
   --c-weight: #9c648d;
   --c-weight-ink: #6c3f61;
   --c-weight-wash: #f2e3ee;
@@ -96,6 +104,8 @@
     --c-diaper-ink: #c9e29d;
     --c-diaper-wash: #202b16;
 
+    --c-dirty: #c98f62;
+
     --c-weight: #c58fb5;
     --c-weight-ink: #dcb6d2;
     --c-weight-wash: #2a1e27;
@@ -131,6 +141,8 @@
   --color-diaper: var(--c-diaper);
   --color-diaper-ink: var(--c-diaper-ink);
   --color-diaper-wash: var(--c-diaper-wash);
+
+  --color-dirty: var(--c-dirty);
 
   --color-weight: var(--c-weight);
   --color-weight-ink: var(--c-weight-ink);
