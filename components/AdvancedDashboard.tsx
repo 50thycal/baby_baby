@@ -98,13 +98,17 @@ export default function AdvancedDashboard() {
       fussies: marksFor("fussy"),
       feed: pair("feed_ml"),
       sleep: pair("sleep_ms"),
-      poop: pair("poop_count"),
+      // Every diaper, not just the dirty ones: a wet one is a change, a
+      // laundry run and a nappy off the shelf just the same, and counting only
+      // the poopy ones drew a chart of about half her actual days.
+      diapers: pair("diaper_count"),
       trendFeed: dailyTotals(data, "feed_ml", now, span),
       trendSleep: sleepDays,
       // Derived from the very points sleep is drawn from, so the two lines can
       // never disagree about which days exist.
       trendAwake: awakeTotals(sleepDays),
-      trendPoop: dailyTotals(data, "poop_count", now, span),
+      trendDiapers: dailyTotals(data, "diaper_count", now, span),
+      trendDirty: dailyTotals(data, "poop_count", now, span),
       clock: sleepClock(data, now, clockSpan),
       stats: computeStats(data, now),
     };
@@ -162,10 +166,10 @@ export default function AdvancedDashboard() {
         markLabel="fussy"
       />
       <CumulativeChart
-        title="Dirty diapers"
+        title="Diapers"
         color="var(--c-diaper)"
-        today={view.poop.today}
-        previous={view.poop.previous}
+        today={view.diapers.today}
+        previous={view.diapers.previous}
         elapsedFraction={view.elapsedFraction}
         format={(v) => `${Math.round(v)}`}
       />
@@ -205,9 +209,11 @@ export default function AdvancedDashboard() {
           describeSlope={(perDay) => rate(perDay, fmtDuration(Math.abs(perDay)))}
         />
         <TrendChart
-          title="Dirty diapers a day"
+          title="Diapers a day"
           color="var(--c-diaper)"
-          points={view.trendPoop}
+          points={view.trendDiapers}
+          companion={{ points: view.trendDirty, color: "var(--c-dirty)", label: "dirty" }}
+          seriesLabel="diapers"
           format={(v) => `${Math.round(v)}`}
           describeSlope={(perDay) => rate(perDay, Math.abs(perDay).toFixed(1))}
         />

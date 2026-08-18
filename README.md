@@ -330,8 +330,17 @@ today" — at 9am a rolling window is still mostly yesterday. It is now anchored
 
 **Advanced** is two questions stacked.
 
+Both diaper charts count **every** change, not only the dirty ones: a wet
+nappy is a change, a laundry run and one off the shelf just the same. **Diapers
+a day** then draws the dirty ones as a second line inside the total, so you can
+read the split without doing arithmetic. That line is brown rather than a
+deeper green — the tidy choice measured badly, separating by 11.8 in OKLab
+where plain sight wants 15, and worse than that under colourblind simulation.
+The poop-only figure also stays in the Averages panel as "Dirty ones a day",
+and on the Basic screen as an annotation on the day's count.
+
 *How is today going* — today's cumulative curve laid over the days before it,
-for feeding, sleep and dirty diapers, so you can see **where** in the day a
+for feeding, sleep and diapers, so you can see **where** in the day a
 difference opened up rather than just its size. One **Compare with** toggle at
 the top drives all three charts: yesterday, two days, three days, or the past
 week. Older days fade, so the stack reads as recency rather than as a set of
