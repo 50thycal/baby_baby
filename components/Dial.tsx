@@ -11,14 +11,22 @@ type Props = {
 };
 
 // A 270° gauge rather than a full circle: the gap at the bottom means you can
-// never drag past 100 and wrap around to 0 by accident.
+// never drag past the top of the scale and wrap around to 0 by accident.
 const SWEEP = 270;
 const START = 135; // degrees clockwise from 3 o'clock
 const SIZE = 260;
 const R = 106;
 const CENTER = SIZE / 2;
 
-export default function Dial({ value, onChange, max = 100, step = 5 }: Props) {
+/**
+ * Detent marks, as a count rather than an interval. Ten gaps look right on a
+ * 270° arc whatever the scale is worth — pinning them to "every 10 mL" instead
+ * would double them to twenty-one the moment the ceiling doubled, and they'd
+ * read as hatching rather than as marks you can count.
+ */
+const DETENTS = 10;
+
+export default function Dial({ value, onChange, max = 200, step = 5 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const lastValue = useRef(value);
 
@@ -117,9 +125,9 @@ export default function Dial({ value, onChange, max = 100, step = 5 }: Props) {
             transform={`rotate(${START} ${CENTER} ${CENTER})`}
             style={{ transition: "stroke-dasharray 90ms linear" }}
           />
-          {/* Detent marks every 10 mL */}
-          {Array.from({ length: max / 10 + 1 }, (_, i) => {
-            const a = ((START + (SWEEP * i) / (max / 10)) * Math.PI) / 180;
+          {/* Detent marks — max / DETENTS apart, so 20 mL on a 200 mL dial */}
+          {Array.from({ length: DETENTS + 1 }, (_, i) => {
+            const a = ((START + (SWEEP * i) / DETENTS) * Math.PI) / 180;
             const inner = R - 4;
             const outer = R + 4;
             return (
@@ -157,8 +165,8 @@ export default function Dial({ value, onChange, max = 100, step = 5 }: Props) {
       </div>
 
       <div className="mt-1 flex items-center gap-3">
-        <NudgeButton label="−5" onClick={() => nudge(-step)} disabled={value <= 0} />
-        <NudgeButton label="+5" onClick={() => nudge(step)} disabled={value >= max} />
+        <NudgeButton label={`−${step}`} onClick={() => nudge(-step)} disabled={value <= 0} />
+        <NudgeButton label={`+${step}`} onClick={() => nudge(step)} disabled={value >= max} />
       </div>
     </div>
   );

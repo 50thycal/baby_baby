@@ -106,10 +106,12 @@ afford to because there are only ever a handful.
 
 **Log** — status in three lines, then three large tiles.
 
-- **Feed** opens a 270° drag dial (0–100 mL, snaps to 5, with `−5`/`+5` for
+- **Feed** opens a 270° drag dial (0–200 mL, snaps to 5, with `−5`/`+5` for
   precision). It defaults to the last feed's amount, since the next one usually
   matches. The gap at the bottom of the gauge is deliberate: you can't drag past
-  100 and wrap around to 0.
+  the top of the scale and wrap around to 0. Detents are a fixed *count* rather
+  than a fixed interval — ten gaps read as marks you can count at any ceiling,
+  where "every 10 mL" would become twenty-one strokes of hatching at 200.
 - **Sleep** starts a session; once running, the tile becomes a live timer and
   the same tile ends it with **Baby's Awake**.
 - **Diaper** is four big buttons, then confirm.
