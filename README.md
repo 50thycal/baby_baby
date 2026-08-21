@@ -420,6 +420,8 @@ chips: you pick this once, deliberately, rather than flicking between them.
 Baby log · Jul 20, 2026 – Aug 9, 2026 · local time (America/New_York), 24h clock
 TOTALS 20 days · 32 feeds · 1205 mL · avg 38 mL/feed · every 2h55
        sleep 12h28 over 9 naps (longest 2h41) · 7 diapers: 3 pee, 2 poop, 2 blowout
+       weight 8 lb 11 oz · +7 oz since 8/2 · +6 oz/wk since 7/20 · +1 lb 7 oz since birth
+       weigh-ins 7/20 7 lb 4 oz (birth) · 8/2 8 lb 4 oz · 8/9 8 lb 11 oz
 
 8/6  feeds 9 / 180 mL  20@02:00 20@05:00 20@07:40 10@11:10 20@12:37
      sleep 13:20-14:50 (1h30)
@@ -438,6 +440,15 @@ Three decisions:
 - **The header describes the data, not the query.** `range=all` starts at a
   fixed floor, so using it verbatim would head the export
   `Jan 1 2000 – Aug 9 2026 · 9718 days` — wrong, and useless for a per-day rate.
+
+Weights ride along whatever span you pick, and every reading is listed rather
+than just the latest: there are only ever a handful, and the run of them is the
+thing a paediatrician asks for by name. The birth weight is tagged `(birth)`
+and the climb since it is stated outright — but only when that differs from the
+step since the previous weigh-in, or it would be one sentence printed twice.
+The weekly rate names the date it runs from, because once a birth weight is on
+file the series starts there and a newborn's first-week dip sits inside the
+average; unlabelled, it would read as the current rate.
 
 ## Weight
 
