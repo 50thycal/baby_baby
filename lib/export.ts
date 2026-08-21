@@ -1,7 +1,7 @@
 import { summarise } from "./summary";
 import { MINUTE } from "./time";
 import type { EventsPayload, Weight } from "./types";
-import { fmtOunceChange, fmtWeight, weightTrend } from "./weight";
+import { changeOunces, fmtOunceChange, fmtWeight, weightTrend } from "./weight";
 
 /**
  * The text behind "Copy data".
@@ -39,22 +39,53 @@ function dateRangeLabel(start: Date, end: Date): string {
 /**
  * Weights arrive separately because they aren't range-scoped — see `Weight` in
  * types.ts. They're summarised in the header rather than filed under a day: a
- * weigh-in is a fact about the baby, not about last Tuesday.
+ * weigh-in is a fact about the baby, not about last Tuesday. Every reading is
+ * listed rather than just the latest, because there are only ever a handful and
+ * the run of them is the thing a paediatrician asks for by name.
  */
-function buildWeightLine(weights: Weight[]): string | null {
-  const trend = weightTrend(
-    weights.map((w) => ({ grams: w.weight_g, at: new Date(w.ts).getTime() })),
+function buildWeightLines(weights: Weight[]): string[] {
+  const sorted = [...weights].sort(
+    (a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime(),
   );
-  if (!trend) return null;
+  const trend = weightTrend(
+    sorted.map((w) => ({ grams: w.weight_g, at: new Date(w.ts).getTime() })),
+  );
+  if (!trend) return [];
 
-  const parts = [`weight ${fmtWeight(trend.latest.grams)}`];
+  const birth = sorted.find((w) => w.is_birth) ?? null;
+  const latestIsBirth = birth !== null && new Date(birth.ts).getTime() === trend.latest.at;
+
+  const parts = [`weight ${fmtWeight(trend.latest.grams)}${latestIsBirth ? " (birth)" : ""}`];
   if (trend.previous) {
     parts.push(`${fmtOunceChange(trend.changeOz!)} since ${dayLabel(new Date(trend.previous.at))}`);
   }
   if (trend.perWeekOz !== null) {
-    parts.push(`${fmtOunceChange(Math.round(trend.perWeekOz))}/wk`);
+    // Say what the rate is measured across. The series starts at the birth
+    // weight once one is on file, and a newborn's first-week dip drags the
+    // average down — an unlabelled "oz/wk" would read as the current rate.
+    parts.push(
+      `${fmtOunceChange(Math.round(trend.perWeekOz))}/wk since ${dayLabel(new Date(sorted[0].ts))}`,
+    );
   }
-  return `       ${parts.join(" · ")}`;
+  // Only when it says something the previous-reading delta didn't: with two
+  // readings where the earlier one *is* the birth, "+1 lb since 7/26" and
+  // "+1 lb since birth" are the same sentence twice.
+  const previousIsBirth =
+    birth !== null && trend.previous !== null && new Date(birth.ts).getTime() === trend.previous.at;
+  if (birth && !latestIsBirth && !previousIsBirth) {
+    parts.push(`${fmtOunceChange(changeOunces(birth.weight_g, trend.latest.grams))} since birth`);
+  }
+
+  const lines = [`       ${parts.join(" · ")}`];
+
+  // With one reading the summary above has already said it, tag and all.
+  if (sorted.length > 1) {
+    const readings = sorted.map(
+      (w) => `${dayLabel(new Date(w.ts))} ${fmtWeight(w.weight_g)}${w.is_birth ? " (birth)" : ""}`,
+    );
+    lines.push(`       weigh-ins ${readings.join(" · ")}`);
+  }
+  return lines;
 }
 
 export function buildExport(data: EventsPayload, weights: Weight[] = []): string {
@@ -123,18 +154,18 @@ export function buildExport(data: EventsPayload, weights: Weight[] = []): string
 
   // Built before the empty check: a birth weight logged before the first feed
   // is still something, and heading that export "nothing logged" would be a lie.
-  const weightLine = buildWeightLine(weights);
+  const weightLines = buildWeightLines(weights);
 
   const lines: string[] = [];
   if (!stamps.length) {
     // Nothing timed to report. With `range=all` the window starts at the query
     // floor, so printing it would head an empty export "Jan 1 2000 · 9718 days".
     lines.push(`Baby log · nothing logged · local time (${tz}), 24h clock`);
-    if (weightLine) lines.push(weightLine);
+    lines.push(...weightLines);
     // "nothing else" only once something else has in fact been printed.
     return (
       lines.join("\n") +
-      (weightLine
+      (weightLines.length
         ? "\n(nothing else logged in this period)"
         : "\n(nothing logged in this period)")
     );
@@ -169,7 +200,7 @@ export function buildExport(data: EventsPayload, weights: Weight[] = []): string
   }
   if (second.length) lines.push(`       ${second.join(" · ")}`);
 
-  if (weightLine) lines.push(weightLine);
+  lines.push(...weightLines);
 
   lines.push("");
 
