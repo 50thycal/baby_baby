@@ -167,10 +167,10 @@ test("each average is divided by its own days, not by the oldest log's", () => {
   });
   const s = computeStats(data, NOW);
 
-  assert.equal(s.feedDays, 13, "thirteen finished days of feeds");
-  assert.equal(s.sleepDays, 2);
+  assert.equal(s.feedDays, 7, "a fortnight of feeds, capped at the week");
+  assert.equal(s.sleepDays, 2, "and sleep short of a week stays short of it");
   assert.equal(s.diaperDays, 0, "nappies were never logged");
-  assert.equal(s.days, 13, "the panel's widest window");
+  assert.equal(s.days, 7, "the panel's widest window");
 
   assert.equal(s.mlPerDay, 100);
   assert.equal(s.sleepPerDayMs, 12 * HOUR);
@@ -197,4 +197,53 @@ test("the day counts are whole days, ending at last midnight", () => {
     6 * 24 * HOUR,
     "six days between the first covered midnight and today's",
   );
+});
+
+// --- the averages look back a week ---------------------------------------------
+//
+// A lifetime average is the wrong number for a baby who is growing: she drinks
+// half again what she did a month ago, and folding those weeks in reports a
+// figure she has already outgrown.
+
+test("the averages describe the past week, not the whole record", () => {
+  // A fortnight at 60 mL, then the past week at 120. The lifetime mean is
+  // about 80; the week she is actually living is 120. Days 1 through 7 back
+  // are the window — today is excluded, being partial.
+  const data = payload({
+    feedings: Array.from({ length: 21 }, (_, i) => feed(i, 1, i <= 7 ? 120 : 60)),
+  });
+  const s = computeStats(data, NOW);
+  assert.equal(s.feedDays, 7);
+  assert.equal(s.mlPerDay, 120, "the old, slower weeks must not drag it down");
+});
+
+test("a record shorter than a week uses what there is", () => {
+  const data = payload({ feedings: Array.from({ length: 4 }, (_, i) => feed(i, 1, 100)) });
+  const s = computeStats(data, NOW);
+  assert.equal(s.feedDays, 3, "three finished days, today excluded");
+  assert.equal(s.mlPerDay, 100);
+});
+
+test("the week never reaches back past the day a log started", () => {
+  // Feeds all week, sleep only for the last two days. The week doesn't invent
+  // five days of nought hours to divide by.
+  const data = payload({
+    feedings: Array.from({ length: 8 }, (_, i) => feed(i, 1)),
+    sleep: [nap(2, 1, 13), nap(1, 1, 13)],
+  });
+  const s = computeStats(data, NOW);
+  assert.equal(s.feedDays, 7);
+  assert.equal(s.sleepDays, 2);
+  assert.equal(s.sleepPerDayMs, 12 * HOUR);
+});
+
+test("the longest sleep is the longest of the week, not of all time", () => {
+  // Follows from the window rather than being chosen separately, and it is the
+  // honest reading of a panel headed "past week".
+  const data = payload({
+    // Distinct days, so the ids `nap` derives are distinct too.
+    sleep: [nap(12, 1, 9), nap(3, 1, 4), nap(2, 1, 3), nap(1, 1, 2)],
+  });
+  const s = computeStats(data, NOW);
+  assert.equal(s.longestSleepMs, 3 * HOUR, "the eight-hour one is a fortnight back");
 });

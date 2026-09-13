@@ -492,9 +492,19 @@ const NIGHT_FROM = 22;
 const NIGHT_TO = 6;
 
 /**
- * Averages over whole days only. Today is excluded: it is partial by
- * definition, and folding a half day into a per-day mean drags every figure
- * down for no reason.
+ * How far back the averages reach.
+ *
+ * A lifetime average is the wrong number for a baby who is growing: she drinks
+ * half again what she did a month ago, and folding those weeks in reports a
+ * figure she has already outgrown. A week is long enough that one odd day
+ * doesn't define it and short enough to describe the baby she is now.
+ */
+const AVERAGE_DAYS = 7;
+
+/**
+ * Averages over the past week, whole days only. Today is excluded: it is
+ * partial by definition, and folding a half day into a per-day mean drags
+ * every figure down for no reason.
  *
  * Each of the three groups is divided by its *own* number of covered days. The
  * logs didn't start together, and a shared denominator would report her sleeping
@@ -504,10 +514,15 @@ const NIGHT_TO = 6;
  */
 export function computeStats(data: EventsPayload, now: Date): Stats {
   const todayStart = startOfDay(now).getTime();
+  const weekStart = addDays(now, -AVERAGE_DAYS).getTime();
 
   const spanOf = (kind: LogKind) => {
-    const from = coverageStart(data, kind, now);
-    if (from === null) return { from: todayStart, days: 0 };
+    const covered = coverageStart(data, kind, now);
+    if (covered === null) return { from: todayStart, days: 0 };
+    // The later of the two: a week back, but never earlier than the log's own
+    // coverage, because days from before anyone was writing sleep down are
+    // still no data rather than quiet ones.
+    const from = Math.max(covered, weekStart);
     return { from, days: Math.max(0, Math.round((todayStart - from) / 86_400_000)) };
   };
 
