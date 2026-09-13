@@ -238,7 +238,7 @@ export default function AdvancedDashboard() {
 
       <div className="panel rounded-[10px] p-4">
         <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-muted">
-          Averages
+          Averages · past week
         </div>
 
         {s.days === 0 ? (
@@ -273,9 +273,11 @@ export default function AdvancedDashboard() {
         )}
 
         <p className="mt-3 border-t border-line pt-2 text-[11px] leading-snug text-muted">
-          Whole days only — today is still in progress, and folding half a day
-          into an average drags every figure down. Each group counts from the day
-          its own log started, which is why the day counts differ.
+          The past week, whole days only — today is still in progress, and
+          folding half a day into an average drags every figure down. A lifetime
+          average would be the wrong number for a baby who is growing: it keeps
+          reporting a figure she has already outgrown. Each group stops at the
+          day its own log started, which is why the day counts can differ.
         </p>
       </div>
 

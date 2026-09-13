@@ -399,8 +399,18 @@ noisy count is held to a higher bar than a steady one. Below that it says
 between the diaper chart claiming "down 0.1 a day" from pure scatter and
 saying nothing at all.
 
-Underneath are averages over **whole days only**. Today is partial by
-definition, and folding half a day into a per-day mean drags every figure down.
+Underneath are averages over the **past week**, whole days only. Today is
+partial by definition, and folding half a day into a per-day mean drags every
+figure down.
+
+A week rather than the whole record, because she's growing: she drinks half
+again what she did a month ago, and a lifetime average keeps reporting a figure
+she has already outgrown. A week is long enough that one odd day doesn't define
+it and short enough to describe the baby she is now. Each group still stops at
+the day its own log started, so a week's window never reaches back into days
+nobody was writing that log — the two rules compose, and the shorter of them
+wins. "Longest sleep" follows the same window, and means the longest of the
+week.
 
 Weight appears on both, differently. **Basic** gets two numbers and the gap
 between them — what she is now, what she was before, and the change — because
