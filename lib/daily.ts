@@ -499,7 +499,7 @@ const NIGHT_TO = 6;
  * figure she has already outgrown. A week is long enough that one odd day
  * doesn't define it and short enough to describe the baby she is now.
  */
-const AVERAGE_DAYS = 7;
+export const AVERAGE_DAYS = 7;
 
 /**
  * Averages over the past week, whole days only. Today is excluded: it is
@@ -511,19 +511,26 @@ const AVERAGE_DAYS = 7;
  * nine hours a day purely because the weeks before anyone wrote sleep down are
  * still in the divisor — while the chart directly above says seventeen. Same
  * screen, same baby, two answers.
+ *
+ * `endDay` slides the whole window back without changing its length — it is how
+ * the week before this one is worked out, so each figure can be shown against
+ * the one it replaced. It defaults to this morning.
  */
-export function computeStats(data: EventsPayload, now: Date): Stats {
-  const todayStart = startOfDay(now).getTime();
-  const weekStart = addDays(now, -AVERAGE_DAYS).getTime();
+export function computeStats(data: EventsPayload, now: Date, endDay?: Date): Stats {
+  const endDate = startOfDay(endDay ?? now);
+  const end = endDate.getTime();
+  // By date components rather than by subtracting milliseconds, so the week
+  // that contains a clock change is still seven days long.
+  const weekStart = addDays(endDate, -AVERAGE_DAYS).getTime();
 
   const spanOf = (kind: LogKind) => {
     const covered = coverageStart(data, kind, now);
-    if (covered === null) return { from: todayStart, days: 0 };
+    if (covered === null) return { from: end, days: 0 };
     // The later of the two: a week back, but never earlier than the log's own
     // coverage, because days from before anyone was writing sleep down are
     // still no data rather than quiet ones.
     const from = Math.max(covered, weekStart);
-    return { from, days: Math.max(0, Math.round((todayStart - from) / 86_400_000)) };
+    return { from, days: Math.max(0, Math.round((end - from) / 86_400_000)) };
   };
 
   const feed = spanOf("feedings");
@@ -552,14 +559,14 @@ export function computeStats(data: EventsPayload, now: Date): Stats {
   const days = Math.max(feed.days, sleep.days, diaper.days);
   if (days < 1) return empty;
 
-  const feedWindow = totalsBetween(data, feed.from, todayStart);
-  const sleepWindow = totalsBetween(data, sleep.from, todayStart);
-  const diaperWindow = totalsBetween(data, diaper.from, todayStart);
+  const feedWindow = totalsBetween(data, feed.from, end);
+  const sleepWindow = totalsBetween(data, sleep.from, end);
+  const diaperWindow = totalsBetween(data, diaper.from, end);
 
   // Feed spacing, across complete days only.
   const feedTimes = data.feedings
     .map((f) => new Date(f.ts).getTime())
-    .filter((t) => t >= feed.from && t < todayStart)
+    .filter((t) => t >= feed.from && t < end)
     .sort((a, b) => a - b);
   const avgBetweenFeedsMs =
     feedTimes.length >= 2
@@ -568,7 +575,7 @@ export function computeStats(data: EventsPayload, now: Date): Stats {
 
   // Naps, and the gaps between them.
   const naps = data.sleep
-    .map((s) => clipSleep(s, sleep.from, todayStart))
+    .map((s) => clipSleep(s, sleep.from, end))
     .filter((x): x is { from: number; to: number } => x !== null)
     .sort((a, b) => a.from - b.from);
   const napDurations = naps.map((n) => n.to - n.from);
@@ -606,4 +613,19 @@ export function computeStats(data: EventsPayload, now: Date): Stats {
     poopsPerDay: per(diaperWindow.poopCount, diaper.days),
     nightFeedsPerNight: per(nightFeeds, feed.days),
   };
+}
+
+/**
+ * The same averages for the week before the one `computeStats` reports, so each
+ * figure can be shown against what it replaced.
+ *
+ * Two windows of the same length, back to back: seven days against the seven
+ * before them, so the comparison is like for like. Both roll forward with the
+ * calendar — "last week" here means the week ending where the reported one
+ * begins, not a fixed Monday to Sunday. A group whose log doesn't reach back
+ * that far gets a day count of nought and nothing to compare with, which the
+ * panel reads as no arrow rather than as a fall to zero.
+ */
+export function previousWeekStats(data: EventsPayload, now: Date): Stats {
+  return computeStats(data, now, addDays(now, -AVERAGE_DAYS));
 }

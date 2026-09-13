@@ -8,11 +8,13 @@ import SleepClock from "@/components/SleepClock";
 import TrendChart from "@/components/TrendChart";
 import WeightChart from "@/components/WeightChart";
 import {
+  AVERAGE_DAYS,
   addDays,
   awakeTotals,
   computeStats,
   cumulativeSeries,
   dailyTotals,
+  previousWeekStats,
   sleepClock,
   startOfDay,
 } from "@/lib/daily";
@@ -111,6 +113,7 @@ export default function AdvancedDashboard() {
       trendDirty: dailyTotals(data, "poop_count", now, span),
       clock: sleepClock(data, now, clockSpan),
       stats: computeStats(data, now),
+      previous: previousWeekStats(data, now),
     };
   }, [data, now, overlay, span, clockSpan]);
 
@@ -133,8 +136,20 @@ export default function AdvancedDashboard() {
   }
 
   const s = view.stats;
+  const p = view.previous;
   const hrs = (ms: number | null) => (ms === null ? "—" : fmtDuration(ms));
   const num = (n: number | null, digits = 1) => (n === null ? "—" : n.toFixed(digits));
+  const ml = (v: number | null) => `${num(v, 0)} mL`;
+
+  /**
+   * Last week's figure, or nothing to compare with.
+   *
+   * `days` is that group's own previous window and is passed along so a short
+   * one can say so: three days of nappies is a fair comparison but it isn't a
+   * week, and the row shouldn't imply it was.
+   */
+  const was = (value: number | null, days: number) =>
+    value === null || days < 1 ? null : { value, days };
 
   return (
     <div className="flex flex-col gap-3 px-5 pb-4">
@@ -251,23 +266,88 @@ export default function AdvancedDashboard() {
           // layout choice.
           <div className="flex flex-col gap-3">
             <Group color="var(--c-feed)" title="Feeding" days={s.feedDays}>
-              <Row label="Milk a day" value={`${num(s.mlPerDay, 0)} mL`} />
-              <Row label="Feeds a day" value={num(s.feedsPerDay)} />
-              <Row label="Average feed" value={`${num(s.avgFeedMl, 0)} mL`} />
-              <Row label="Typical gap between feeds" value={hrs(s.avgBetweenFeedsMs)} />
-              <Row label="Night feeds (10pm–6am)" value={num(s.nightFeedsPerNight)} />
+              <Row
+                label="Milk a day"
+                value={s.mlPerDay}
+                was={was(p.mlPerDay, p.feedDays)}
+                format={ml}
+              />
+              <Row
+                label="Feeds a day"
+                value={s.feedsPerDay}
+                was={was(p.feedsPerDay, p.feedDays)}
+                format={num}
+              />
+              <Row
+                label="Average feed"
+                value={s.avgFeedMl}
+                was={was(p.avgFeedMl, p.feedDays)}
+                format={ml}
+              />
+              <Row
+                label="Typical gap between feeds"
+                value={s.avgBetweenFeedsMs}
+                was={was(p.avgBetweenFeedsMs, p.feedDays)}
+                format={hrs}
+              />
+              <Row
+                label="Night feeds (10pm–6am)"
+                value={s.nightFeedsPerNight}
+                was={was(p.nightFeedsPerNight, p.feedDays)}
+                format={num}
+              />
             </Group>
             <Group color="var(--c-sleep)" title="Sleep" days={s.sleepDays}>
-              <Row label="Asleep a day" value={hrs(s.sleepPerDayMs)} />
-              <Row label="Awake a day" value={hrs(s.awakePerDayMs)} />
-              <Row label="Naps a day" value={num(s.napsPerDay)} />
-              <Row label="Average nap" value={hrs(s.avgNapMs)} />
-              <Row label="Average awake stretch" value={hrs(s.avgAwakeStretchMs)} />
-              <Row label="Longest sleep" value={hrs(s.longestSleepMs)} />
+              <Row
+                label="Asleep a day"
+                value={s.sleepPerDayMs}
+                was={was(p.sleepPerDayMs, p.sleepDays)}
+                format={hrs}
+              />
+              <Row
+                label="Awake a day"
+                value={s.awakePerDayMs}
+                was={was(p.awakePerDayMs, p.sleepDays)}
+                format={hrs}
+              />
+              <Row
+                label="Naps a day"
+                value={s.napsPerDay}
+                was={was(p.napsPerDay, p.sleepDays)}
+                format={num}
+              />
+              <Row
+                label="Average nap"
+                value={s.avgNapMs}
+                was={was(p.avgNapMs, p.sleepDays)}
+                format={hrs}
+              />
+              <Row
+                label="Average awake stretch"
+                value={s.avgAwakeStretchMs}
+                was={was(p.avgAwakeStretchMs, p.sleepDays)}
+                format={hrs}
+              />
+              <Row
+                label="Longest sleep"
+                value={s.longestSleepMs}
+                was={was(p.longestSleepMs, p.sleepDays)}
+                format={hrs}
+              />
             </Group>
             <Group color="var(--c-diaper)" title="Diapers" days={s.diaperDays}>
-              <Row label="Diapers a day" value={num(s.diapersPerDay)} />
-              <Row label="Dirty ones a day" value={num(s.poopsPerDay)} />
+              <Row
+                label="Diapers a day"
+                value={s.diapersPerDay}
+                was={was(p.diapersPerDay, p.diaperDays)}
+                format={num}
+              />
+              <Row
+                label="Dirty ones a day"
+                value={s.poopsPerDay}
+                was={was(p.poopsPerDay, p.diaperDays)}
+                format={num}
+              />
             </Group>
           </div>
         )}
@@ -276,8 +356,12 @@ export default function AdvancedDashboard() {
           The past week, whole days only — today is still in progress, and
           folding half a day into an average drags every figure down. A lifetime
           average would be the wrong number for a baby who is growing: it keeps
-          reporting a figure she has already outgrown. Each group stops at the
-          day its own log started, which is why the day counts can differ.
+          reporting a figure she has already outgrown. Underneath each figure is
+          the week before it, with a day count when that week is a short one.
+          The arrows point, they don&apos;t judge: more time awake, or a longer
+          gap between feeds, is neither good news nor bad. Each group stops at
+          the day its own log started, which is why the day counts can differ
+          and why some rows have nothing to compare with yet.
         </p>
       </div>
 
@@ -375,11 +459,65 @@ function Group({
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+/** An arrow, and the word behind it for anyone not looking at the screen. */
+const MOVES = {
+  up: { glyph: "↑", said: "up" },
+  down: { glyph: "↓", said: "down" },
+  level: { glyph: "↔", said: "unchanged" },
+} as const;
+
+/**
+ * One figure, with last week's beneath it when there is one.
+ *
+ * The direction is decided on the printed strings rather than the raw numbers.
+ * 720.4 and 720.1 mL both print as 720, and an arrow claiming a rise over two
+ * identical figures reads as a bug — which, from the reader's side of the
+ * screen, it is.
+ *
+ * Nothing here is coloured. Up is not good news and down is not bad news for
+ * most of these rows: more time awake, a longer gap between feeds, fewer
+ * nappies. Green and red would be the app editorialising about a baby doing
+ * entirely ordinary things.
+ */
+function Row({
+  label,
+  value,
+  was,
+  format,
+}: {
+  label: string;
+  value: number | null;
+  was?: { value: number; days: number } | null;
+  format: (v: number | null) => string;
+}) {
+  const text = format(value);
+  // Both figures or neither: a missing one is nothing to compare with, not a
+  // fall to zero.
+  const against =
+    value !== null && was
+      ? { text: format(was.value), days: was.days, up: value > was.value }
+      : null;
+  const move =
+    against === null ? null : against.text === text ? "level" : against.up ? "up" : "down";
+
   return (
     <div className="flex items-baseline justify-between gap-3 text-[14px]">
       <span className="text-muted">{label}</span>
-      <span className="whitespace-nowrap font-medium tabular-nums">{value}</span>
+      <span className="flex shrink-0 flex-col items-end">
+        <span className="whitespace-nowrap font-medium tabular-nums">{text}</span>
+        {against && move && (
+          // Pulled up a little so it sits closer to the figure it belongs to
+          // than to the row beneath it, which is the only thing keeping the
+          // pairing readable down a long list.
+          <span className="-mt-0.5 whitespace-nowrap text-[11px] leading-tight text-muted tabular-nums">
+            <span aria-hidden="true">{MOVES[move].glyph}</span>
+            <span className="sr-only">{MOVES[move].said}</span> from {against.text}
+            {/* A short window is still a fair comparison, but it isn't a week
+                and shouldn't pretend to be. */}
+            {against.days < AVERAGE_DAYS && ` · ${against.days}d`}
+          </span>
+        )}
+      </span>
     </div>
   );
 }
