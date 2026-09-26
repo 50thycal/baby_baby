@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { fail, ok, parseTimestamp, readJson } from "@/lib/http";
+import { fail, ok, parseTimestamp, readJson, readMe } from "@/lib/http";
 import type { SleepSession } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,8 @@ export async function POST(req: Request) {
 
     try {
       const rows = (await sql`
-        INSERT INTO sleep_sessions (sleep_start) VALUES (${start.toISOString()})
+        INSERT INTO sleep_sessions (sleep_start, logged_by)
+        VALUES (${start.toISOString()}, (SELECT name FROM people WHERE id = ${readMe(req)}))
         RETURNING *`) as SleepSession[];
       return ok(rows[0], 201);
     } catch (err) {

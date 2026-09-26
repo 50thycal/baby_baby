@@ -38,6 +38,9 @@ export default function NotesList({ comments, onOpen }: Props) {
                     : `${fmtDayLabel(at)} · ${fmtClock(at)}`}
                 </div>
                 <p className="mt-1 text-[17px] font-semibold leading-snug">{comment.text}</p>
+                {comment.logged_by && (
+                  <p className="mt-0.5 text-[13px] text-muted">— {comment.logged_by}</p>
+                )}
               </button>
               <Reactions comment={comment} />
             </div>

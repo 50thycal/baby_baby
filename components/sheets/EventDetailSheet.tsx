@@ -49,6 +49,11 @@ export default function EventDetailSheet({ event, onClose }: Props) {
       {event.kind === "diaper" && <EditDiaper event={event.data} onClose={onClose} />}
       {event.kind === "comment" && <EditComment event={event.data} onClose={onClose} />}
       {event.kind === "moment" && <EditMoment event={event.data} onClose={onClose} />}
+      {event.data.logged_by && (
+        <p className="mt-3 text-center text-[13px] text-muted">
+          Logged by <span className="font-semibold text-ink">{event.data.logged_by}</span>
+        </p>
+      )}
     </Sheet>
   );
 }

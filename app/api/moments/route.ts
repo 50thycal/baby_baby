@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { BadRequest, fail, ok, parseTimestamp, readJson } from "@/lib/http";
+import { BadRequest, fail, ok, parseTimestamp, readJson, readMe } from "@/lib/http";
 import { MOMENT_KINDS, type Moment, type MomentKind } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,8 @@ export async function POST(req: Request) {
 
     const sql = await db();
     const rows = (await sql`
-      INSERT INTO moments (kind, ts) VALUES (${kind}, ${ts.toISOString()})
+      INSERT INTO moments (kind, ts, logged_by)
+      VALUES (${kind}, ${ts.toISOString()}, (SELECT name FROM people WHERE id = ${readMe(req)}))
       RETURNING *`) as Moment[];
 
     return ok(rows[0], 201);

@@ -1,6 +1,8 @@
 "use client";
 
 import useSWR, { mutate } from "swr";
+import type { BetsPayload, Person } from "./bets";
+import { getMe } from "./me";
 import type { EventsPayload, HomeState, RangeKey, Weight } from "./types";
 
 async function fetcher<T>(url: string): Promise<T> {
@@ -36,6 +38,18 @@ export function useWeights() {
   return useSWR<Weight[]>("/api/weights", fetcher, SHARED_OPTS);
 }
 
+export function usePeople() {
+  return useSWR<Person[]>("/api/people", fetcher, SHARED_OPTS);
+}
+
+/**
+ * Keyed on who's asking, because other people's calls come back blank until
+ * betting closes — and your own must not.
+ */
+export function useBets(meId: string | null) {
+  return useSWR<BetsPayload>(`/api/bets?me=${meId ?? ""}`, fetcher, SHARED_OPTS);
+}
+
 /**
  * Which build the server is serving right now, so a stale tab can notice.
  * Checked rarely — a deploy is not urgent news — but always on refocus, which
@@ -67,9 +81,16 @@ export function refreshAll() {
 type Method = "POST" | "PATCH" | "DELETE";
 
 export async function send<T>(method: Method, url: string, body?: unknown): Promise<T> {
+  // Every write is signed with the picked name, if there is one. Logging a
+  // feed never asks for it — only bets and notes do.
+  const headers: Record<string, string> = {};
+  if (body) headers["content-type"] = "application/json";
+  const me = getMe();
+  if (me) headers["x-baby-me"] = me.id;
+
   const res = await fetch(url, {
     method,
-    headers: body ? { "content-type": "application/json" } : undefined,
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
   const payload = await res.json().catch(() => null);

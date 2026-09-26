@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import AdvancedDashboard from "@/components/AdvancedDashboard";
+import BetsScreen from "@/components/BetsScreen";
 import Dashboard from "@/components/Dashboard";
 import HomeScreen from "@/components/HomeScreen";
 import { Toaster } from "@/components/Toaster";
 import VersionBar from "@/components/VersionBar";
 import { tick } from "@/lib/haptics";
 
-type Tab = "log" | "basic" | "advanced";
+type Tab = "log" | "basic" | "advanced" | "bets";
 
 export default function Page() {
   const [tab, setTab] = useState<Tab>("log");
@@ -32,6 +33,9 @@ export default function Page() {
             <Tab id="advanced" active={tab} onSelect={setTab}>
               Advanced
             </Tab>
+            <Tab id="bets" active={tab} onSelect={setTab}>
+              Bets
+            </Tab>
           </div>
         </header>
 
@@ -39,6 +43,7 @@ export default function Page() {
           {tab === "log" && <HomeScreen />}
           {tab === "basic" && <Dashboard />}
           {tab === "advanced" && <AdvancedDashboard />}
+          {tab === "bets" && <BetsScreen />}
         </div>
       </main>
     </Toaster>
