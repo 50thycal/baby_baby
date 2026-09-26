@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { BadRequest, fail, ok, parseTimestamp, readJson } from "@/lib/http";
+import { BadRequest, fail, ok, parseTimestamp, readJson, readMe } from "@/lib/http";
 import { maybeSnapshot } from "@/lib/snapshot";
 import type { Weight } from "@/lib/types";
 
@@ -41,8 +41,9 @@ export async function POST(req: Request) {
     const sql = await db();
     const isBirth = body.is_birth === true;
     const rows = (await sql`
-      INSERT INTO weights (weight_g, ts, is_birth)
-      VALUES (${grams}, ${ts.toISOString()}, ${isBirth})
+      INSERT INTO weights (weight_g, ts, is_birth, logged_by)
+      VALUES (${grams}, ${ts.toISOString()}, ${isBirth},
+              (SELECT name FROM people WHERE id = ${readMe(req)}))
       RETURNING *`) as Weight[];
 
     return ok(rows[0], 201);

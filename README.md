@@ -18,7 +18,9 @@ handed, in the dark, while holding a baby.
 | Fetching | SWR                                       | Revalidates on window focus, so opening the app shows current state |
 | Host     | Vercel                                    | — |
 
-No auth. It's a private-by-obscurity family URL, exactly as specced.
+No auth. It's a private-by-obscurity family URL, exactly as specced. People
+pick a *name* — no password — to sign bets and notes; see
+[Names and the nightly bet](#names-and-the-nightly-bet).
 
 ## Which database, and why
 
@@ -66,16 +68,21 @@ database before pointing the app at it — otherwise it happens on first request
 
 ## Data model
 
-No joins (`lib/schema.ts`):
+No joins on the logging side (`lib/schema.ts`):
 
 ```
-feedings         id, amount_ml, ts, created_at
-sleep_sessions   id, sleep_start, sleep_end (nullable), created_at
-diapers          id, type, ts, created_at
-comments         id, ts, text, reactions (jsonb), created_at
-moments          id, kind, ts, created_at
-weights          id, weight_g, ts, is_birth, created_at
+feedings         id, amount_ml, ts, created_at, logged_by
+sleep_sessions   id, sleep_start, sleep_end (nullable), created_at, logged_by
+diapers          id, type, ts, created_at, logged_by
+comments         id, ts, text, reactions (jsonb), created_at, logged_by
+moments          id, kind, ts, created_at, logged_by
+weights          id, weight_g, ts, is_birth, created_at, logged_by
 snapshots        id, taken_at, reason, counts (jsonb), payload (jsonb)
+
+people           id, name (unique, case-insensitive), created_at
+bet_nights       night (date), tz, created_at
+bets             id, night, person_id, pick (yes|no), guess_min, note,
+                 created_at, updated_at — one per person per night
 ```
 
 `sleep_end IS NULL` means the baby is asleep *right now*. That state has to be
@@ -154,13 +161,15 @@ app/
   page.tsx              Log | History shell
   globals.css           design tokens (light + dark)
   manifest.ts           PWA
-  api/                  feedings, sleep, diapers, comments, events, state
+  api/                  feedings, sleep, diapers, comments, events, state,
+                        people, bets
 components/
   HomeScreen, Dashboard, Timeline, SummaryCard, NotesList
   Dial, TimeField, Sheet, ConfirmButton, DeleteButton, Toaster
+  BetsScreen, WhoPicker
   sheets/               Feed, Sleep, Diaper, Comment, EventDetail
 lib/
-  db, schema, types, time, summary, export, api, haptics, useNow
+  db, schema, types, time, summary, export, api, haptics, useNow, bets, me
 ```
 
 `GET /api/state` answers "what's happening now" for the Log screen;
@@ -553,6 +562,44 @@ keep a copy somewhere that isn't this database.
 
 Neither path is allowed to fail a request: a backup problem is logged and
 dropped rather than blocking the person trying to log a feed.
+
+## Names and the nightly bet
+
+**Names, not accounts.** The first time someone bets or writes a note, they're
+asked *who's this?*: everyone who has picked a name before is a chip, anyone new
+types theirs once. That's the whole sign-in — no password — kept in
+`localStorage` (`lib/me.ts`). Typing an existing name in any capitalisation
+rejoins that person rather than making a second one. Logging a feed never asks;
+if a name is set, every write carries it in an `x-baby-me` header and the row is
+signed with it (`logged_by`, shown as "Logged by …" when you open an entry and
+"— Cal" under a note). Older rows stay unsigned. `logged_by` is the name as
+text rather than a key into `people`, so it survives backups and restores with
+nothing to dangle.
+
+**The bet** lives on the **Bets** tab: *will she sleep 6 hours straight
+tonight?* All the rules are in `lib/bets.ts`, which is pure so the server and
+every phone agree.
+
+- A good night is **one unbroken sleep of 6h+** that *starts* between 6pm and
+  6am. Two 4-hour stretches don't add up.
+- Call it from 6am. Betting **closes the moment she goes down** — the first
+  sleep logged after 6pm — or 8pm at the latest, and the server enforces it
+  against its own sleep rows. Before 6am, "tonight" still means last night.
+- **Calls are blind until close**: `GET /api/bets` blanks everyone else's
+  pick, guess and note until then. Honour-system blind, not secure — it's there
+  so nobody just copies Nana.
+- **YES is settled early**, the minute any stretch reaches 6h. NO is settled
+  once the night is over and nothing is still running (a stretch that starts at
+  5am can win at 11am). Nothing logged all night is a void — no points.
+- **Baby baby points (BBP):** +10 for calling it, +5 more if most of the family
+  called it wrong (underdog), +5 for the closest guess at her longest stretch
+  (needs two or more guesses; ties share it).
+
+Nothing about a result is stored. Outcomes, points, records and streaks are
+recomputed from `sleep_sessions` on every load, so fixing a mis-logged sleep
+fixes the bet with it. Each night stores the time zone of whoever bet on it
+first, because "6pm" means nothing to a server running in UTC; the boundaries
+are computed with `Intl`, daylight-saving nights included.
 
 ## Tests
 

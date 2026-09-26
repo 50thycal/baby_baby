@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { fail, ok, parseCommentText, parseTimestamp, readJson } from "@/lib/http";
+import { fail, ok, parseCommentText, parseTimestamp, readJson, readMe } from "@/lib/http";
 import type { Comment } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,8 @@ export async function POST(req: Request) {
 
     const sql = await db();
     const rows = (await sql`
-      INSERT INTO comments (text, ts) VALUES (${text}, ${ts.toISOString()})
+      INSERT INTO comments (text, ts, logged_by)
+      VALUES (${text}, ${ts.toISOString()}, (SELECT name FROM people WHERE id = ${readMe(req)}))
       RETURNING *`) as Comment[];
 
     return ok(rows[0], 201);

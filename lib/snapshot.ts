@@ -282,77 +282,86 @@ export async function restoreSnapshot(id: string): Promise<SnapshotCounts> {
 
   if (p.feedings.length) {
     await sql.query(
-      `INSERT INTO feedings (id, amount_ml, ts, created_at)
-       SELECT * FROM unnest($1::uuid[], $2::int[], $3::timestamptz[], $4::timestamptz[])`,
+      `INSERT INTO feedings (id, amount_ml, ts, created_at, logged_by)
+       SELECT * FROM unnest($1::uuid[], $2::int[], $3::timestamptz[], $4::timestamptz[], $5::text[])`,
       [
         p.feedings.map((r) => r.id),
         p.feedings.map((r) => r.amount_ml),
         p.feedings.map((r) => r.ts),
         p.feedings.map((r) => r.created_at),
+        p.feedings.map((r) => r.logged_by ?? null),
       ],
     );
   }
   if (p.sleep.length) {
     await sql.query(
-      `INSERT INTO sleep_sessions (id, sleep_start, sleep_end, created_at)
-       SELECT * FROM unnest($1::uuid[], $2::timestamptz[], $3::timestamptz[], $4::timestamptz[])`,
+      `INSERT INTO sleep_sessions (id, sleep_start, sleep_end, created_at, logged_by)
+       SELECT * FROM unnest($1::uuid[], $2::timestamptz[], $3::timestamptz[], $4::timestamptz[], $5::text[])`,
       [
         p.sleep.map((r) => r.id),
         p.sleep.map((r) => r.sleep_start),
         p.sleep.map((r) => r.sleep_end),
         p.sleep.map((r) => r.created_at),
+        p.sleep.map((r) => r.logged_by ?? null),
       ],
     );
   }
   if (p.diapers.length) {
     await sql.query(
-      `INSERT INTO diapers (id, type, ts, created_at)
-       SELECT * FROM unnest($1::uuid[], $2::text[], $3::timestamptz[], $4::timestamptz[])`,
+      `INSERT INTO diapers (id, type, ts, created_at, logged_by)
+       SELECT * FROM unnest($1::uuid[], $2::text[], $3::timestamptz[], $4::timestamptz[], $5::text[])`,
       [
         p.diapers.map((r) => r.id),
         p.diapers.map((r) => r.type),
         p.diapers.map((r) => r.ts),
         p.diapers.map((r) => r.created_at),
+        p.diapers.map((r) => r.logged_by ?? null),
       ],
     );
   }
   if (p.comments.length) {
     await sql.query(
-      `INSERT INTO comments (id, ts, text, reactions, created_at)
-       SELECT * FROM unnest($1::uuid[], $2::timestamptz[], $3::text[], $4::jsonb[], $5::timestamptz[])`,
+      `INSERT INTO comments (id, ts, text, reactions, created_at, logged_by)
+       SELECT * FROM unnest($1::uuid[], $2::timestamptz[], $3::text[], $4::jsonb[], $5::timestamptz[], $6::text[])`,
       [
         p.comments.map((r) => r.id),
         p.comments.map((r) => r.ts),
         p.comments.map((r) => r.text),
         p.comments.map((r) => JSON.stringify(r.reactions ?? {})),
         p.comments.map((r) => r.created_at),
+        p.comments.map((r) => r.logged_by ?? null),
       ],
     );
   }
 
   if (p.moments?.length) {
     await sql.query(
-      `INSERT INTO moments (id, kind, ts, created_at)
-       SELECT * FROM unnest($1::uuid[], $2::text[], $3::timestamptz[], $4::timestamptz[])`,
+      `INSERT INTO moments (id, kind, ts, created_at, logged_by)
+       SELECT * FROM unnest($1::uuid[], $2::text[], $3::timestamptz[], $4::timestamptz[], $5::text[])`,
       [
         p.moments.map((r) => r.id),
         p.moments.map((r) => r.kind),
         p.moments.map((r) => r.ts),
         p.moments.map((r) => r.created_at),
+        p.moments.map((r) => r.logged_by ?? null),
       ],
     );
   }
 
   // `?.` because backups taken before weigh-ins existed have no such key.
+  // `is_birth` rides along, or a restore would quietly demote the birth weight
+  // to an ordinary reading.
   if (p.weights?.length) {
     await sql.query(
-      `INSERT INTO weights (id, weight_g, ts, created_at)
-       SELECT * FROM unnest($1::uuid[], $2::int[], $3::timestamptz[], $4::timestamptz[])`,
+      `INSERT INTO weights (id, weight_g, ts, created_at, is_birth, logged_by)
+       SELECT * FROM unnest($1::uuid[], $2::int[], $3::timestamptz[], $4::timestamptz[], $5::bool[], $6::text[])`,
       [
         p.weights.map((r) => r.id),
         p.weights.map((r) => r.weight_g),
         p.weights.map((r) => r.ts),
         p.weights.map((r) => r.created_at),
+        p.weights.map((r) => r.is_birth ?? false),
+        p.weights.map((r) => r.logged_by ?? null),
       ],
     );
   }

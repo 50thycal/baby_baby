@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { fail, ok, parseAmount, parseTimestamp, readJson } from "@/lib/http";
+import { fail, ok, parseAmount, parseTimestamp, readJson, readMe } from "@/lib/http";
 import type { Feeding } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,8 @@ export async function POST(req: Request) {
 
     const sql = await db();
     const rows = (await sql`
-      INSERT INTO feedings (amount_ml, ts) VALUES (${amount}, ${ts.toISOString()})
+      INSERT INTO feedings (amount_ml, ts, logged_by)
+      VALUES (${amount}, ${ts.toISOString()}, (SELECT name FROM people WHERE id = ${readMe(req)}))
       RETURNING *`) as Feeding[];
 
     return ok(rows[0], 201);

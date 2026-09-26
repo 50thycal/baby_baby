@@ -21,6 +21,8 @@ export type Feeding = {
   amount_ml: number;
   ts: string;
   created_at: string;
+  /** Whoever logged it, if they'd picked a name. */
+  logged_by?: string | null;
 };
 
 export type SleepSession = {
@@ -28,6 +30,8 @@ export type SleepSession = {
   sleep_start: string;
   sleep_end: string | null;
   created_at: string;
+  /** Whoever logged it, if they'd picked a name. */
+  logged_by?: string | null;
 };
 
 export type Diaper = {
@@ -35,6 +39,8 @@ export type Diaper = {
   type: DiaperType;
   ts: string;
   created_at: string;
+  /** Whoever logged it, if they'd picked a name. */
+  logged_by?: string | null;
 };
 
 /**
@@ -61,6 +67,8 @@ export type Moment = {
   kind: MomentKind;
   ts: string;
   created_at: string;
+  /** Whoever logged it, if they'd picked a name. */
+  logged_by?: string | null;
 };
 
 export type Comment = {
@@ -69,6 +77,8 @@ export type Comment = {
   text: string;
   reactions: Record<string, number>;
   created_at: string;
+  /** Whoever logged it, if they'd picked a name. */
+  logged_by?: string | null;
 };
 
 /**
@@ -93,6 +103,7 @@ export type Weight = {
    */
   is_birth: boolean;
   created_at: string;
+  logged_by?: string | null;
 };
 
 /** Everything the dashboard needs for one time range. */

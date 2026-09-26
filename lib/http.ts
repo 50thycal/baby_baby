@@ -61,3 +61,25 @@ export async function readJson(req: Request): Promise<Record<string, unknown>> {
     throw new BadRequest("Expected a JSON body");
   }
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Who's asking — the person id the phone picked, sent on every write as a
+ * header (see `send` in lib/api.ts). Not authentication: there is none, and a
+ * name is a signature, not a login. Anything malformed is simply nobody.
+ */
+export const ME_HEADER = "x-baby-me";
+
+export function readMe(req: Request): string | null {
+  const id = req.headers.get(ME_HEADER);
+  return id && UUID.test(id) ? id : null;
+}
+
+export function parsePersonName(value: unknown): string {
+  if (typeof value !== "string") throw new BadRequest("name is required");
+  const name = value.trim().replace(/\s+/g, " ");
+  if (!name) throw new BadRequest("Name can't be empty");
+  if (name.length > 24) throw new BadRequest("Name is too long (24 characters max)");
+  return name;
+}

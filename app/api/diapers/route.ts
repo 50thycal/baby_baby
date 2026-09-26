@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { fail, ok, parseDiaperType, parseTimestamp, readJson } from "@/lib/http";
+import { fail, ok, parseDiaperType, parseTimestamp, readJson, readMe } from "@/lib/http";
 import type { Diaper } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,8 @@ export async function POST(req: Request) {
 
     const sql = await db();
     const rows = (await sql`
-      INSERT INTO diapers (type, ts) VALUES (${type}, ${ts.toISOString()})
+      INSERT INTO diapers (type, ts, logged_by)
+      VALUES (${type}, ${ts.toISOString()}, (SELECT name FROM people WHERE id = ${readMe(req)}))
       RETURNING *`) as Diaper[];
 
     return ok(rows[0], 201);
