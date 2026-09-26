@@ -38,6 +38,25 @@ function connect() {
 let ready: Promise<void> | null = null;
 
 /**
+ * Did this statement fail only because another instance created the same
+ * thing a moment earlier?
+ *
+ * `IF NOT EXISTS` checks and then creates without a lock, so after a deploy
+ * that adds a table, two cold starts running this at once can both see it
+ * missing — and the slower one trips over a system catalog's unique index
+ * (`pg_type_typname_nsp_index` for a table). The object exists either way,
+ * which is all the statement wanted. A 23505 against one of our own tables
+ * (a unique index over duplicate rows) is a real problem and still throws.
+ */
+export function isConcurrentCreate(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const { code, constraint } = err as { code?: string; constraint?: string };
+  if (code === "23505") return typeof constraint === "string" && constraint.startsWith("pg_");
+  // duplicate_table (a table or index), duplicate_object, duplicate_column
+  return code === "42P07" || code === "42710" || code === "42701";
+}
+
+/**
  * Creates the schema if it isn't there yet. Runs at most once per warm
  * instance; every statement is `IF NOT EXISTS`, so repeats are free.
  */
@@ -46,7 +65,11 @@ function ensureSchema() {
     const c = connect();
     ready = (async () => {
       for (const statement of SCHEMA_STATEMENTS) {
-        await c.query(statement);
+        try {
+          await c.query(statement);
+        } catch (err) {
+          if (!isConcurrentCreate(err)) throw err;
+        }
       }
     })().catch((err) => {
       ready = null; // let the next request retry
