@@ -13,7 +13,16 @@ import { linearFit, type DailyPoint } from "@/lib/daily";
  *
  * The trend is an ordinary least-squares fit over the whole selected window,
  * so one wild day nudges it rather than defining it.
+ *
+ * Today gets a column of its own at the right, drawn as a phantom: a faint
+ * line to where she is so far, and a dotted one to where the day is expected
+ * to finish. Neither is a point in the series. The fit never sees today — a
+ * partial day would drag it down every morning — and the dot is placed so you
+ * can read it against the finished days, not so it can be averaged with them.
  */
+
+/** Today's column: where the day stands, and where it's heading. */
+export type TodayMark = { soFar: number; expected: number };
 
 const W = 320;
 const H = 118;
@@ -36,14 +45,19 @@ export default function TrendChart({
   companion,
   /** Names the primary series, once there are two of them to tell apart. */
   seriesLabel,
+  today,
+  formatExact,
 }: {
   title: string;
   color: string;
   points: DailyPoint[];
   format: (value: number) => string;
   describeSlope: (perDay: number) => string;
-  companion?: { points: DailyPoint[]; color: string; label: string };
+  companion?: { points: DailyPoint[]; color: string; label: string; today?: TodayMark | null };
   seriesLabel?: string;
+  today?: TodayMark | null;
+  /** The figure with its unit, for today's readout under the chart. */
+  formatExact?: (value: number) => string;
 }) {
   const trend = linearFit(points);
 
@@ -69,12 +83,19 @@ export default function TrendChart({
     ...(companion?.points ?? []).map((p) => p.value),
     trend?.from ?? 0,
     trend?.to ?? 0,
+    today?.soFar ?? 0,
+    today?.expected ?? 0,
+    companion?.today?.soFar ?? 0,
+    companion?.today?.expected ?? 0,
   );
   // Always anchored at zero: these are daily totals, and a zoomed baseline
   // would turn a 5% wobble into a mountain range.
   const peak = rawMax > 0 ? rawMax : 1;
 
-  const x = (i: number) => PAD_L + (i / Math.max(1, points.length - 1)) * plotW;
+  // One extra slot on the right when today is shown, so the finished days keep
+  // their spacing and today sits where tomorrow's point will land.
+  const slots = points.length + (today ? 1 : 0);
+  const x = (i: number) => PAD_L + (i / Math.max(1, slots - 1)) * plotW;
   const y = (v: number) => PAD_T + plotH - (Math.max(0, v) / peak) * plotH;
 
   const line = (ps: DailyPoint[]) =>
@@ -89,7 +110,13 @@ export default function TrendChart({
 
   return (
     <div className="panel rounded-[10px] p-3">
-      <Header title={title} color={color} companion={companion} seriesLabel={seriesLabel} />
+      <Header
+          title={title}
+          color={color}
+          companion={companion}
+          seriesLabel={seriesLabel}
+          hasToday={!!today}
+        />
 
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={title}>
         {[0, 0.5, 1].map((f) => (
@@ -156,6 +183,42 @@ export default function TrendChart({
           strokeLinecap="round"
         />
 
+        {/* Today, behind the finished points: the phantom rule down the
+            column, then for each series a faint line to where she is and a
+            dotted one to where she's heading. Companion first, as above. */}
+        {today && (
+          <line
+            x1={x(points.length)}
+            x2={x(points.length)}
+            y1={PAD_T}
+            y2={PAD_T + plotH}
+            stroke="var(--c-muted)"
+            strokeWidth={1}
+            strokeDasharray="1 3"
+            opacity={0.6}
+          />
+        )}
+        {today && companion?.today && companion.points.length > 0 && (
+          <Phantom
+            fromX={x(companion.points.length - 1)}
+            fromY={y(companion.points[companion.points.length - 1].value)}
+            toX={x(points.length)}
+            soFarY={y(companion.today.soFar)}
+            expectedY={y(companion.today.expected)}
+            color={companion.color}
+          />
+        )}
+        {today && (
+          <Phantom
+            fromX={x(points.length - 1)}
+            fromY={y(points[points.length - 1].value)}
+            toX={x(points.length)}
+            soFarY={y(today.soFar)}
+            expectedY={y(today.expected)}
+            color={color}
+          />
+        )}
+
         {showDots &&
           companion?.points.map((p, i) => (
             <circle key={`c${i}`} cx={x(i)} cy={y(p.value)} r={2.2} fill={companion.color} />
@@ -172,7 +235,7 @@ export default function TrendChart({
           textAnchor="end"
           style={{ fontSize: 8, fill: "var(--c-muted)" }}
         >
-          {dayLabel(points[points.length - 1].dayStart)}
+          {today ? "today" : dayLabel(points[points.length - 1].dayStart)}
         </text>
       </svg>
 
@@ -193,7 +256,76 @@ export default function TrendChart({
               : "holding steady"}
         </span>
       </div>
+
+      {today && (
+        <div className="flex items-baseline justify-between gap-3 pt-1 text-[13px]">
+          {/* Unnamed even with two series: naming it wrapped the row at phone
+              width, and the figure carries the series' colour instead. */}
+          <span className="whitespace-nowrap text-muted">
+            Today{" "}
+            <span className="font-medium tabular-nums" style={{ color }}>
+              {(formatExact ?? format)(today.soFar)}
+            </span>{" "}
+            so far
+          </span>
+          <span className="whitespace-nowrap text-muted">
+            heading for{" "}
+            <span className="font-medium tabular-nums" style={{ color }}>
+              ~{(formatExact ?? format)(today.expected)}
+            </span>
+          </span>
+        </div>
+      )}
     </div>
+  );
+}
+
+/**
+ * Today's two strokes for one series. The faint solid one ends on a filled dot
+ * — that's real, it has happened. The dotted one ends on a hollow ring — that's
+ * an expectation, and an empty circle is the usual way of saying "not yet".
+ */
+function Phantom({
+  fromX,
+  fromY,
+  toX,
+  soFarY,
+  expectedY,
+  color,
+}: {
+  fromX: number;
+  fromY: number;
+  toX: number;
+  soFarY: number;
+  expectedY: number;
+  color: string;
+}) {
+  return (
+    <g>
+      <line
+        x1={fromX}
+        y1={fromY}
+        x2={toX}
+        y2={expectedY}
+        stroke={color}
+        strokeWidth={2}
+        strokeDasharray="0.5 4"
+        strokeLinecap="round"
+        opacity={0.75}
+      />
+      <line
+        x1={fromX}
+        y1={fromY}
+        x2={toX}
+        y2={soFarY}
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        opacity={0.3}
+      />
+      <circle cx={toX} cy={expectedY} r={3} fill="var(--c-card)" stroke={color} strokeWidth={1.5} />
+      <circle cx={toX} cy={soFarY} r={3.2} fill={color} stroke="var(--c-card)" strokeWidth={1} />
+    </g>
   );
 }
 
@@ -202,11 +334,13 @@ function Header({
   color,
   companion,
   seriesLabel,
+  hasToday,
 }: {
   title: string;
   color: string;
   companion?: { color: string; label: string };
   seriesLabel?: string;
+  hasToday?: boolean;
 }) {
   // With one series the title already names it, so the only key worth the room
   // is the dashed fit. With two, identity stops being obvious and the legend
@@ -221,20 +355,36 @@ function Header({
         >
           {title}
         </span>
-        {!companion && <Key dashed color={color} label="trend" />}
+        {!companion && (
+          <span className="flex shrink-0 items-center gap-3">
+            <Key dashed color={color} label="trend" />
+            {hasToday && <Key dotted color={color} label="today, expected" />}
+          </span>
+        )}
       </div>
       {companion && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
           <Key color={color} label={seriesLabel ?? "this"} />
           <Key color={companion.color} label={companion.label} />
           <Key dashed color={color} label="trend" />
+          {hasToday && <Key dotted color={color} label="today, expected" />}
         </div>
       )}
     </div>
   );
 }
 
-function Key({ color, label, dashed }: { color: string; label: string; dashed?: boolean }) {
+function Key({
+  color,
+  label,
+  dashed,
+  dotted,
+}: {
+  color: string;
+  label: string;
+  dashed?: boolean;
+  dotted?: boolean;
+}) {
   return (
     <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[10px] text-muted">
       <svg width="14" height="4" aria-hidden>
@@ -245,8 +395,9 @@ function Key({ color, label, dashed }: { color: string; label: string; dashed?: 
           y2="2"
           stroke={color}
           strokeWidth={dashed ? 1.5 : 2}
-          strokeDasharray={dashed ? "4 3" : undefined}
-          opacity={dashed ? 0.55 : 1}
+          strokeDasharray={dashed ? "4 3" : dotted ? "0.5 4" : undefined}
+          strokeLinecap={dotted ? "round" : undefined}
+          opacity={dashed ? 0.55 : dotted ? 0.75 : 1}
         />
       </svg>
       {label}

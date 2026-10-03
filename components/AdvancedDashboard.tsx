@@ -14,9 +14,12 @@ import {
   computeStats,
   cumulativeSeries,
   dailyTotals,
+  feedRecords,
   previousWeekStats,
+  projectToday,
   sleepClock,
   startOfDay,
+  type DayProjection,
 } from "@/lib/daily";
 import { useEvents, useWeights } from "@/lib/api";
 import { tick } from "@/lib/haptics";
@@ -87,6 +90,21 @@ export default function AdvancedDashboard() {
 
     const sleepDays = dailyTotals(data, "sleep_ms", now, span);
 
+    // Where each of today's totals is heading. Always a week's worth, whatever
+    // the toggles say — see `projectToday`.
+    const projFeed = projectToday(data, now, "feed_ml");
+    const projSleep = projectToday(data, now, "sleep_ms");
+    const projDiapers = projectToday(data, now, "diaper_count");
+    const projDirty = projectToday(data, now, "poop_count");
+    // Awake is the remainder of the day, so today's awake is too: the time
+    // gone minus what was slept, heading for the whole day minus what's
+    // expected to be slept by midnight.
+    const dayMs = addDays(new Date(todayStart), 1).getTime() - todayStart;
+    const projAwake = projSleep && {
+      soFar: Math.max(0, now.getTime() - todayStart - projSleep.soFar),
+      expected: Math.max(0, dayMs - projSleep.expected),
+    };
+
     // Today's moments as fractions of the day, for the vertical marks.
     const marksFor = (kind: "spit_up" | "fussy") =>
       data.moments
@@ -98,6 +116,12 @@ export default function AdvancedDashboard() {
       elapsedFraction,
       spitUps: marksFor("spit_up"),
       fussies: marksFor("fussy"),
+      projFeed,
+      projSleep,
+      projDiapers,
+      projDirty,
+      projAwake,
+      records: feedRecords(data),
       feed: pair("feed_ml"),
       sleep: pair("sleep_ms"),
       // Every diaper, not just the dirty ones: a wet one is a change, a
@@ -140,6 +164,7 @@ export default function AdvancedDashboard() {
   const hrs = (ms: number | null) => (ms === null ? "—" : fmtDuration(ms));
   const num = (n: number | null, digits = 1) => (n === null ? "—" : n.toFixed(digits));
   const ml = (v: number | null) => `${num(v, 0)} mL`;
+  const r = view.records;
 
   /**
    * Last week's figure, or nothing to compare with.
@@ -167,8 +192,10 @@ export default function AdvancedDashboard() {
         previous={view.feed.previous}
         elapsedFraction={view.elapsedFraction}
         format={(v) => `${Math.round(v)}`}
+        formatExact={ml}
         marks={view.spitUps}
         markLabel="spit up"
+        projection={view.projFeed}
       />
       <CumulativeChart
         title="Sleep"
@@ -177,8 +204,10 @@ export default function AdvancedDashboard() {
         previous={view.sleep.previous}
         elapsedFraction={view.elapsedFraction}
         format={(v) => `${Math.round(v / 3_600_000)}h`}
+        formatExact={fmtDuration}
         marks={view.fussies}
         markLabel="fussy"
+        projection={view.projSleep}
       />
       <CumulativeChart
         title="Diapers"
@@ -187,6 +216,7 @@ export default function AdvancedDashboard() {
         previous={view.diapers.previous}
         elapsedFraction={view.elapsedFraction}
         format={(v) => `${Math.round(v)}`}
+        projection={view.projDiapers}
       />
 
       <div className="mt-1 flex flex-col gap-3">
@@ -211,24 +241,39 @@ export default function AdvancedDashboard() {
           title="Milk a day"
           color="var(--c-feed)"
           points={view.trendFeed}
+          today={mark(view.projFeed)}
           format={(v) => `${Math.round(v)}`}
+          formatExact={ml}
           describeSlope={(perDay) => rate(perDay, `${Math.abs(Math.round(perDay))} mL`)}
         />
         <TrendChart
           title="Asleep and awake a day"
           color="var(--c-sleep)"
           points={view.trendSleep}
-          companion={{ points: view.trendAwake, color: "var(--c-awake)", label: "awake" }}
+          companion={{
+            points: view.trendAwake,
+            color: "var(--c-awake)",
+            label: "awake",
+            today: view.projAwake,
+          }}
           seriesLabel="asleep"
+          today={mark(view.projSleep)}
           format={(v) => `${Math.round(v / 3_600_000)}h`}
+          formatExact={fmtDuration}
           describeSlope={(perDay) => rate(perDay, fmtDuration(Math.abs(perDay)))}
         />
         <TrendChart
           title="Diapers a day"
           color="var(--c-diaper)"
           points={view.trendDiapers}
-          companion={{ points: view.trendDirty, color: "var(--c-dirty)", label: "dirty" }}
+          companion={{
+            points: view.trendDirty,
+            color: "var(--c-dirty)",
+            label: "dirty",
+            today: mark(view.projDirty),
+          }}
           seriesLabel="diapers"
+          today={mark(view.projDiapers)}
           format={(v) => `${Math.round(v)}`}
           describeSlope={(perDay) => rate(perDay, Math.abs(perDay).toFixed(1))}
         />
@@ -242,13 +287,17 @@ export default function AdvancedDashboard() {
           data. The dashed line is a least-squares fit across the whole window,
           so one unusual day nudges it rather than defining it. A direction is
           only named once the whole fitted move is bigger than the day-to-day
-          scatter; below that it says steady, because it is.
+          scatter; below that it says steady, because it is. The column marked
+          today is a phantom, never a point: the filled dot is where she is so
+          far, and the dotted line runs to where the day is expected to land —
+          today so far plus what the past week usually added from this hour to
+          midnight. The fit never sees it.
         </p>
 
         {/* Weight belongs with the long-arc charts rather than the daily ones,
             but it keeps its own window: weigh-ins are their own series and have
             nothing to do with how many days of totals you asked for. */}
-        {weights && <WeightChart weights={weights} />}
+        {weights && <WeightChart weights={weights} now={now} />}
       </div>
 
       <div className="panel rounded-[10px] p-4">
@@ -297,6 +346,35 @@ export default function AdvancedDashboard() {
                 format={num}
               />
             </Group>
+            {/* All-time rather than past-week, and labelled so: a record is
+                the one figure here that is meant to outlive the baby she was
+                when she set it. */}
+            {(r.biggestDay || r.biggestFeed) && (
+              <Group color="var(--c-feed)" title="Feeding records" note="all time">
+                {r.biggestDay && (
+                  <Record
+                    label="Most milk in one day"
+                    value={ml(r.biggestDay.ml)}
+                    when={
+                      r.biggestDay.dayStart === startOfDay(now).getTime()
+                        ? "today, and counting"
+                        : shortDate(r.biggestDay.dayStart)
+                    }
+                  />
+                )}
+                {r.biggestFeed && (
+                  <Record
+                    label="Biggest single feed"
+                    value={ml(r.biggestFeed.ml)}
+                    when={
+                      r.biggestFeed.at >= startOfDay(now).getTime()
+                        ? `today, ${shortTime(r.biggestFeed.at)}`
+                        : `${shortDate(r.biggestFeed.at)}, ${shortTime(r.biggestFeed.at)}`
+                    }
+                  />
+                )}
+              </Group>
+            )}
             <Group color="var(--c-sleep)" title="Sleep" days={s.sleepDays}>
               <Row
                 label="Asleep a day"
@@ -361,7 +439,10 @@ export default function AdvancedDashboard() {
           The arrows point, they don&apos;t judge: more time awake, or a longer
           gap between feeds, is neither good news nor bad. Each group stops at
           the day its own log started, which is why the day counts can differ
-          and why some rows have nothing to compare with yet.
+          and why some rows have nothing to compare with yet. The records are
+          the exception: they cover every day she has, today included — a day
+          in progress can only fall short of its total, so if it has already
+          passed the old best, the record is real.
         </p>
       </div>
 
@@ -371,6 +452,16 @@ export default function AdvancedDashboard() {
     </div>
   );
 }
+
+/** Just the two figures a today-column needs, or nothing. */
+function mark(p: DayProjection | null) {
+  return p && { soFar: p.soFar, expected: p.expected };
+}
+
+const shortDate = (ms: number) =>
+  new Date(ms).toLocaleDateString([], { month: "short", day: "numeric" });
+const shortTime = (ms: number) =>
+  new Date(ms).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
 /**
  * "up 12 mL a day". Only ever called for a trend that has already earned the
@@ -436,11 +527,14 @@ function Group({
   title,
   color,
   days,
+  note,
   children,
 }: {
   title: string;
   color: string;
-  days: number;
+  days?: number;
+  /** In place of the day count, for a group that isn't a window of days. */
+  note?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -451,10 +545,25 @@ function Group({
       >
         <span>{title}</span>
         <span className="whitespace-nowrap normal-case tracking-normal text-muted">
-          {days === 0 ? "not logged yet" : `${days} day${days === 1 ? "" : "s"}`}
+          {note ?? (days === 0 ? "not logged yet" : `${days} day${days === 1 ? "" : "s"}`)}
         </span>
       </div>
       {children}
+    </div>
+  );
+}
+
+/** A record and when it was set, laid out like a Row so the column lines up. */
+function Record({ label, value, when }: { label: string; value: string; when: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 text-[14px]">
+      <span className="text-muted">{label}</span>
+      <span className="flex shrink-0 flex-col items-end">
+        <span className="whitespace-nowrap font-medium tabular-nums">{value}</span>
+        <span className="-mt-0.5 whitespace-nowrap text-[11px] leading-tight text-muted tabular-nums">
+          {when}
+        </span>
+      </span>
     </div>
   );
 }

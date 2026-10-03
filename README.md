@@ -359,6 +359,21 @@ equal peers, and they share one legend key — seven keys would take more room
 than the chart. Past days are drawn complete; today stops at the current time,
 because running it flat to the right edge would read as "she stopped".
 
+Each chart also shows **where today is heading**. A faint dotted rule marks
+now across the whole height, so you can read every past day's line where it
+crosses it. From the end of today's line a dotted one carries on to midnight
+and ends on a hollow ring, and a readout underneath says "247 mL so far ·
+heading for ~966 mL". The expectation is today so far **plus what the past
+week typically added from this time of day to midnight**: increments, not a
+rate. "200 mL by 2pm, so 340 by midnight" assumes the evening goes like the
+morning, and a newborn's never does. Asking each past day how much came after
+this hour carries the shape of her day along with its size, so the dotted
+line bends where her days bend. It always uses a week, whatever **Compare
+with** says (an expectation that moved when you tapped a button would be
+describing the button), and like the averages it stops where that metric's
+own log began. At midnight the expectation is exactly the week's daily
+average.
+
 *When does she sleep* — **When she sleeps**, every finished day folded onto one
 midnight-to-midnight axis, asking of each fifteen minutes: on what share of
 those days was she asleep then? Averaged over one day, two, three, a week or
@@ -408,6 +423,19 @@ noisy count is held to a higher bar than a steady one. Below that it says
 between the diaper chart claiming "down 0.1 a day" from pure scatter and
 saying nothing at all.
 
+Today gets a **phantom column** at the right of each of these charts, never a
+point in the series. A faint line runs from the last finished day to a filled
+dot (where she is so far), and a dotted one runs to a hollow ring (where the
+day is expected to land, from the same projection as above). The companion
+lines get the same treatment, with awake being the time so far minus sleep so
+far, heading for the whole day minus expected sleep. The fitted line never
+sees today, so the morning dip still can't drag the trend down.
+
+The weight chart does the same thing across time. When the last weigh-in was
+before today, the axis runs on to now and a dotted line carries her pace
+forward to a hollow ring: "Expected today, at this pace". The pace is the
+first-to-last one already shown, so two weigh-ins a day apart can't set it.
+
 Underneath are averages over the **past week**, whole days only. Today is
 partial by definition, and folding half a day into a per-day mean drags every
 figure down.
@@ -420,6 +448,13 @@ the day its own log started, so a week's window never reaches back into days
 nobody was writing that log — the two rules compose, and the shorter of them
 wins. "Longest sleep" follows the same window, and means the longest of the
 week.
+
+**Feeding records** sit with the averages but are labelled *all time*: the
+most milk in one calendar day and the biggest single feed, each with the date
+it was set. Unlike the averages these count today. A day in progress can only
+fall short of its total, never overshoot it, so if today has already passed
+the old best the record is real, and it shows "today, and counting". Ties go
+to whoever set the record first.
 
 Weight appears on both, differently. **Basic** gets two numbers and the gap
 between them — what she is now, what she was before, and the change — because

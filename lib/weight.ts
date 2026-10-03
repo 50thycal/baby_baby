@@ -122,3 +122,19 @@ export function fmtRate(perWeekOz: number): string {
   const verb = rounded > 0 ? "gaining" : "losing";
   return `${verb} ${Math.abs(rounded)} oz a week`;
 }
+
+/**
+ * Where she'd be expected to weigh at `at`, carrying the series' own pace on
+ * from the last reading.
+ *
+ * The pace is the first-to-last one `weightTrend` already reports, for the same
+ * reason: two weigh-ins a day apart would otherwise set it. Null when there is
+ * no pace to carry, or when the last reading is already at or after `at` —
+ * there's nothing to estimate when somebody has just put her on the scale.
+ */
+export function expectedWeightAt(trend: WeightTrend, at: number): number | null {
+  if (trend.perWeekOz === null) return null;
+  const days = (at - trend.latest.at) / 86_400_000;
+  if (days <= 0) return null;
+  return trend.latest.grams + (trend.perWeekOz / 7) * days * GRAMS_PER_OUNCE;
+}
