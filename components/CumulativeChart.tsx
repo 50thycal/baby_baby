@@ -1,5 +1,7 @@
 "use client";
 
+import type { DayProjection } from "@/lib/daily";
+
 /**
  * Today's running total laid over the days before it.
  *
@@ -15,6 +17,11 @@
  * With several past days the older ones fade, so the eye reads the stack as
  * recency rather than as a set of equal peers. They also share one legend key
  * rather than getting one each: seven keys would take more room than the chart.
+ *
+ * From the end of today's line a dotted one carries on to midnight: where the
+ * day is expected to finish if the rest of it goes like her recent days did.
+ * It is drawn fainter and dotted precisely so it can't be mistaken for today's
+ * real line — that one stops at now, and still means what it always meant.
  */
 
 /**
@@ -40,11 +47,14 @@ function Swatch({
   dash,
   opacity = 1,
   vertical = false,
+  dotted = false,
 }: {
   color: string;
   dash?: string;
   opacity?: number;
   vertical?: boolean;
+  /** Round caps, which is what turns a near-zero dash into a dot. */
+  dotted?: boolean;
 }) {
   return vertical ? (
     <svg width="7" height="11" aria-hidden>
@@ -69,6 +79,7 @@ function Swatch({
         stroke={color}
         strokeWidth={2}
         strokeDasharray={dash}
+        strokeLinecap={dotted ? "round" : undefined}
         opacity={opacity}
       />
     </svg>
@@ -84,6 +95,8 @@ export default function CumulativeChart({
   title,
   marks = [],
   markLabel,
+  projection,
+  formatExact,
 }: {
   today: number[];
   /** Finished days, most recent first. */
@@ -96,8 +109,12 @@ export default function CumulativeChart({
   /** Moments today, as fractions of the day. Drawn as bare vertical lines. */
   marks?: number[];
   markLabel?: string;
+  /** Where today is heading. Drawn dotted from the end of today's line. */
+  projection?: DayProjection | null;
+  /** The figure with its unit, for the readout under the chart. */
+  formatExact?: (value: number) => string;
 }) {
-  const peak = Math.max(1, ...today, ...previous.flat());
+  const peak = Math.max(1, ...today, ...previous.flat(), projection?.expected ?? 0);
   const plotW = W - PAD_L - PAD_R;
   const plotH = H - PAD_T - PAD_B;
 
@@ -113,6 +130,22 @@ export default function CumulativeChart({
   const todayCutoff = Math.max(2, Math.round(elapsedFraction * (today.length - 1)) + 1);
   const lastX = x(todayCutoff - 1, today.length);
   const lastY = y(today[todayCutoff - 1] ?? 0);
+  const nowX = PAD_L + Math.min(1, Math.max(0, elapsedFraction)) * plotW;
+
+  // Starts from the dot rather than from the projection's first sample, so the
+  // two lines join instead of leaving a ten-minute gap between them.
+  const n = today.length;
+  const ahead =
+    projection && projection.curve.length === n
+      ? projection.curve
+          .map((v, i) => ({ v, i }))
+          .filter(({ v, i }) => i >= todayCutoff && Number.isFinite(v))
+      : [];
+  const projectionPath = ahead.length
+    ? `M${lastX.toFixed(1)} ${lastY.toFixed(1)} ` +
+      ahead.map(({ v, i }) => `L${x(i, n).toFixed(1)} ${y(v).toFixed(1)}`).join(" ")
+    : null;
+  const exact = formatExact ?? format;
 
   return (
     <div className="panel rounded-[10px] p-3">
@@ -188,6 +221,19 @@ export default function CumulativeChart({
           />
         ))}
 
+        {/* Now, as a phantom rule across the whole height: where every past
+            day's line crosses it is where that day stood at this same time. */}
+        <line
+          x1={nowX}
+          x2={nowX}
+          y1={PAD_T}
+          y2={PAD_T + plotH}
+          stroke="var(--c-muted)"
+          strokeWidth={1}
+          strokeDasharray="1 3"
+          opacity={0.6}
+        />
+
         {/* Oldest first, so the most recent past day is drawn last and sits on
             top of the fainter ones. */}
         {previous
@@ -213,7 +259,29 @@ export default function CumulativeChart({
           strokeLinejoin="round"
           strokeLinecap="round"
         />
-        <circle cx={lastX} cy={lastY} r={3.5} fill={color} />
+        {projectionPath && projection && (
+          <>
+            <path
+              d={projectionPath}
+              fill="none"
+              stroke={color}
+              strokeWidth={2}
+              strokeDasharray="0.5 4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.75}
+            />
+            <circle
+              cx={x(n - 1, n)}
+              cy={y(projection.expected)}
+              r={3}
+              fill="var(--c-card)"
+              stroke={color}
+              strokeWidth={1.5}
+            />
+          </>
+        )}
+        <circle cx={lastX} cy={lastY} r={3.5} fill={color} stroke="var(--c-card)" strokeWidth={1} />
 
         {/* Six-hourly ticks; a newborn's day has no other natural landmarks. */}
         {[0, 0.25, 0.5, 0.75, 1].map((f) => (
@@ -229,6 +297,29 @@ export default function CumulativeChart({
           </text>
         ))}
       </svg>
+
+      {projection && (
+        <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-line pt-2 text-[13px]">
+          <span className="flex items-center gap-1.5 text-muted">
+            <svg width="8" height="8" aria-hidden>
+              <circle cx="4" cy="4" r="3" fill={color} />
+            </svg>
+            <span>
+              <span className="font-medium tabular-nums text-ink">{exact(projection.soFar)}</span>{" "}
+              so far
+            </span>
+          </span>
+          <span className="flex items-center gap-1.5 whitespace-nowrap text-muted">
+            <Swatch color={color} dash="0.5 4" dotted />
+            <span>
+              heading for{" "}
+              <span className="font-medium tabular-nums" style={{ color }}>
+                ~{exact(projection.expected)}
+              </span>
+            </span>
+          </span>
+        </div>
+      )}
     </div>
   );
 }

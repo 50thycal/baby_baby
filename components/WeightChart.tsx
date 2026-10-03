@@ -1,6 +1,14 @@
 "use client";
 
-import { fmtOunceChange, fmtPounds, fmtRate, fmtWeight, weightTrend } from "@/lib/weight";
+import { startOfDay } from "@/lib/daily";
+import {
+  expectedWeightAt,
+  fmtOunceChange,
+  fmtPounds,
+  fmtRate,
+  fmtWeight,
+  weightTrend,
+} from "@/lib/weight";
 import type { Weight } from "@/lib/types";
 
 /**
@@ -15,6 +23,11 @@ import type { Weight } from "@/lib/types";
  * more honest for a bar chart, but a newborn's whole range is a couple of
  * pounds inside a fifteen-pound axis, and the line would be flat and useless.
  * The axis labels say plainly what the range is.
+ *
+ * When the last weigh-in was before today, the axis runs on to now and a dotted
+ * line carries her pace forward to a hollow ring: roughly what the scale would
+ * say if you weighed her this minute. It's an estimate and is drawn like one —
+ * the real readings stay solid.
  */
 
 const W = 320;
@@ -26,7 +39,7 @@ const PAD_B = 20;
 
 const ACCENT = "var(--c-weight)";
 
-export default function WeightChart({ weights }: { weights: Weight[] }) {
+export default function WeightChart({ weights, now }: { weights: Weight[]; now: Date }) {
   const points = weights
     .map((w) => ({ grams: w.weight_g, at: new Date(w.ts).getTime() }))
     .sort((a, b) => a.at - b.at);
@@ -62,8 +75,15 @@ export default function WeightChart({ weights }: { weights: Weight[] }) {
   const plotW = W - PAD_L - PAD_R;
   const plotH = H - PAD_T - PAD_B;
 
-  const lowG = Math.min(...points.map((p) => p.grams));
-  const highG = Math.max(...points.map((p) => p.grams));
+  const nowMs = now.getTime();
+  // Only once a day has turned over: a reading from this morning already is
+  // today's weight, and a projection hours long would just restate it.
+  const expected =
+    trend.latest.at < startOfDay(now).getTime() ? expectedWeightAt(trend, nowMs) : null;
+
+  const plotted = [...points.map((p) => p.grams), ...(expected === null ? [] : [expected])];
+  const lowG = Math.min(...plotted);
+  const highG = Math.max(...plotted);
   // A flat series would divide by zero; give it a nominal band so the line sits
   // in the middle rather than on an edge.
   const span = Math.max(1, highG - lowG);
@@ -73,7 +93,8 @@ export default function WeightChart({ weights }: { weights: Weight[] }) {
 
   const first = points[0].at;
   const last = points[points.length - 1].at;
-  const timeSpan = Math.max(1, last - first);
+  const end = expected === null ? last : nowMs;
+  const timeSpan = Math.max(1, end - first);
 
   const x = (at: number) => PAD_L + ((at - first) / timeSpan) * plotW;
   const y = (g: number) => PAD_T + plotH - ((g - lo) / (hi - lo)) * plotH;
@@ -124,6 +145,42 @@ export default function WeightChart({ weights }: { weights: Weight[] }) {
           strokeLinecap="round"
         />
 
+        {expected !== null && (
+          <>
+            {/* Today, as a phantom rule, so the gap since the last reading is
+                visible as time rather than hidden by the line. */}
+            <line
+              x1={x(nowMs)}
+              x2={x(nowMs)}
+              y1={PAD_T}
+              y2={PAD_T + plotH}
+              stroke="var(--c-muted)"
+              strokeWidth={1}
+              strokeDasharray="1 3"
+              opacity={0.6}
+            />
+            <line
+              x1={x(last)}
+              y1={y(trend.latest.grams)}
+              x2={x(nowMs)}
+              y2={y(expected)}
+              stroke={ACCENT}
+              strokeWidth={2}
+              strokeDasharray="0.5 4"
+              strokeLinecap="round"
+              opacity={0.75}
+            />
+            <circle
+              cx={x(nowMs)}
+              cy={y(expected)}
+              r={3.5}
+              fill="var(--c-card)"
+              stroke={ACCENT}
+              strokeWidth={1.5}
+            />
+          </>
+        )}
+
         {points.map((p, i) => (
           <circle
             key={i}
@@ -148,12 +205,19 @@ export default function WeightChart({ weights }: { weights: Weight[] }) {
           textAnchor="end"
           style={{ fontSize: 8, fill: "var(--c-muted)" }}
         >
-          {dayLabel(last)}
+          {expected === null ? dayLabel(last) : "today"}
         </text>
       </svg>
 
       <div className="mt-1 flex flex-col gap-1 border-t border-line pt-2 text-[13px]">
-        <Row label="Now" value={fmtWeight(trend.latest.grams)} strong />
+        <Row
+          label={expected === null ? "Now" : `Last weighed · ${dayLabel(last)}`}
+          value={fmtWeight(trend.latest.grams)}
+          strong
+        />
+        {expected !== null && (
+          <Row label="Expected today, at this pace" value={`~${fmtWeight(expected)}`} />
+        )}
         <Row
           label={`Gained over ${Math.round(trend.spanDays)} day${Math.round(trend.spanDays) === 1 ? "" : "s"}`}
           value={fmtOunceChange(trend.totalOz)}

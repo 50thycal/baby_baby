@@ -113,11 +113,155 @@ export function cumulativeSeries(
   stepMs = 10 * 60_000,
   upToMs = 24 * 3600_000,
 ): number[] {
+  // Narrowed to the day first. Every sample re-totals from midnight, so without
+  // this a week of overlays plus the projections walks the whole lifetime log
+  // well over a thousand times a minute — on a phone, months in.
+  const end = dayStart + upToMs;
+  const inDay = (ts: string) => {
+    const t = new Date(ts).getTime();
+    return t >= dayStart && t < end;
+  };
+  const day: EventsPayload = {
+    ...data,
+    feedings: data.feedings.filter((f) => inDay(f.ts)),
+    diapers: data.diapers.filter((d) => inDay(d.ts)),
+    sleep: data.sleep.filter((s) => clipSleep(s, dayStart, end) !== null),
+  };
+
   const points: number[] = [];
   for (let offset = 0; offset <= upToMs; offset += stepMs) {
-    points.push(metricValue(totalsBetween(data, dayStart, dayStart + offset), metric));
+    points.push(metricValue(totalsBetween(day, dayStart, dayStart + offset), metric));
   }
   return points;
+}
+
+export type DayProjection = {
+  /** Today's total at this moment. */
+  soFar: number;
+  /** Where today is expected to finish by midnight. */
+  expected: number;
+  /**
+   * The expected running total on the same grid as `cumulativeSeries`. Only
+   * the samples after now mean anything; the ones before are NaN, because the
+   * real line already covers them.
+   */
+  curve: number[];
+  /** How many finished days the expectation was drawn from. */
+  days: number;
+};
+
+/**
+ * Where today is heading: what she has so far, plus what the recent days
+ * typically added from this time of day to midnight.
+ *
+ * Built from increments rather than a rate. "420 mL by 2pm, so 720 by
+ * midnight" assumes the evening goes like the morning, and a newborn's never
+ * does — the cluster feeds are at night, the long sleep starts at ten. Asking
+ * each past day "how much came after this hour" carries the shape of the day
+ * along with the size of it, so the dotted line bends where her days bend.
+ *
+ * A plain mean across the days, so at midnight the expectation is exactly the
+ * week's daily average — the same figure the averages panel prints. The
+ * cumulative series are monotonic, so every increment is zero or more and the
+ * line never dips below where she is.
+ */
+export function projectDay(
+  soFar: number,
+  /** Finished days' cumulative series, all on the same grid. */
+  past: number[][],
+  elapsedFraction: number,
+): DayProjection | null {
+  if (!past.length) return null;
+  const n = past[0].length;
+  const pos = Math.min(1, Math.max(0, elapsedFraction)) * (n - 1);
+
+  // Each past day's total at this same clock time, read between grid samples
+  // so the increment doesn't jump every ten minutes.
+  const lo = Math.floor(pos);
+  const hi = Math.min(n - 1, lo + 1);
+  const base = past.map((s) => s[lo] + (s[hi] - s[lo]) * (pos - lo));
+
+  const curve = Array.from({ length: n }, (_, i) =>
+    i <= pos ? NaN : soFar + past.reduce((sum, s, d) => sum + (s[i] - base[d]), 0) / past.length,
+  );
+  const expected =
+    soFar + past.reduce((sum, s, d) => sum + (s[n - 1] - base[d]), 0) / past.length;
+
+  return { soFar, expected, curve, days: past.length };
+}
+
+/**
+ * `projectDay` for one metric, drawn from the past week.
+ *
+ * Always a week, whatever the Compare-with toggle says: that toggle is about
+ * what to look at, and an expectation that jumped when you tapped "1 day" would
+ * be telling you about the button rather than about her. The week stops where
+ * the metric's own log starts, for the same reason the averages do — a day from
+ * before anyone was writing sleep down would expect her to sleep for none of
+ * the evening.
+ */
+export function projectToday(
+  data: EventsPayload,
+  now: Date,
+  metric: Metric,
+  days = AVERAGE_DAYS,
+): DayProjection | null {
+  const covered = coverageStart(data, metricKind(metric), now);
+  if (covered === null) return null;
+
+  const past: number[][] = [];
+  for (let i = 1; i <= days; i++) {
+    const from = addDays(now, -i).getTime();
+    if (from < covered) break;
+    past.push(cumulativeSeries(data, from, metric));
+  }
+
+  const todayStart = startOfDay(now).getTime();
+  const soFar = metricValue(totalsBetween(data, todayStart, now.getTime()), metric);
+  return projectDay(soFar, past, (now.getTime() - todayStart) / 86_400_000);
+}
+
+export type FeedRecords = {
+  /** The single biggest bottle, and when. */
+  biggestFeed: { ml: number; at: number } | null;
+  /** The most milk in one calendar day, and which day. */
+  biggestDay: { ml: number; dayStart: number } | null;
+};
+
+/**
+ * All-time feeding records.
+ *
+ * Unlike every average on the screen these do count today. A partial day can
+ * only under-report its total, never over-report it, so if today has already
+ * passed the old record it has genuinely set a new one — and that is exactly
+ * the evening you want to see it.
+ *
+ * Ties go to the earlier one: a record belongs to whoever set it first, and
+ * equalling it isn't breaking it. Zero-mL entries never count as a record.
+ */
+export function feedRecords(data: EventsPayload): FeedRecords {
+  let biggestFeed: FeedRecords["biggestFeed"] = null;
+  const byDay = new Map<number, number>();
+
+  const sorted = [...data.feedings].sort(
+    (a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime(),
+  );
+  for (const f of sorted) {
+    const at = new Date(f.ts).getTime();
+    if (f.amount_ml > 0 && (!biggestFeed || f.amount_ml > biggestFeed.ml)) {
+      biggestFeed = { ml: f.amount_ml, at };
+    }
+    const day = startOfDay(new Date(at)).getTime();
+    byDay.set(day, (byDay.get(day) ?? 0) + f.amount_ml);
+  }
+
+  let biggestDay: FeedRecords["biggestDay"] = null;
+  // Map iteration follows insertion order, which is chronological here.
+  for (const [dayStart, ml] of byDay) {
+    if (ml > 0 && (!biggestDay || ml > biggestDay.ml)) biggestDay = { ml, dayStart };
+  }
+
+  return { biggestFeed, biggestDay };
 }
 
 /** Which log a metric is drawn from — see `coverageStart`. */
