@@ -15,7 +15,7 @@ import { useEvents, useHomeState, useWeights } from "@/lib/api";
 import { fmtWeight } from "@/lib/weight";
 import { nextFeedWindow, wakeWindow } from "@/lib/predict";
 import { useNow } from "@/lib/useNow";
-import { fmtAgo, fmtClock, fmtDuration } from "@/lib/time";
+import { fmtAgo, fmtClock, fmtClockRange, fmtDuration } from "@/lib/time";
 import { DIAPER_SHORT } from "@/lib/types";
 
 type Which =
@@ -80,7 +80,7 @@ export default function HomeScreen() {
             feedWindow
               ? feedWindow.overdue
                 ? `overdue · usually by ${fmtClock(feedWindow.to)}`
-                : `next ${fmtClock(feedWindow.from)} – ${fmtClock(feedWindow.to)}`
+                : `next feed ${fmtClockRange(feedWindow.from, feedWindow.to)}`
               : undefined
           }
           onClick={() => setOpen("feed")}
@@ -94,14 +94,15 @@ export default function HomeScreen() {
             wash="var(--c-sleep)"
             ink="#fff"
             filled
-            detail={`asleep ${fmtDuration(now.getTime() - new Date(asleep.sleep_start).getTime())}${
+            detail={`asleep ${fmtDuration(now.getTime() - new Date(asleep.sleep_start).getTime())}`}
+            sub={
               wake
                 ? wake.overdue
-                  ? " · a long one"
-                  : ` · up ~${fmtClock(wake.from)}–${fmtClock(wake.to)}`
-                : ""
-            }`}
-            sub="tap when she's up"
+                  ? "a long one — past her usual"
+                  : `likely up ${fmtClockRange(wake.from, wake.to)}`
+                : undefined
+            }
+            hint="tap when she's up"
             onClick={() => setOpen("sleep")}
           />
         ) : (
@@ -196,6 +197,7 @@ function ActionTile({
   ink,
   detail,
   sub,
+  hint,
   filled,
   onClick,
 }: {
@@ -205,8 +207,10 @@ function ActionTile({
   wash: string;
   ink: string;
   detail?: string;
-  /** A second, quieter line — the forecast, or what to do next. */
+  /** A second, quieter line — the forecast. */
   sub?: string;
+  /** What tapping will do, when that isn't obvious from the label. */
+  hint?: string;
   filled?: boolean;
   onClick: () => void;
 }) {
@@ -234,8 +238,12 @@ function ActionTile({
       </span>
       <span className="flex min-w-0 flex-col gap-0.5">
         <span className="font-pixel text-2xl font-semibold">{label}</span>
-        {detail && <span className="truncate text-[14px] font-medium opacity-90">{detail}</span>}
-        {sub && <span className="truncate text-[13px] font-normal opacity-70">{sub}</span>}
+        {/* Three steps of weight, and every line wraps rather than truncating:
+            a forecast cut off at "1:3…" is worse than no forecast, and the
+            tiles have height to spare. */}
+        {detail && <span className="text-[16px] font-semibold leading-snug">{detail}</span>}
+        {sub && <span className="text-[14px] font-normal leading-snug opacity-85">{sub}</span>}
+        {hint && <span className="mt-1 text-[12px] font-normal leading-snug opacity-75">{hint}</span>}
       </span>
     </button>
   );

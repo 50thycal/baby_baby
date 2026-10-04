@@ -11,6 +11,19 @@ export function fmtClock(d: Date | string): string {
   return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
+/**
+ * "9:21 – 10:49 PM", "11:40 PM – 1:05 AM". The meridiem is said once when both
+ * ends share it, which is what lets a forecast window fit on one line of a
+ * tile instead of being cut off halfway through the second time.
+ * `formatRange` handles that per locale; the fallback is just two clocks.
+ */
+export function fmtClockRange(from: Date, to: Date, locale?: string): string {
+  const f = new Intl.DateTimeFormat(locale ?? [], { hour: "numeric", minute: "2-digit" });
+  return typeof f.formatRange === "function"
+    ? f.formatRange(from, to)
+    : `${fmtClock(from)} – ${fmtClock(to)}`;
+}
+
 export function fmtDayLabel(d: Date | string): string {
   const date = typeof d === "string" ? new Date(d) : d;
   return date.toLocaleDateString([], { weekday: "short", month: "numeric", day: "numeric" });
