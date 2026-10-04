@@ -1,15 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import AdvancedDashboard from "@/components/AdvancedDashboard";
 import BetsScreen from "@/components/BetsScreen";
 import Dashboard from "@/components/Dashboard";
 import HomeScreen from "@/components/HomeScreen";
 import { Toaster } from "@/components/Toaster";
+import TrendsDashboard from "@/components/TrendsDashboard";
 import VersionBar from "@/components/VersionBar";
 import { tick } from "@/lib/haptics";
 
-type Tab = "log" | "basic" | "advanced" | "bets";
+/**
+ * Named for what each screen shows, not how complicated it is: "Today" is how
+ * the day is going, "Trends" is which way the weeks are heading. "Basic" and
+ * "Advanced" described the reader rather than the content, and "ADVANCED" was
+ * too wide for its quarter of the bar in the pixel font.
+ */
+type Tab = "log" | "today" | "trends" | "bets";
 
 export default function Page() {
   const [tab, setTab] = useState<Tab>("log");
@@ -27,11 +33,11 @@ export default function Page() {
             <Tab id="log" active={tab} onSelect={setTab}>
               Log
             </Tab>
-            <Tab id="basic" active={tab} onSelect={setTab}>
-              Basic
+            <Tab id="today" active={tab} onSelect={setTab}>
+              Today
             </Tab>
-            <Tab id="advanced" active={tab} onSelect={setTab}>
-              Advanced
+            <Tab id="trends" active={tab} onSelect={setTab}>
+              Trends
             </Tab>
             <Tab id="bets" active={tab} onSelect={setTab}>
               Bets
@@ -41,8 +47,8 @@ export default function Page() {
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {tab === "log" && <HomeScreen />}
-          {tab === "basic" && <Dashboard />}
-          {tab === "advanced" && <AdvancedDashboard />}
+          {tab === "today" && <Dashboard />}
+          {tab === "trends" && <TrendsDashboard />}
           {tab === "bets" && <BetsScreen />}
         </div>
       </main>

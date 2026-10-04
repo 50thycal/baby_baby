@@ -10,7 +10,7 @@ const ACCENT = "var(--c-weight)";
  * Where she's at, and what she was before.
  *
  * No chart here on purpose — two numbers and the gap between them is the whole
- * of what you want at a glance. The shape of the climb lives on Advanced.
+ * of what you want at a glance. The shape of the climb lives on Trends.
  */
 export default function WeightCard({
   weights,

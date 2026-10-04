@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import CritterStrip from "@/components/Critters";
 import CumulativeChart from "@/components/CumulativeChart";
+import Explain from "@/components/Explain";
 import GrandTally from "@/components/GrandTally";
 import SleepClock from "@/components/SleepClock";
 import TrendChart from "@/components/TrendChart";
@@ -64,7 +65,19 @@ const SPANS = [
 
 type Span = (typeof SPANS)[number]["key"];
 
-export default function AdvancedDashboard() {
+/**
+ * Where each jump chip lands. The screen is several phones tall, and the
+ * averages — the part most often wanted — are at the bottom of it.
+ */
+const SECTIONS = [
+  { id: "trends-today", label: "Today" },
+  { id: "trends-clock", label: "Clock" },
+  { id: "trends-daily", label: "Daily" },
+  { id: "trends-weight", label: "Weight" },
+  { id: "trends-averages", label: "Averages" },
+] as const;
+
+export default function TrendsDashboard() {
   const [overlay, setOverlay] = useState<number>(1);
   const [span, setSpan] = useState<Span>(7);
   const [clockSpan, setClockSpan] = useState<ClockSpan>(7);
@@ -178,48 +191,52 @@ export default function AdvancedDashboard() {
 
   return (
     <div className="flex flex-col gap-3 px-5 pb-4">
-      <Toggle
-        label="Compare with"
-        options={OVERLAYS}
-        value={overlay}
-        onChange={(v) => setOverlay(v as number)}
-      />
+      <JumpChips />
 
-      <CumulativeChart
-        title="Feeding"
-        color="var(--c-feed)"
-        today={view.feed.today}
-        previous={view.feed.previous}
-        elapsedFraction={view.elapsedFraction}
-        format={(v) => `${Math.round(v)}`}
-        formatExact={ml}
-        marks={view.spitUps}
-        markLabel="spit up"
-        projection={view.projFeed}
-      />
-      <CumulativeChart
-        title="Sleep"
-        color="var(--c-sleep)"
-        today={view.sleep.today}
-        previous={view.sleep.previous}
-        elapsedFraction={view.elapsedFraction}
-        format={(v) => `${Math.round(v / 3_600_000)}h`}
-        formatExact={fmtDuration}
-        marks={view.fussies}
-        markLabel="fussy"
-        projection={view.projSleep}
-      />
-      <CumulativeChart
-        title="Diapers"
-        color="var(--c-diaper)"
-        today={view.diapers.today}
-        previous={view.diapers.previous}
-        elapsedFraction={view.elapsedFraction}
-        format={(v) => `${Math.round(v)}`}
-        projection={view.projDiapers}
-      />
+      <div id="trends-today" className="flex scroll-mt-3 flex-col gap-3">
+        <Toggle
+          label="Compare with"
+          options={OVERLAYS}
+          value={overlay}
+          onChange={(v) => setOverlay(v as number)}
+        />
 
-      <div className="mt-1 flex flex-col gap-3">
+        <CumulativeChart
+          title="Feeding"
+          color="var(--c-feed)"
+          today={view.feed.today}
+          previous={view.feed.previous}
+          elapsedFraction={view.elapsedFraction}
+          format={(v) => `${Math.round(v)}`}
+          formatExact={ml}
+          marks={view.spitUps}
+          markLabel="spit up"
+          projection={view.projFeed}
+        />
+        <CumulativeChart
+          title="Sleep"
+          color="var(--c-sleep)"
+          today={view.sleep.today}
+          previous={view.sleep.previous}
+          elapsedFraction={view.elapsedFraction}
+          format={(v) => `${Math.round(v / 3_600_000)}h`}
+          formatExact={fmtDuration}
+          marks={view.fussies}
+          markLabel="fussy"
+          projection={view.projSleep}
+        />
+        <CumulativeChart
+          title="Diapers"
+          color="var(--c-diaper)"
+          today={view.diapers.today}
+          previous={view.diapers.previous}
+          elapsedFraction={view.elapsedFraction}
+          format={(v) => `${Math.round(v)}`}
+          projection={view.projDiapers}
+        />
+      </div>
+
+      <div id="trends-clock" className="mt-1 flex scroll-mt-3 flex-col gap-3">
         <Toggle
           label="When she sleeps · average of"
           options={CLOCK_SPANS}
@@ -229,7 +246,7 @@ export default function AdvancedDashboard() {
         <SleepClock clock={view.clock} now={now} />
       </div>
 
-      <div className="mt-1 flex flex-col gap-3">
+      <div id="trends-daily" className="mt-1 flex scroll-mt-3 flex-col gap-3">
         <Toggle
           label="Day by day"
           options={SPANS}
@@ -278,7 +295,7 @@ export default function AdvancedDashboard() {
           describeSlope={(perDay) => rate(perDay, Math.abs(perDay).toFixed(1))}
         />
 
-        <p className="-mt-1 text-[11px] leading-snug text-muted">
+        <Explain className="-mt-1">
           One point per finished day. Today is left out — it&apos;s partial by
           definition, and a trend drawn through it would report a dip every
           morning. Each chart starts the day its own log started, which is why
@@ -292,15 +309,19 @@ export default function AdvancedDashboard() {
           far, and the dotted line runs to where the day is expected to land —
           today so far plus what the past week usually added from this hour to
           midnight. The fit never sees it.
-        </p>
+        </Explain>
 
         {/* Weight belongs with the long-arc charts rather than the daily ones,
             but it keeps its own window: weigh-ins are their own series and have
             nothing to do with how many days of totals you asked for. */}
-        {weights && <WeightChart weights={weights} now={now} />}
+        {weights && (
+          <div id="trends-weight" className="scroll-mt-3">
+            <WeightChart weights={weights} now={now} />
+          </div>
+        )}
       </div>
 
-      <div className="panel rounded-[10px] p-4">
+      <div id="trends-averages" className="panel scroll-mt-3 rounded-[10px] p-4">
         <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-muted">
           Averages · past week
         </div>
@@ -430,7 +451,7 @@ export default function AdvancedDashboard() {
           </div>
         )}
 
-        <p className="mt-3 border-t border-line pt-2 text-[11px] leading-snug text-muted">
+        <Explain className="mt-3 border-t border-line pt-2">
           The past week, whole days only — today is still in progress, and
           folding half a day into an average drags every figure down. A lifetime
           average would be the wrong number for a baby who is growing: it keeps
@@ -443,13 +464,40 @@ export default function AdvancedDashboard() {
           the exception: they cover every day she has, today included — a day
           in progress can only fall short of its total, so if it has already
           passed the old best, the record is real.
-        </p>
+        </Explain>
       </div>
 
       {data && <GrandTally data={data} now={now} />}
 
       <CritterStrip />
     </div>
+  );
+}
+
+/**
+ * One row of chips that scroll the screen to a section. Plain buttons rather
+ * than anchors, so the URL doesn't pick up a fragment and the browser's back
+ * button keeps meaning "back", not "up the page".
+ */
+function JumpChips() {
+  return (
+    <nav aria-label="Jump to" className="flex gap-1.5">
+      {SECTIONS.map((s) => (
+        <button
+          key={s.id}
+          type="button"
+          onClick={() => {
+            tick();
+            document.getElementById(s.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+          className="press flex h-7 flex-1 items-center justify-center whitespace-nowrap rounded-full border-2 border-line bg-card px-1 text-muted"
+        >
+          {/* Sized on the span: globals.css gives buttons an unlayered
+              `font: inherit`, which beats a text size on the button itself. */}
+          <span className="text-[11px] font-medium">{s.label}</span>
+        </button>
+      ))}
+    </nav>
   );
 }
 

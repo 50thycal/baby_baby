@@ -8,7 +8,7 @@ import type { EventsPayload } from "@/lib/types";
 /**
  * Everything since day one, with something to measure it against.
  *
- * Sits at the very bottom of Advanced on purpose: it's the fun one, not the
+ * Sits at the very bottom of Trends on purpose: it's the fun one, not the
  * useful one, and it shouldn't be in the way of the numbers you check at 3am.
  */
 export default function GrandTally({ data, now }: { data: EventsPayload; now: Date }) {

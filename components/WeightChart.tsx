@@ -1,5 +1,6 @@
 "use client";
 
+import Explain from "@/components/Explain";
 import { startOfDay } from "@/lib/daily";
 import {
   expectedWeightAt,
@@ -229,10 +230,12 @@ export default function WeightChart({ weights, now }: { weights: Weight[]; now: 
         />
       </div>
 
-      <p className="mt-2 text-[11px] leading-snug text-muted">
+      <Explain className="mt-2">
         Plotted against real time, so the gaps between weigh-ins are to scale. The
-        axis is zoomed to the readings — it does not start at zero.
-      </p>
+        axis is zoomed to the readings — it does not start at zero. When the last
+        weigh-in was before today, the dotted line carries her pace on to a
+        hollow ring: roughly what the scale would say right now.
+      </Explain>
     </div>
   );
 }

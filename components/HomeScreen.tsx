@@ -5,6 +5,7 @@ import BackupSheet from "@/components/sheets/BackupSheet";
 import DiaperSheet from "@/components/sheets/DiaperSheet";
 import FeedSheet from "@/components/sheets/FeedSheet";
 import ImportSheet from "@/components/sheets/ImportSheet";
+import SettingsSheet from "@/components/sheets/SettingsSheet";
 import SleepSheet from "@/components/sheets/SleepSheet";
 import CritterStrip from "@/components/Critters";
 import { BottleIcon, MoonIcon, NappyIcon, ScaleIcon } from "@/components/icons";
@@ -15,9 +16,18 @@ import { fmtWeight } from "@/lib/weight";
 import { nextFeedWindow, wakeWindow } from "@/lib/predict";
 import { useNow } from "@/lib/useNow";
 import { fmtAgo, fmtClock, fmtDuration } from "@/lib/time";
-import { DIAPER_SHORT, type EventsPayload, type HomeState } from "@/lib/types";
+import { DIAPER_SHORT } from "@/lib/types";
 
-type Which = "feed" | "sleep" | "diaper" | "weight" | "birth" | "import" | "backups" | null;
+type Which =
+  | "feed"
+  | "sleep"
+  | "diaper"
+  | "weight"
+  | "birth"
+  | "import"
+  | "backups"
+  | "settings"
+  | null;
 
 export default function HomeScreen() {
   const { data, error } = useHomeState();
@@ -34,9 +44,25 @@ export default function HomeScreen() {
   const asleep = data?.activeSleep ?? null;
   const close = () => setOpen(null);
 
+  // Each tile carries its own status. There used to be a strip of four lines
+  // above them saying the same things a second time — "last 113 mL" under a
+  // line reading "1h 47m ago — 113 mL" — so the facts now live once, on the
+  // button you'd press about them. Until the state loads the tiles show no
+  // detail at all, which is quieter than a placeholder that flickers.
+  const nothingYet = data ? "nothing logged yet" : undefined;
+
+  // Both forecasts return null until there's enough history to mean anything,
+  // in which case their line simply isn't drawn.
+  const feedWindow = history ? nextFeedWindow(history.feedings, now) : null;
+  const wake = history && asleep ? wakeWindow(history.sleep, asleep, now) : null;
+
   return (
     <div className="flex h-full flex-col gap-4 px-5 pb-4">
-      <StatusStrip state={data} now={now} error={!!error} history={history} />
+      {error && (
+        <p className="rounded-[10px] bg-danger-wash px-4 py-3 text-center text-sm font-medium text-danger">
+          Can&apos;t reach the database right now.
+        </p>
+      )}
 
       <div className="flex flex-1 flex-col gap-3">
         <ActionTile
@@ -45,7 +71,18 @@ export default function HomeScreen() {
           accent="var(--c-feed)"
           wash="var(--c-feed-wash)"
           ink="var(--c-feed-ink)"
-          detail={data?.lastFeeding ? `last ${data.lastFeeding.amount_ml} mL` : undefined}
+          detail={
+            data?.lastFeeding
+              ? `${fmtAgo(data.lastFeeding.ts, now)} · ${data.lastFeeding.amount_ml} mL`
+              : nothingYet
+          }
+          sub={
+            feedWindow
+              ? feedWindow.overdue
+                ? `overdue · usually by ${fmtClock(feedWindow.to)}`
+                : `next ${fmtClock(feedWindow.from)} – ${fmtClock(feedWindow.to)}`
+              : undefined
+          }
           onClick={() => setOpen("feed")}
         />
 
@@ -57,7 +94,14 @@ export default function HomeScreen() {
             wash="var(--c-sleep)"
             ink="#fff"
             filled
-            detail={`${fmtDuration(now.getTime() - new Date(asleep.sleep_start).getTime())} · tap when she's up`}
+            detail={`asleep ${fmtDuration(now.getTime() - new Date(asleep.sleep_start).getTime())}${
+              wake
+                ? wake.overdue
+                  ? " · a long one"
+                  : ` · up ~${fmtClock(wake.from)}–${fmtClock(wake.to)}`
+                : ""
+            }`}
+            sub="tap when she's up"
             onClick={() => setOpen("sleep")}
           />
         ) : (
@@ -70,7 +114,7 @@ export default function HomeScreen() {
             detail={
               data?.lastSleep?.sleep_end
                 ? `awake ${fmtDuration(now.getTime() - new Date(data.lastSleep.sleep_end).getTime())}`
-                : undefined
+                : nothingYet
             }
             onClick={() => setOpen("sleep")}
           />
@@ -82,7 +126,11 @@ export default function HomeScreen() {
           accent="var(--c-diaper)"
           wash="var(--c-diaper-wash)"
           ink="var(--c-diaper-ink)"
-          detail={data?.lastDiaper ? `last ${DIAPER_SHORT[data.lastDiaper.type]}` : undefined}
+          detail={
+            data?.lastDiaper
+              ? `${fmtAgo(data.lastDiaper.ts, now)} · ${DIAPER_SHORT[data.lastDiaper.type]}`
+              : nothingYet
+          }
           onClick={() => setOpen("diaper")}
         />
       </div>
@@ -109,23 +157,15 @@ export default function HomeScreen() {
 
       <CritterStrip />
 
-      {/* Deliberately small and quiet: all three are rare, deliberate errands
-          and must never compete with the things done at 3am. Spaced rather
-          than separated by dots — there are enough of them now to wrap on a
-          narrow phone, and a dot separator strands itself at the end of a
-          line when it does. */}
-      <div className="-mt-1 flex flex-wrap items-center justify-center gap-x-2 text-[13px] text-muted">
-        <Errand onClick={() => setOpen("import")}>Import from a paper log</Errand>
-        <Errand onClick={() => setOpen("backups")}>Backups</Errand>
-        {/* A one-off backfill, so it belongs with the other errands rather than
-            beside the weight row. Once it's on file it carries the figure —
-            both a receipt and the way back in to fix a typo. */}
-        <Errand
-          onClick={() => setOpen("birth")}
-          after={birthWeight ? fmtWeight(birthWeight.weight_g) : undefined}
-        >
-          Birth weight
-        </Errand>
+      {/* Import, backups and the birth weight are rare, deliberate errands —
+          set up once, visited when something's gone wrong. They sit behind
+          one quiet link so the screen used at 3am shows only what's done at
+          3am. */}
+      <div className="-mt-1 flex justify-center text-[13px] text-muted">
+        <button type="button" onClick={() => setOpen("settings")} className="press px-2 py-1">
+          <span aria-hidden>⚙ </span>
+          <span className="underline underline-offset-4">Settings &amp; backups</span>
+        </button>
       </div>
 
       {open === "feed" && (
@@ -137,140 +177,13 @@ export default function HomeScreen() {
       {open === "birth" && <BirthWeightSheet onClose={close} existing={birthWeight} />}
       {open === "import" && <ImportSheet onClose={close} />}
       {open === "backups" && <BackupSheet onClose={close} />}
-    </div>
-  );
-}
-
-/**
- * One of the quiet errands under the tiles.
- *
- * The underline sits on an inner span rather than the button, because
- * text-decoration draws through descendants and a child can't switch it off —
- * `no-underline` on the value would have no effect with the rule on the parent.
- */
-function Errand({
-  onClick,
-  after,
-  children,
-}: {
-  onClick: () => void;
-  after?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button type="button" onClick={onClick} className="press px-2 py-1">
-      <span className="underline underline-offset-4">{children}</span>
-      {after && <span className="ml-1">· {after}</span>}
-    </button>
-  );
-}
-
-/**
- * Four quiet lines of context.
- *
- * The forecasts live here rather than in a panel of their own: "when is she
- * next due" belongs beside "when did she last eat", and the three tiles below
- * must stay the loudest thing on the screen.
- */
-function StatusStrip({
-  state,
-  now,
-  error,
-  history,
-}: {
-  state: HomeState | undefined;
-  now: Date;
-  error: boolean;
-  history: EventsPayload | undefined;
-}) {
-  if (error) {
-    return (
-      <p className="rounded-[10px] bg-danger-wash px-4 py-3 text-center text-sm font-medium text-danger">
-        Can&apos;t reach the database right now.
-      </p>
-    );
-  }
-  if (!state) {
-    return <div className="h-[76px] animate-pulse rounded-[10px] bg-sunk" />;
-  }
-
-  const asleep = state.activeSleep;
-
-  // Both forecasts return null until there's enough history to mean anything,
-  // in which case the line simply isn't drawn.
-  const feedWindow = history ? nextFeedWindow(history.feedings, now) : null;
-  const wake = history && asleep ? wakeWindow(history.sleep, asleep, now) : null;
-
-  const sleepingFor = asleep
-    ? fmtDuration(now.getTime() - new Date(asleep.sleep_start).getTime())
-    : null;
-
-  return (
-    <div className="flex flex-col gap-1.5 text-[15px]">
-      <StatusLine
-        label="Last feeding"
-        value={
-          state.lastFeeding
-            ? `${fmtAgo(state.lastFeeding.ts, now)} — ${state.lastFeeding.amount_ml} mL`
-            : "nothing logged yet"
-        }
-      />
-      {feedWindow && (
-        <StatusLine
-          label="Next feed"
-          value={
-            feedWindow.overdue
-              ? `overdue — usually by ${fmtClock(feedWindow.to)}`
-              : `${fmtClock(feedWindow.from)} – ${fmtClock(feedWindow.to)}`
-          }
-          accent={feedWindow.overdue ? "var(--c-feed)" : undefined}
+      {open === "settings" && (
+        <SettingsSheet
+          onClose={close}
+          onPick={setOpen}
+          birthWeight={birthWeight ? fmtWeight(birthWeight.weight_g) : null}
         />
       )}
-      <StatusLine
-        label="Baby"
-        value={
-          asleep
-            ? wake
-              ? `Sleeping ${sleepingFor} — ${
-                  wake.overdue
-                    ? "a long one"
-                    : `up ~${fmtClock(wake.from)}–${fmtClock(wake.to)}`
-                }`
-              : `Sleeping — ${sleepingFor}`
-            : "Awake"
-        }
-        accent={asleep ? "var(--c-sleep)" : undefined}
-      />
-      <StatusLine
-        label="Last diaper"
-        value={
-          state.lastDiaper
-            ? `${fmtAgo(state.lastDiaper.ts, now)} — ${DIAPER_SHORT[state.lastDiaper.type]}`
-            : "nothing logged yet"
-        }
-      />
-    </div>
-  );
-}
-
-function StatusLine({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: string;
-}) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="shrink-0 text-muted">{label}</span>
-      <span
-        className="truncate text-right font-medium"
-        style={accent ? { color: accent } : undefined}
-      >
-        {value}
-      </span>
     </div>
   );
 }
@@ -282,6 +195,7 @@ function ActionTile({
   wash,
   ink,
   detail,
+  sub,
   filled,
   onClick,
 }: {
@@ -291,6 +205,8 @@ function ActionTile({
   wash: string;
   ink: string;
   detail?: string;
+  /** A second, quieter line — the forecast, or what to do next. */
+  sub?: string;
   filled?: boolean;
   onClick: () => void;
 }) {
@@ -318,7 +234,8 @@ function ActionTile({
       </span>
       <span className="flex min-w-0 flex-col gap-0.5">
         <span className="font-pixel text-2xl font-semibold">{label}</span>
-        {detail && <span className="truncate text-[13px] font-normal opacity-80">{detail}</span>}
+        {detail && <span className="truncate text-[14px] font-medium opacity-90">{detail}</span>}
+        {sub && <span className="truncate text-[13px] font-normal opacity-70">{sub}</span>}
       </span>
     </button>
   );
