@@ -111,7 +111,11 @@ afford to because there are only ever a handful.
 
 ## Screens
 
-**Log** — status in three lines, then three large tiles.
+**Log** — three large tiles, each carrying its own status: when and how much
+on the first line, the forecast or what to do next on the second. There used to
+be a strip of status lines above the tiles as well, which said everything twice
+("1h 47m ago — 113 mL" over a tile reading "last 113 mL"), so each fact now
+lives once, on the button you'd press about it.
 
 - **Feed** opens a 270° drag dial (0–200 mL, snaps to 5, with `−5`/`+5` for
   precision). It defaults to the last feed's amount, since the next one usually
@@ -123,7 +127,11 @@ afford to because there are only ever a handful.
   the same tile ends it with **Baby's Awake**.
 - **Diaper** is four big buttons, then confirm.
 
-A quiet **Birth weight** link sits with the other rare errands. It takes a
+The rare errands — **Import**, **Backups** and **Birth weight** — sit behind
+one quiet **Settings & backups** link under the tiles, along with which build
+is running. The "new version ready" refresh button still appears above the
+tabs when there is one; the build label otherwise doesn't spend a row of every
+screen. **Birth weight** takes a
 typed date and typed pounds/ounces rather than the wheel and the time field —
 it's a number copied off a hospital band weeks after the fact, and the ±hours
 wheel can't reach back that far anyway. It files an ordinary weigh-in, so the
@@ -177,7 +185,7 @@ lib/
 
 ## Importing a paper log
 
-A quiet link under the three tiles on the Log screen opens a paste box for
+**Settings → Import from a paper log** on the Log screen opens a paste box for
 typing up a paper feeding log in one go. One entry per line:
 
 ```
@@ -275,9 +283,9 @@ collected into a panel of their own.
 
 | Forecast | Where | Reads like |
 |---|---|---|
-| Next feed window | Log, status strip | `Next feed  3:57 AM – 4:38 AM` |
+| Next feed window | Log, on the Feed tile | `next 3:57 AM – 4:38 AM` |
 | Likely amount | Feed sheet, under the dial | `lately 40–55 mL · trending up` |
-| Wake window | Log, while she's asleep | `Sleeping 40m — up ~6:26–7:16 AM` |
+| Wake window | Log, on the Sleep tile while she's asleep | `asleep 40m · up ~6:26–7:16 AM` |
 | Day pace | Today, under the totals | `9 mL ahead of the usual by now` |
 
 Three rules run through `lib/predict.ts`:
@@ -577,7 +585,7 @@ nap logged.
 
 The app has no accounts on purpose — anyone with the link can log a feed, and
 anyone with the link can delete one. The safety net sits behind that rather than
-in front of it. A **Backups** link next to Import lists restore points, each
+in front of it. **Settings → Backups** lists restore points, each
 showing its row counts so you can spot the one from before something went wrong.
 
 Copies are triggered by activity, not a clock. Every `/api/state` read calls
