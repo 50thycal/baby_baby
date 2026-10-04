@@ -64,7 +64,7 @@ const SPANS = [
 
 type Span = (typeof SPANS)[number]["key"];
 
-export default function AdvancedDashboard() {
+export default function TrendsDashboard() {
   const [overlay, setOverlay] = useState<number>(1);
   const [span, setSpan] = useState<Span>(7);
   const [clockSpan, setClockSpan] = useState<ClockSpan>(7);

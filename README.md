@@ -144,7 +144,7 @@ Every timestamp defaults to now and is adjustable by tapping it — a horizontal
 scroll-snap wheel with 5-minute detents, plus `−1h / −30m / −5m / +5m / reset`
 chips. No date pickers anywhere.
 
-**Basic** — three time-aligned tracks sharing one horizontal axis: feeding bars
+**Today** — three time-aligned tracks sharing one horizontal axis: feeding bars
 scaled by volume, sleep blocks scaled by duration, diaper icons. Ranges are
 24h / 2d / 3d / 1w / All; it opens scrolled to now. Tapping any mark opens edit
 and delete (delete is two-step). **Comment** mode turns the timeline into a
@@ -217,7 +217,7 @@ a third marker later is a one-line change. Each is its own event with its own
 time: a spit-up usually gets noticed while you're logging a feed, but it might
 have happened between two, so it isn't attached to one.
 
-On the Basic timeline they draw as a thin line with the emoji in a reserved lane
+On the Today timeline they draw as a thin line with the emoji in a reserved lane
 along the top of the track — no scaling, because there's nothing to scale. They
 **do not respond to a short tap**: they share a track with the feed bars, and a
 tap target over a bar stole the tap, so you'd go to check how big a feed was and
@@ -228,7 +228,7 @@ reacts — never the line — and it sits in a lane above the bars so the two ne
 compete. The hold is cancelled by movement, because the timeline scrolls
 sideways and a drag that happens to start on the emoji is a scroll, not a hold.
 
-On the Advanced charts they're dashed verticals behind the curves, so they read
+On the Trends charts they're dashed verticals behind the curves, so they read
 as "around here" and can't be mistaken for part of the line.
 
 They're carried in backups, restores and the Copy data export. Backups taken
@@ -237,7 +237,7 @@ rather than printing `undefined`.
 
 ## The Grand Tally
 
-At the very bottom of Advanced, deliberately last: it's the fun one, not the
+At the very bottom of Trends, deliberately last: it's the fun one, not the
 useful one. Lifetime totals for milk, sleep and diapers, plus spit-ups, fussy
 spells and notes.
 
@@ -278,7 +278,7 @@ collected into a panel of their own.
 | Next feed window | Log, status strip | `Next feed  3:57 AM – 4:38 AM` |
 | Likely amount | Feed sheet, under the dial | `lately 40–55 mL · trending up` |
 | Wake window | Log, while she's asleep | `Sleeping 40m — up ~6:26–7:16 AM` |
-| Day pace | Basic, under the totals | `9 mL ahead of the usual by now` |
+| Day pace | Today, under the totals | `9 mL ahead of the usual by now` |
 
 Three rules run through `lib/predict.ts`:
 
@@ -303,7 +303,7 @@ varies enormously and the range is wide by construction.
 
 ## The two dashboards
 
-**Basic** is the day-to-day view: today's totals at the top, then the range
+**Today** is the day-to-day view: today's totals at the top, then the range
 buttons — 24h, 2d, 3d, 1w, All — and the timeline.
 
 **All** is the odd one out, and worth explaining. The other four have a span
@@ -339,7 +339,7 @@ today" — at 9am a rolling window is still mostly yesterday. It is now anchored
   alarming by construction is a number people stop reading.
 - The line underneath is **all of yesterday** — the figure to end up near.
 
-**Advanced** is two questions stacked.
+**Trends** is two questions stacked.
 
 Both diaper charts count **every** change, not only the dirty ones: a wet
 nappy is a change, a laundry run and one off the shelf just the same. **Diapers
@@ -348,7 +348,7 @@ read the split without doing arithmetic. That line is brown rather than a
 deeper green — the tidy choice measured badly, separating by 11.8 in OKLab
 where plain sight wants 15, and worse than that under colourblind simulation.
 The poop-only figure also stays in the Averages panel as "Dirty ones a day",
-and on the Basic screen as an annotation on the day's count.
+and on the Today screen as an annotation on the day's count.
 
 *How is today going* — today's cumulative curve laid over the days before it,
 for feeding, sleep and diapers, so you can see **where** in the day a
@@ -456,16 +456,16 @@ fall short of its total, never overshoot it, so if today has already passed
 the old best the record is real, and it shows "today, and counting". Ties go
 to whoever set the record first.
 
-Weight appears on both, differently. **Basic** gets two numbers and the gap
+Weight appears on both, differently. **Today** gets two numbers and the gap
 between them — what she is now, what she was before, and the change — because
-that's the whole of what you want at a glance. **Advanced** gets the line.
+that's the whole of what you want at a glance. **Trends** gets the line.
 
 All of it is computed client-side from one week of events, because the day
 boundaries belong to the reader's timezone, not the server's.
 
 ## Copying the data out
 
-**Copy data** on the Basic screen opens a span picker — 24 hours, 3 days, a
+**Copy data** on the Today screen opens a span picker — 24 hours, 3 days, a
 week, or everything — and puts a compact text log on the clipboard. A shorter
 list than the timeline's range chips, and worded as sentences rather than
 chips: you pick this once, deliberately, rather than flicking between them.
@@ -535,7 +535,7 @@ Tapping "+1 oz" twice quickly gave you one ounce. Caught by a browser test, not
 by reading the code.
 
 Weigh-ins aren't on the timeline — they'd be a track that's empty six days in
-seven — so the Basic card is tappable and opens the list, where any one of them
+seven — so the Today card is tappable and opens the list, where any one of them
 can be corrected or deleted.
 
 ## Knowing which build you're on
