@@ -6,8 +6,9 @@ import { tick } from "@/lib/haptics";
 import { BUILD_ID, BUILT_AT, isStale, versionLabel } from "@/lib/version";
 
 /**
- * A thin line above the tabs saying which build this is, and turning into a
- * refresh button when the server has moved on.
+ * A refresh button above the tabs when the server has moved on, and nothing at
+ * all otherwise. Which build this is lives in Settings (`VersionLabel`): it's
+ * worth being able to find, but not worth a row of every screen.
  *
  * It never reloads on its own. Someone could be halfway through logging a feed
  * at 4am, and having the page vanish under them to pick up a new build would be
@@ -16,12 +17,6 @@ import { BUILD_ID, BUILT_AT, isStale, versionLabel } from "@/lib/version";
 export default function VersionBar() {
   const { data } = useVersion();
   const stale = isStale(data?.build, BUILD_ID);
-
-  // Formatted after mount, not during render: the server renders in UTC and the
-  // phone renders in its own zone, and a date formatted in both is a hydration
-  // mismatch waiting to happen.
-  const [label, setLabel] = useState(BUILD_ID);
-  useEffect(() => setLabel(versionLabel(BUILT_AT, BUILD_ID)), []);
 
   if (stale) {
     return (
@@ -43,9 +38,18 @@ export default function VersionBar() {
     );
   }
 
+  return null;
+}
+
+/** "Updated Oct 4, 2:22 am · dev" — which build is running. */
+export function VersionLabel({ className = "" }: { className?: string }) {
+  // Formatted after mount, not during render: the server renders in UTC and the
+  // phone renders in its own zone, and a date formatted in both is a hydration
+  // mismatch waiting to happen.
+  const [label, setLabel] = useState(BUILD_ID);
+  useEffect(() => setLabel(versionLabel(BUILT_AT, BUILD_ID)), []);
+
   return (
-    <p className="mb-2 h-4 text-center text-[10px] leading-4 tracking-[0.04em] text-muted">
-      {label}
-    </p>
+    <p className={`text-center text-[11px] tracking-[0.04em] text-muted ${className}`}>{label}</p>
   );
 }
