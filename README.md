@@ -349,6 +349,12 @@ today" — at 9am a rolling window is still mostly yesterday. It is now anchored
 
 **Trends** is two questions stacked.
 
+It's a long screen, so a row of chips at the top — **Today · Clock · Daily ·
+Weight · Averages** — scrolls straight to each section; they're buttons rather
+than links so the back button keeps meaning back. Every "how to read this"
+explanation is folded behind an ⓘ: each is worth reading once, and laid out in
+full they made the screen five phones tall.
+
 Both diaper charts count **every** change, not only the dirty ones: a wet
 nappy is a change, a laundry run and one off the shelf just the same. **Diapers
 a day** then draws the dirty ones as a second line inside the total, so you can

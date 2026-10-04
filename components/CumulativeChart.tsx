@@ -240,12 +240,16 @@ export default function CumulativeChart({
           .map((series, i) => ({ series, age: i }))
           .reverse()
           .map(({ series, age }) => (
+            // Thin, so that where today's projection runs along the same path —
+            // which on an ordinary day it does, that being the point of it —
+            // the coloured dots stay readable on top rather than merging
+            // into a grey dash of the same weight.
             <path
               key={age}
               d={path(series)}
               fill="none"
               stroke="var(--c-muted)"
-              strokeWidth={1.5}
+              strokeWidth={1}
               strokeDasharray="3 3"
               opacity={fade(age, previous.length)}
               strokeLinejoin="round"
@@ -265,11 +269,11 @@ export default function CumulativeChart({
               d={projectionPath}
               fill="none"
               stroke={color}
-              strokeWidth={2}
-              strokeDasharray="0.5 4"
+              strokeWidth={2.5}
+              strokeDasharray="0.5 4.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              opacity={0.75}
+              opacity={0.95}
             />
             <circle
               cx={x(n - 1, n)}

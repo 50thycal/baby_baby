@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Explain from "@/components/Explain";
 import { oddsAsleepAt, typicalSleepWindow, type SleepClock as Clock } from "@/lib/daily";
 import { fmtClock } from "@/lib/time";
 
@@ -238,13 +239,13 @@ export default function SleepClock({ clock, now }: { clock: Clock; now: Date }) 
         </div>
       )}
 
-      <p className="mt-2 text-[11px] leading-snug text-muted">
+      <Explain className="mt-2">
         Each bar is the share of the last {clock.dayCount || 0} finished day
         {clock.dayCount === 1 ? "" : "s"} she was asleep at that time. &quot;Usually
         asleep&quot; is the longest stretch above half, counted across midnight. The
         red line is now — the figure beside it is how often she was asleep at this
         time on those days, not whether she is asleep this minute.
-      </p>
+      </Explain>
     </div>
   );
 }
