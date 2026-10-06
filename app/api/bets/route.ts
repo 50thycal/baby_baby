@@ -117,10 +117,12 @@ async function ensureDay(key: DayKey, tz: string, now: Date, peopleCount: number
 }
 
 /**
- * POST /api/bets — make or change your answer for tomorrow. Only ever
- * tomorrow's, and only until its midnight. Both are checked here, in the
- * day's own zone, because a phone's clock and a phone's idea of "tomorrow"
- * are exactly the things that can't be trusted to close a bet.
+ * POST /api/bets — lock in your answer for tomorrow. Once, and for good: a
+ * call can't be changed after it's in, so nobody can drift toward whatever
+ * the rest of the evening seems to suggest. Only ever tomorrow's, and only
+ * until its midnight — both checked here, in the day's own zone, because a
+ * phone's clock and a phone's idea of "tomorrow" are exactly the things that
+ * can't be trusted to close a bet.
  */
 export async function POST(req: Request) {
   try {
@@ -156,12 +158,14 @@ export async function POST(req: Request) {
     const saved = (await sql`
       INSERT INTO bet_predictions (day, person_id, answer, note)
       VALUES (${day.day}, ${me}, ${answer}, ${note})
-      ON CONFLICT (day, person_id) DO UPDATE
-         SET answer = EXCLUDED.answer,
-             note = EXCLUDED.note,
-             updated_at = now()
+      ON CONFLICT (day, person_id) DO NOTHING
       RETURNING id, to_char(day, 'YYYY-MM-DD') AS day, person_id, answer, note,
                 created_at, updated_at`) as Omit<Prediction, "name">[];
+
+    // Nothing came back: there was already a call, and it stands. Decided by
+    // the database's unique constraint rather than a read beforehand, so two
+    // quick taps can't both get in.
+    if (!saved[0]) throw new BadRequest("You've already locked in your call for tomorrow");
 
     return ok(saved[0], 201);
   } catch (err) {
