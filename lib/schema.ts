@@ -113,25 +113,35 @@ export const SCHEMA_STATEMENTS: string[] = [
   `ALTER TABLE moments        ADD COLUMN IF NOT EXISTS logged_by text`,
   `ALTER TABLE weights        ADD COLUMN IF NOT EXISTS logged_by text`,
 
-  // One row per night anyone bet on, carrying the time zone that "6pm" and
-  // "8pm" mean for it — the server runs in UTC. The first bettor's zone wins.
-  `CREATE TABLE IF NOT EXISTS bet_nights (
-     night      date        PRIMARY KEY,
+  // The daily question, frozen the first time anyone opens the Bets tab the day
+  // before: which question, the over/under line set from the week before it,
+  // and the time zone "midnight" means for it — the server runs in UTC. Frozen
+  // because the line is drawn from the log, and a line that moved whenever
+  // someone back-filled a feed would be a different bet for everyone who'd
+  // already called it.
+  //
+  // These replace the old nightly 6-hour bet (bet_nights, bets). Those tables
+  // are left as they are in any database that has them; nothing reads them.
+  `CREATE TABLE IF NOT EXISTS bet_days (
+     day        date        PRIMARY KEY,
      tz         text        NOT NULL,
+     kind       text        NOT NULL,
+     line       double precision,
      created_at timestamptz NOT NULL DEFAULT now()
    )`,
 
-  // One call per person per night, changeable until betting closes. No result
-  // column: the outcome is recomputed from sleep_sessions (see lib/bets.ts).
-  `CREATE TABLE IF NOT EXISTS bets (
+  // One answer per person per day, changeable until that day's midnight. The
+  // answer is text because the question decides its shape — "820", "over",
+  // "yes", "Nana" — and lib/bets.ts checks it against the question. No result
+  // column: the outcome is recomputed from the log every time.
+  `CREATE TABLE IF NOT EXISTS predictions (
      id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-     night      date        NOT NULL REFERENCES bet_nights (night),
+     day        date        NOT NULL REFERENCES bet_days (day),
      person_id  uuid        NOT NULL REFERENCES people (id),
-     pick       text        NOT NULL CHECK (pick IN ('yes', 'no')),
-     guess_min  integer     CHECK (guess_min IS NULL OR (guess_min >= 0 AND guess_min <= 1440)),
+     answer     text        NOT NULL CHECK (length(answer) BETWEEN 1 AND 40),
      note       text        CHECK (note IS NULL OR length(note) <= 280),
      created_at timestamptz NOT NULL DEFAULT now(),
      updated_at timestamptz NOT NULL DEFAULT now(),
-     UNIQUE (night, person_id)
+     UNIQUE (day, person_id)
    )`,
 ];

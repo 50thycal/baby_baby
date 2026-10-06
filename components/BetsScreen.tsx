@@ -5,34 +5,40 @@ import ConfirmButton from "@/components/ConfirmButton";
 import { useToast } from "@/components/Toaster";
 import WhoPicker, { SignedAs } from "@/components/WhoPicker";
 import Sheet from "@/components/Sheet";
-import { send, useBets } from "@/lib/api";
+import { send, useBets, useEvents } from "@/lib/api";
 import {
   BBP,
-  currentNight,
-  GOOD_NIGHT_MS,
-  lockTime,
-  nightOutcome,
-  nightWindow,
-  scoreNight,
-  shiftNight,
+  currentDay,
+  dayWindow,
+  hintFor,
+  kindById,
+  openDay,
+  outcome,
+  pastWindows,
+  scoreDay,
+  shiftDay,
   standings,
-  type Bet,
-  type BetsPayload,
-  type NightKey,
-  type NightWindow,
+  type BetDay,
+  type DayKey,
+  type Hint,
+  type Kind,
   type Outcome,
-  type Pick,
+  type Person,
+  type Prediction,
   type Score,
 } from "@/lib/bets";
+import { projectToday, type Metric } from "@/lib/daily";
 import { tick } from "@/lib/haptics";
 import { useMe } from "@/lib/me";
 import { useNow } from "@/lib/useNow";
 import { fmtClock, fmtDayLabel, fmtDuration, MINUTE } from "@/lib/time";
+import type { EventsPayload } from "@/lib/types";
 
+/** The two sides of a yes/no or an over/under. */
 const YES = "var(--c-sleep)";
 const NO = "var(--c-awake)";
 
-/** The phone's own zone — used for a night nobody has bet on yet. */
+/** The phone's own zone — sent along so tomorrow means the family's tomorrow. */
 function localZone() {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -41,33 +47,34 @@ function localZone() {
   }
 }
 
-type NightView = {
-  key: NightKey;
-  win: NightWindow;
-  lock: Date;
-  locked: boolean;
-  outcome: Outcome;
-  bets: Bet[];
+type DayView = {
+  key: DayKey;
+  kind: Kind;
+  line: number | null;
+  preds: Prediction[];
+  result: Outcome;
   scores: Score[];
 };
 
-function viewNight(data: BetsPayload, key: NightKey, fallbackTz: string, now: Date): NightView {
-  const tz = data.nights.find((n) => n.night === key)?.tz ?? fallbackTz;
-  const win = nightWindow(key, tz);
-  const lock = lockTime(win, data.sleep);
-  const outcome = nightOutcome(win, data.sleep, now);
-  const bets = data.bets.filter((b) => b.night === key);
-  return { key, win, lock, locked: lock <= now, outcome, bets, scores: scoreNight(bets, outcome) };
+function viewDay(row: BetDay, data: EventsPayload, preds: Prediction[], now: Date): DayView | null {
+  const kind = kindById(row.kind);
+  if (!kind) return null;
+  const result = outcome(kind, row.line, data, dayWindow(row.day, row.tz), now);
+  const mine = preds.filter((p) => p.day === row.day);
+  return { key: row.day, kind, line: row.line, preds: mine, result, scores: scoreDay(kind, mine, result) };
 }
 
 /**
- * Will she sleep six hours straight tonight? Everyone calls it before she goes
- * down, says why, and the sleep log settles it in the morning. Points are
- * baby baby points — worth exactly nothing, argued over endlessly.
+ * One question a day, always about tomorrow. Anyone can call it at any hour;
+ * it locks at midnight, plays out live through the day, and the log settles
+ * it. Points are baby baby points — worth exactly nothing, argued over
+ * endlessly.
  */
 export default function BetsScreen() {
   const me = useMe();
-  const { data, error } = useBets(me?.id ?? null);
+  const tz = localZone();
+  const { data, error } = useBets(me?.id ?? null, tz);
+  const { data: events } = useEvents("all");
   const now = useNow(30_000);
   const [choosing, setChoosing] = useState(false);
 
@@ -80,7 +87,7 @@ export default function BetsScreen() {
       </div>
     );
   }
-  if (!data) {
+  if (!data || !events) {
     return (
       <div className="px-5">
         <div className="h-64 animate-pulse rounded-[10px] bg-sunk" />
@@ -88,37 +95,54 @@ export default function BetsScreen() {
     );
   }
 
-  const tz = localZone();
-  const tonightKey = currentNight(now, tz);
-  const tonight = viewNight(data, tonightKey, tz, now);
-  const last = viewNight(data, shiftNight(tonightKey, -1), tz, now);
+  const views = data.days
+    .map((row) => viewDay(row, events, data.predictions, now))
+    .filter((v): v is DayView => v !== null);
+  const byKey = new Map(views.map((v) => [v.key, v]));
+
+  const todayKey = currentDay(now, tz);
+  const tomorrow = byKey.get(openDay(now, tz));
+  const today = byKey.get(todayKey);
+  const yesterday = byKey.get(shiftDay(todayKey, -1));
 
   const table = standings(
     data.people,
-    data.nights.map((n) => {
-      const v = viewNight(data, n.night, n.tz, now);
-      return { key: v.key, bets: v.bets, outcome: v.outcome };
-    }),
+    views.map((v) => ({ key: v.key, kind: v.kind, preds: v.preds, result: v.result })),
   );
-
-  const older = data.nights
-    .map((n) => n.night)
-    .filter((k) => k < last.key)
+  const older = views
+    .filter((v) => v.key < shiftDay(todayKey, -1) && v.preds.length > 0)
     .reverse()
-    .slice(0, 14)
-    .map((k) => viewNight(data, k, tz, now));
+    .slice(0, 14);
 
   return (
     <div className="flex flex-col gap-3 px-5 pb-4">
-      <TonightCard view={tonight} now={now} onChooseName={() => setChoosing(true)} />
+      {tomorrow ? (
+        <OpenCard
+          view={tomorrow}
+          hint={hintFor(tomorrow.kind, events, pastWindows(todayKey, tz))}
+          people={data.people}
+          onChooseName={() => setChoosing(true)}
+        />
+      ) : (
+        <div className="h-48 animate-pulse rounded-[10px] bg-sunk" />
+      )}
 
-      {last.bets.length > 0 && (
-        <ResultCard view={last} title={`Last night · ${dayLabel(last.key)}`} />
+      {today && (
+        <LiveCard view={today} events={events} now={now} title={`Today · ${dayLabel(today.key)}`} />
+      )}
+
+      {yesterday && yesterday.preds.length > 0 && (
+        <LiveCard
+          view={yesterday}
+          events={events}
+          now={now}
+          title={`Yesterday · ${dayLabel(yesterday.key)}`}
+        />
       )}
 
       {table.length > 0 && <Leaderboard table={table} />}
 
-      {older.length > 0 && <History nights={older} />}
+      {older.length > 0 && <History days={older} />}
 
       <Rules />
 
@@ -131,9 +155,39 @@ export default function BetsScreen() {
   );
 }
 
-function dayLabel(key: NightKey) {
+// ---------------------------------------------------------------------------
+// Words and figures.
+
+function dayLabel(key: DayKey) {
   const [y, m, d] = key.split("-").map(Number);
   return fmtDayLabel(new Date(y, m - 1, d));
+}
+
+/** A figure in its own unit: "820 mL", "7", "2h 15m", "7:30 AM". */
+function fmtValue(kind: Kind, v: number): string {
+  switch (kind.unit) {
+    case "ml":
+      return `${Math.round(v)} mL`;
+    case "count":
+      return Number.isInteger(v) ? String(v) : v.toFixed(1);
+    case "duration":
+      return fmtDuration(Math.round(v) * MINUTE);
+    case "clock":
+      return fmtClock(new Date(2000, 0, 1, 0, Math.round(v)));
+  }
+}
+
+function question(kind: Kind, line: number | null): string {
+  return kind.ask.replace("{line}", line === null ? "?" : fmtValue(kind, line));
+}
+
+/** How an answer reads on a call: a figure, a side, or a name. */
+function fmtAnswer(kind: Kind, answer: string): string {
+  return kind.format === "closest" ? fmtValue(kind, Number(answer)) : answer.toUpperCase();
+}
+
+function sideColor(answer: string) {
+  return answer === "yes" || answer === "over" ? YES : NO;
 }
 
 function Label({ children }: { children: React.ReactNode }) {
@@ -142,105 +196,160 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
-function TonightCard({
+function Question({ kind, line }: { kind: Kind; line: number | null }) {
+  return (
+    <h2 className="mt-1 font-pixel text-[20px] font-semibold leading-tight">{question(kind, line)}</h2>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tomorrow: the open question.
+
+function OpenCard({
   view,
-  now,
+  hint,
+  people,
   onChooseName,
 }: {
-  view: NightView;
-  now: Date;
+  view: DayView;
+  hint: Hint;
+  people: Person[];
   onChooseName: () => void;
 }) {
   const me = useMe();
-  const mine = me ? view.bets.find((b) => b.person_id === me.id) : undefined;
+  const mine = me ? view.preds.find((p) => p.person_id === me.id) : undefined;
+  const others = view.preds.filter((p) => p.person_id !== me?.id);
 
   return (
     <div className="panel rounded-[10px] p-4">
-      <Label>Tonight · {dayLabel(view.key)}</Label>
-      <h2 className="mt-1 font-pixel text-[22px] font-semibold leading-tight">
-        6 hours straight?
-      </h2>
+      <Label>Tomorrow · {dayLabel(view.key)}</Label>
+      <Question kind={view.kind} line={view.line} />
+      <HintLine kind={view.kind} hint={hint} />
 
-      {view.locked ? (
-        <div className="mt-3 flex flex-col gap-3">
-          <Progress outcome={view.outcome} />
-          <Calls bets={view.bets} scores={view.scores} />
-        </div>
-      ) : (
-        <div className="mt-3 flex flex-col gap-3">
+      <div className="mt-3 flex flex-col gap-3">
+        {me ? (
+          <>
+            {/* Keyed on the answer itself, so the form picks it up when it
+                arrives — including just after choosing a name, when the
+                previous response had it blanked out. */}
+            <AnswerForm
+              key={mine ? `${mine.updated_at}:${mine.answer}` : "new"}
+              view={view}
+              mine={mine}
+              hint={hint}
+              people={people}
+            />
+            <SignedAs onSwitch={onChooseName} />
+          </>
+        ) : (
+          <>
+            <p className="text-[15px] font-medium">Pick your name to play.</p>
+            <WhoPicker />
+          </>
+        )}
+
+        {others.length > 0 && (
           <p className="text-[13px] text-muted">
-            Closes when she goes down for the night, or {fmtClock(view.win.lockBy)} ·{" "}
-            {closesIn(view.lock, now)}
+            🔒 In:{" "}
+            <span className="font-medium text-ink">{others.map((p) => p.name).join(", ")}</span> —
+            revealed at midnight
           </p>
-
-          {me ? (
-            <>
-              {/* Keyed on the call itself, so the form picks it up when it
-                  arrives — including just after choosing a name, when the
-                  previous response had this very call blanked out. */}
-              <BetForm
-                key={mine ? `${mine.updated_at}:${mine.pick}` : "new"}
-                night={view.key}
-                mine={mine}
-              />
-              <SignedAs onSwitch={onChooseName} />
-            </>
-          ) : (
-            <>
-              <p className="text-[15px] font-medium">Pick your name to play.</p>
-              <WhoPicker />
-            </>
-          )}
-
-          <Hidden bets={view.bets.filter((b) => b.person_id !== me?.id)} />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
 
-function closesIn(lock: Date, now: Date) {
-  const ms = lock.getTime() - now.getTime();
-  return ms < 60 * MINUTE ? `${fmtDuration(ms)} left` : `${fmtDuration(ms)} to go`;
+/** What her past week says, so a guess has something to go on. */
+function HintLine({ kind, hint }: { kind: Kind; hint: Hint }) {
+  if (!hint.days) return null;
+  let text: string | null = null;
+  if (kind.format === "yesno") {
+    text = `Happened on ${hint.happenedDays} of the last ${hint.days} days`;
+  } else if (kind.format !== "person" && hint.typical !== null) {
+    text = `${kind.unit === "clock" ? "Usually around" : "Her average lately:"} ${fmtValue(kind, hint.typical)}`;
+  }
+  return text ? <p className="mt-1 text-[13px] text-muted">{text}</p> : null;
 }
 
-/** Who else has called it, without saying what. */
-function Hidden({ bets }: { bets: Bet[] }) {
-  if (!bets.length) return null;
-  return (
-    <p className="text-[13px] text-muted">
-      🔒 Called it: <span className="font-medium text-ink">{bets.map((b) => b.name).join(", ")}</span>{" "}
-      — revealed when she goes down
-    </p>
+/** A sensible place for the stepper to start, snapped to its step. */
+function startingFigure(kind: Kind, hint: Hint): number {
+  const [small] = kind.steps!;
+  const [lo, hi] = kind.range!;
+  const fallback = { ml: 600, count: 8, duration: 180, clock: 8 * 60 }[kind.unit];
+  const raw = hint.typical ?? fallback;
+  return Math.min(hi, Math.max(lo, Math.round(raw / small) * small));
+}
+
+function AnswerForm({
+  view,
+  mine,
+  hint,
+  people,
+}: {
+  view: DayView;
+  mine: Prediction | undefined;
+  hint: Hint;
+  people: Person[];
+}) {
+  const { kind } = view;
+  const [answer, setAnswer] = useState<string | null>(
+    mine?.answer ?? (kind.format === "closest" ? String(startingFigure(kind, hint)) : null),
   );
-}
-
-function BetForm({ night, mine }: { night: NightKey; mine: Bet | undefined }) {
-  const [pick, setPick] = useState<Pick | null>(mine?.pick ?? null);
-  const [guess, setGuess] = useState<number | null>(mine?.guess_min ?? null);
   const [note, setNote] = useState(mine?.note ?? "");
   const notify = useToast();
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-2">
-        <PickButton
-          label="YES"
-          sub="6h+ stretch"
-          color={YES}
-          on={pick === "yes"}
-          onClick={() => setPick("yes")}
-        />
-        <PickButton
-          label="NO"
-          sub="not tonight"
-          color={NO}
-          on={pick === "no"}
-          onClick={() => setPick("no")}
-        />
-      </div>
-
-      <GuessStepper value={guess} onChange={setGuess} />
+      {kind.format === "closest" && (
+        <FigureStepper kind={kind} value={Number(answer)} onChange={(v) => setAnswer(String(v))} />
+      )}
+      {(kind.format === "yesno" || kind.format === "overunder") && (
+        <div className="grid grid-cols-2 gap-2">
+          {(kind.format === "yesno" ? ["yes", "no"] : ["over", "under"]).map((side) => (
+            <SideButton
+              key={side}
+              label={side.toUpperCase()}
+              sub={
+                kind.format === "overunder" && view.line !== null
+                  ? `${side === "over" ? "more than" : "less than"} ${fmtValue(kind, view.line)}`
+                  : side === "yes"
+                    ? "it'll happen"
+                    : "not tomorrow"
+              }
+              color={sideColor(side)}
+              on={answer === side}
+              onClick={() => setAnswer(side)}
+            />
+          ))}
+        </div>
+      )}
+      {kind.format === "person" && (
+        <div className="flex flex-wrap gap-2">
+          {people.map((p) => {
+            const on = answer === p.name;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                aria-pressed={on}
+                onClick={() => {
+                  tick();
+                  setAnswer(p.name);
+                }}
+                className="press h-11 rounded-full border-2 px-4"
+                style={{
+                  background: on ? "var(--c-ink)" : "var(--c-card)",
+                  color: on ? "var(--c-paper)" : "var(--c-ink)",
+                  borderColor: on ? "var(--c-ink)" : "var(--c-line)",
+                }}
+              >
+                <span className="text-[15px] font-semibold">{p.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <textarea
         value={note}
@@ -253,14 +362,12 @@ function BetForm({ night, mine }: { night: NightKey; mine: Bet | undefined }) {
 
       <ConfirmButton
         label={mine ? "Update my call" : "Lock in my call"}
-        accent={pick === "no" ? NO : YES}
-        disabled={!pick}
+        accent={answer === "no" || answer === "under" ? NO : YES}
+        disabled={answer === null}
         onConfirm={async () => {
           await send("POST", "/api/bets", {
-            night,
-            tz: localZone(),
-            pick,
-            guess_min: guess,
+            day: view.key,
+            answer,
             note: note.trim() || null,
           });
           notify(mine ? "Call updated" : "You're in 🎲");
@@ -270,7 +377,7 @@ function BetForm({ night, mine }: { night: NightKey; mine: Bet | undefined }) {
   );
 }
 
-function PickButton({
+function SideButton({
   label,
   sub,
   color,
@@ -304,146 +411,200 @@ function PickButton({
   );
 }
 
-const GUESS_STEP = 15;
-const GUESS_MIN = 30;
-const GUESS_MAX = 12 * 60;
-
-/** The optional side bet: how long will the longest stretch be? */
-function GuessStepper({
+/** A figure, nudged in the question's own steps. Times of day wrap round midnight. */
+function FigureStepper({
+  kind,
   value,
   onChange,
 }: {
-  value: number | null;
-  onChange: (v: number | null) => void;
+  kind: Kind;
+  value: number;
+  onChange: (v: number) => void;
 }) {
-  if (value === null) {
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          tick();
-          onChange(6 * 60);
-        }}
-        className="press h-11 rounded-[8px] border border-dashed border-line text-[13px] font-medium text-muted"
-      >
-        + Guess her longest stretch · closest +{BBP.closest} BBP
-      </button>
-    );
-  }
+  const [small, big] = kind.steps!;
+  const [lo, hi] = kind.range!;
   const step = (d: number) => {
     tick();
-    onChange(Math.min(GUESS_MAX, Math.max(GUESS_MIN, value + d)));
+    if (kind.unit === "clock") onChange((((value + d) % 1440) + 1440) % 1440);
+    else onChange(Math.min(hi, Math.max(lo, value + d)));
   };
+  const bigLabel = kind.unit === "duration" || kind.unit === "clock" ? "1h" : String(big);
   return (
-    <div className="flex items-center gap-2">
-      <span className="flex-1 text-[13px] text-muted">Longest stretch guess</span>
-      <StepButton onClick={() => step(-GUESS_STEP)} label="−" />
-      <span className="w-[76px] text-center text-[17px] font-semibold tabular-nums">
-        {fmtDuration(value * MINUTE)}
+    <div className="flex items-center gap-1.5">
+      <StepButton onClick={() => step(-big)} label={`−${bigLabel}`} wide />
+      <StepButton onClick={() => step(-small)} label="−" />
+      <span className="flex-1 text-center text-[22px] font-semibold tabular-nums">
+        {fmtValue(kind, value)}
       </span>
-      <StepButton onClick={() => step(GUESS_STEP)} label="+" />
-      <button
-        type="button"
-        aria-label="No guess"
-        onClick={() => onChange(null)}
-        className="press h-10 w-8 text-[15px] text-muted"
-      >
-        ×
-      </button>
+      <StepButton onClick={() => step(small)} label="+" />
+      <StepButton onClick={() => step(big)} label={`+${bigLabel}`} wide />
     </div>
   );
 }
 
-function StepButton({ onClick, label }: { onClick: () => void; label: string }) {
+function StepButton({ onClick, label, wide }: { onClick: () => void; label: string; wide?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="press h-10 w-10 rounded-[8px] bg-sunk text-[20px] font-semibold"
+      className={`press flex h-11 items-center justify-center rounded-[8px] bg-sunk ${wide ? "w-12" : "w-11"}`}
     >
-      {label}
+      <span className={wide ? "text-[13px] font-semibold" : "text-[20px] font-semibold"}>{label}</span>
     </button>
   );
 }
 
-/** How the night is going, against the six-hour mark. */
-function Progress({ outcome }: { outcome: Outcome }) {
-  const share = Math.min(1, outcome.longestMs / GOOD_NIGHT_MS);
+// ---------------------------------------------------------------------------
+// Today and yesterday: playing out, and played.
+
+/** The metric `projectToday` knows for a kind, where there is one. */
+const PACE: Partial<Record<string, Metric>> = {
+  milk_total: "feed_ml",
+  feeds_count: "feed_count",
+  diapers_count: "diaper_count",
+  dirty_count: "poop_count",
+  sleep_total: "sleep_ms",
+};
+
+/**
+ * Where a running total is heading by midnight, in the kind's unit. Only for
+ * today, and only for totals — the same projection as the Trends charts.
+ */
+function paceFor(view: DayView, events: EventsPayload, now: Date): number | null {
+  const metric = PACE[view.kind.id];
+  if (!metric || view.result.phase !== "live" || view.result.settled) return null;
+  const p = projectToday(events, now, metric);
+  if (!p) return null;
+  return metric === "sleep_ms" ? p.expected / MINUTE : p.expected;
+}
+
+function LiveCard({
+  view,
+  events,
+  now,
+  title,
+}: {
+  view: DayView;
+  events: EventsPayload;
+  now: Date;
+  title: string;
+}) {
+  const pace = paceFor(view, events, now);
   return (
-    <div className="flex flex-col gap-1.5">
-      <Verdict outcome={outcome} />
-      {!outcome.void && (
-        <>
-          <div className="h-3 overflow-hidden rounded-[4px] bg-sunk">
-            <div
-              className="h-full rounded-[4px]"
-              style={{ width: `${share * 100}%`, background: outcome.good === false ? NO : YES }}
-            />
-          </div>
-          <div className="flex justify-between text-[12px] text-muted tabular-nums">
-            <span>
-              Longest {fmtDuration(outcome.longestMs)}
-              {outcome.running ? " · still asleep" : ""}
-            </span>
-            <span>6h</span>
-          </div>
-        </>
-      )}
+    <div className="panel rounded-[10px] p-4">
+      <Label>{title}</Label>
+      <Question kind={view.kind} line={view.line} />
+      <div className="mt-2 flex flex-col gap-3">
+        <Verdict view={view} pace={pace} />
+        <Calls view={view} pace={pace} />
+      </div>
     </div>
   );
 }
 
-function Verdict({ outcome }: { outcome: Outcome }) {
+/** How it stands, in one line: who won, or what the log says so far. */
+function Verdict({ view, pace }: { view: DayView; pace: number | null }) {
+  const { kind, result, line } = view;
+  const { obs } = result;
   let text: string;
+  let sub: string | null = null;
   let color = "var(--c-ink)";
-  if (outcome.void) {
-    text = "No sleep logged — no contest";
+
+  if (result.void) {
+    text =
+      kind.format === "overunder" && !obs.empty
+        ? `Landed right on the line — no contest`
+        : "Nothing logged — no contest";
     color = "var(--c-muted)";
-  } else if (outcome.good) {
-    text = outcome.phase === "final" ? "She did it! YES wins 🎉" : "6 hours! YES wins 🎉";
-    color = YES;
-  } else if (outcome.good === false) {
-    text = "Not this time — NO wins";
-    color = NO;
-  } else if (outcome.phase === "upcoming") {
-    text = "Bets are in. Waiting on bedtime…";
+  } else if (result.settled) {
+    if (kind.format === "closest") {
+      text = kind.id === "first_poop" ? `First poop: ${fmtValue(kind, obs.value!)}` : `It was ${fmtValue(kind, obs.value!)}`;
+    } else if (kind.format === "person") {
+      text = `${obs.leaders.join(" & ")} logged the most (${obs.value})`;
+    } else {
+      text = `${result.winning!.toUpperCase()} wins${result.winning === "yes" || result.winning === "over" ? " 🎉" : ""}`;
+      color = sideColor(result.winning!);
+      if (kind.format === "overunder") sub = `${fmtValue(kind, obs.value ?? 0)} against a line of ${fmtValue(kind, line!)}`;
+      if (kind.id === "six_hours") sub = `Longest stretch ${fmtValue(kind, obs.value ?? 0)}`;
+    }
+  } else if (result.phase === "open") {
+    text = "Starts at midnight";
   } else {
-    text = outcome.running ? "She's down. Fingers crossed…" : "Night in progress…";
+    // Live and undecided: what's happened so far.
+    switch (kind.format) {
+      case "yesno":
+        text =
+          kind.id === "six_hours"
+            ? `Longest so far ${fmtValue(kind, obs.value ?? 0)}${obs.running ? " · still asleep" : ""}`
+            : "Not yet…";
+        break;
+      case "person":
+        text = obs.leaders.length
+          ? `${obs.leaders.join(" & ")} ${obs.leaders.length > 1 ? "lead" : "leads"} with ${obs.value}`
+          : "Nobody's logged anything yet";
+        break;
+      default:
+        text =
+          kind.id === "first_poop"
+            ? "No poop yet…"
+            : kind.id === "longest_sleep"
+              ? `Longest so far ${fmtValue(kind, obs.value ?? 0)}${obs.running ? " · still asleep" : ""}`
+              : `${fmtValue(kind, obs.value ?? 0)} so far`;
+    }
+    if (pace !== null) sub = `on pace for ~${fmtValue(kind, pace)}`;
   }
+
   return (
-    <p className="text-[17px] font-semibold" style={{ color }}>
-      {text}
-    </p>
+    <div>
+      <p className="text-[17px] font-semibold leading-snug" style={{ color }}>
+        {text}
+      </p>
+      {sub && <p className="text-[13px] text-muted">{sub}</p>}
+    </div>
   );
 }
 
-/** Everyone's call, why they made it, and — once it's settled — what it earned. */
-function Calls({ bets, scores }: { bets: Bet[]; scores: Score[] }) {
-  if (!bets.length) {
-    return <p className="text-[13px] text-muted">Nobody called this one.</p>;
-  }
+/**
+ * Everyone's call, why they made it, and what it earned. While a closest-guess
+ * day is still running, whoever is nearest the pace is marked as leading — a
+ * reason to open the tab at lunchtime.
+ */
+function Calls({ view, pace }: { view: DayView; pace: number | null }) {
+  const { kind, preds, scores } = view;
+  if (!preds.length) return <p className="text-[13px] text-muted">Nobody called this one.</p>;
+
   const byPerson = new Map(scores.map((s) => [s.person_id, s]));
+  const leading =
+    kind.format === "closest" && pace !== null && preds.length >= 2
+      ? Math.min(...preds.map((p) => Math.abs(Number(p.answer) - pace)))
+      : null;
+
   return (
     <ul className="flex flex-col divide-y divide-line">
-      {bets.map((b) => {
-        const s = byPerson.get(b.person_id);
+      {preds.map((p) => {
+        const s = byPerson.get(p.person_id);
+        const isLeading = leading !== null && Math.abs(Number(p.answer) - pace!) === leading;
         return (
-          <li key={b.id} className="flex flex-col gap-0.5 py-2">
+          <li key={p.id} className="flex flex-col gap-0.5 py-2">
             <div className="flex items-center gap-2">
-              <span className="font-semibold">{b.name}</span>
-              {b.pick && (
+              <span className="font-semibold">{p.name}</span>
+              {p.answer !== null && (
                 <span
-                  className="rounded-[4px] px-1.5 py-0.5 font-pixel text-[11px] text-white"
-                  style={{ background: b.pick === "yes" ? YES : NO }}
+                  className={
+                    kind.format === "closest" || kind.format === "person"
+                      ? "rounded-[4px] bg-sunk px-1.5 py-0.5 text-[13px] font-medium tabular-nums"
+                      : "rounded-[4px] px-1.5 py-0.5 font-pixel text-[11px] text-white"
+                  }
+                  style={
+                    kind.format === "yesno" || kind.format === "overunder"
+                      ? { background: sideColor(p.answer) }
+                      : undefined
+                  }
                 >
-                  {b.pick.toUpperCase()}
+                  {fmtAnswer(kind, p.answer)}
                 </span>
               )}
-              {b.guess_min !== null && (
-                <span className="text-[12px] text-muted">
-                  guessed {fmtDuration(b.guess_min * MINUTE)}
-                </span>
-              )}
+              {isLeading && !s && <span className="text-[12px] text-muted">🏁 leading</span>}
               {s && (
                 <span
                   className="ml-auto text-[14px] font-semibold tabular-nums"
@@ -453,18 +614,10 @@ function Calls({ bets, scores }: { bets: Bet[]; scores: Score[] }) {
                 </span>
               )}
             </div>
-            {s && (s.correct || s.closest) && (
-              <div className="text-[12px] text-muted">
-                {[
-                  s.correct && "✓ called it",
-                  s.underdog && `underdog +${BBP.underdog}`,
-                  s.closest && `closest guess +${BBP.closest}`,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </div>
+            {s && s.reasons.length > 0 && (
+              <div className="text-[12px] text-muted">{s.reasons.join(" · ")}</div>
             )}
-            {b.note && <p className="text-[14px] italic leading-snug">“{b.note}”</p>}
+            {p.note && <p className="text-[14px] italic leading-snug">“{p.note}”</p>}
           </li>
         );
       })}
@@ -472,17 +625,8 @@ function Calls({ bets, scores }: { bets: Bet[]; scores: Score[] }) {
   );
 }
 
-function ResultCard({ view, title }: { view: NightView; title: string }) {
-  return (
-    <div className="panel rounded-[10px] p-4">
-      <Label>{title}</Label>
-      <div className="mt-2 flex flex-col gap-3">
-        <Progress outcome={view.outcome} />
-        <Calls bets={view.bets} scores={view.scores} />
-      </div>
-    </div>
-  );
-}
+// ---------------------------------------------------------------------------
+// The long game.
 
 function Leaderboard({ table }: { table: ReturnType<typeof standings> }) {
   return (
@@ -509,26 +653,30 @@ function Leaderboard({ table }: { table: ReturnType<typeof standings> }) {
   );
 }
 
-function History({ nights }: { nights: NightView[] }) {
+function History({ days }: { days: DayView[] }) {
   return (
     <div className="panel rounded-[10px] p-4">
-      <Label>Earlier nights</Label>
+      <Label>Earlier days</Label>
       <ul className="mt-2 flex flex-col gap-1.5 text-[14px]">
-        {nights.map((n) => {
-          const o = n.outcome;
-          const top = [...n.scores].sort((a, b) => b.points - a.points)[0];
-          const winner = top?.points ? n.bets.find((b) => b.person_id === top.person_id)?.name : null;
+        {days.map((d) => {
+          const r = d.result;
+          const top = [...d.scores].sort((a, b) => b.points - a.points)[0];
+          const winner = top?.points ? d.preds.find((p) => p.person_id === top.person_id)?.name : null;
+          const result = r.void
+            ? "no contest"
+            : !r.settled
+              ? "…"
+              : d.kind.format === "closest"
+                ? fmtValue(d.kind, r.obs.value!)
+                : d.kind.format === "person"
+                  ? r.obs.leaders.join(" & ")
+                  : r.winning!.toUpperCase();
           return (
-            <li key={n.key} className="flex items-baseline gap-2">
-              <span className="w-[88px] shrink-0 text-muted">{dayLabel(n.key)}</span>
-              <span
-                className="w-9 font-pixel text-[12px]"
-                style={{ color: o.good ? YES : o.good === false ? NO : "var(--c-muted)" }}
-              >
-                {o.void ? "—" : o.good ? "YES" : o.good === false ? "NO" : "…"}
-              </span>
-              <span className="tabular-nums">{o.void ? "no data" : fmtDuration(o.longestMs)}</span>
-              {winner && <span className="ml-auto truncate text-muted">👑 {winner}</span>}
+            <li key={d.key} className="flex items-baseline gap-2">
+              <span className="w-[84px] shrink-0 text-muted">{dayLabel(d.key)}</span>
+              <span className="min-w-0 flex-1 truncate">{d.kind.short}</span>
+              <span className="shrink-0 font-medium tabular-nums">{result}</span>
+              {winner && <span className="max-w-[30%] shrink-0 truncate text-muted">👑 {winner}</span>}
             </li>
           );
         })}
@@ -543,20 +691,26 @@ function Rules() {
       <summary className="press cursor-pointer py-1">How it works</summary>
       <ul className="mt-1 flex list-disc flex-col gap-1 pl-5">
         <li>
-          A good night is one unbroken sleep of 6 hours or more, starting between 6pm and 6am.
-          Two 4-hour stretches don&apos;t add up.
+          One question a day, always about tomorrow, and a different kind most days: a number to
+          guess, an over/under, a yes/no, or one of the family.
         </li>
         <li>
-          Call it any time from 6am. Betting closes the moment she goes down for the night (the first
-          sleep logged after 6pm), or 8pm at the latest. Calls stay hidden until then.
+          Call it any time before midnight and change your mind as often as you like. Calls stay
+          hidden until tomorrow starts.
         </li>
         <li>
-          YES is settled the minute she hits 6 hours. NO is settled once the night&apos;s over.
-          Nothing logged all night means no contest.
+          The log settles it. Some things settle early — a blowout has happened, the line has been
+          passed, the first poop has been — and the rest at midnight. A sleep that starts that day
+          counts in full, even when she wakes the next morning. Nothing logged at all is no contest.
         </li>
         <li>
-          +{BBP.correct} BBP for calling it · +{BBP.underdog} more if most of the family got it wrong
-          · +{BBP.closest} for the closest guess at her longest stretch (two or more guesses).
+          Over/under lines come from her past week, so they&apos;re close to a coin flip.
+        </li>
+        <li>
+          Right on a yes/no, over/under or person: +{BBP.correct} BBP, and +{BBP.underdog} more if
+          most of the family got it wrong. Number guesses: +{BBP.nearest} for the nearest (two or more
+          guessers), +{BBP.runnerUp} for second (three or more), and +{BBP.bullseye} for a bullseye
+          whoever else played.
         </li>
       </ul>
     </details>
