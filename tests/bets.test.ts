@@ -1,207 +1,306 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  currentNight,
-  isNightKey,
+  availability,
+  BBP,
+  currentDay,
+  dayWindow,
+  hintFor,
+  isDayKey,
   isValidTimeZone,
-  lockTime,
-  nightOutcome,
-  nightWindow,
-  scoreNight,
-  shiftNight,
+  kindById,
+  KINDS,
+  lineFor,
+  normaliseAnswer,
+  openDay,
+  outcome,
+  pastWindows,
+  pickKind,
+  scoreDay,
+  shiftDay,
   standings,
   zonedInstant,
-  type Bet,
-  type Outcome,
+  type Kind,
+  type Prediction,
 } from "../lib/bets";
-import type { SleepSession } from "../lib/types";
+import type { EventsPayload } from "../lib/types";
 
 const TZ = "America/Toronto";
-const HOUR = 3_600_000;
 const MIN = 60_000;
+const HOUR = 60 * MIN;
 
-const iso = (s: string) => new Date(s);
+/** Wall-clock time in Toronto on 2026-10-`day`, as an instant. */
+const at = (day: number, h: number, m = 0) =>
+  new Date(zonedInstant(`2026-10-${String(day).padStart(2, "0")}`, 0, 0, TZ).getTime() + h * HOUR + m * MIN);
+const iso = (d: Date) => d.toISOString();
 
-const sleep = (start: string, end: string | null, id = start): SleepSession => ({
-  id,
-  sleep_start: iso(start).toISOString(),
-  sleep_end: end === null ? null : iso(end).toISOString(),
-  created_at: iso(start).toISOString(),
+const payload = (over: Partial<EventsPayload> = {}): EventsPayload => ({
+  start: iso(at(1, 0)),
+  end: iso(at(20, 0)),
+  feedings: [],
+  sleep: [],
+  diapers: [],
+  comments: [],
+  moments: [],
+  ...over,
 });
 
-const bet = (person: string, pick: "yes" | "no" | null, guess_min: number | null = null): Bet => ({
-  id: person,
-  night: "2026-09-26",
+let n = 0;
+const feed = (ml: number, when: Date, by?: string) => ({
+  id: `f${n++}`,
+  amount_ml: ml,
+  ts: iso(when),
+  created_at: iso(when),
+  logged_by: by ?? null,
+});
+const diaper = (type: "pee" | "poop" | "both" | "massive_blowout", when: Date) =>
+  ({ id: `d${n++}`, type, ts: iso(when), created_at: iso(when) }) as EventsPayload["diapers"][number];
+const nap = (from: Date, to: Date | null) => ({
+  id: `s${n++}`,
+  sleep_start: iso(from),
+  sleep_end: to ? iso(to) : null,
+  created_at: iso(from),
+});
+
+const K = (id: string) => kindById(id) as Kind;
+const DAY = "2026-10-10";
+const WIN = dayWindow(DAY, TZ);
+
+const pred = (person: string, answer: string | null): Prediction => ({
+  id: `p-${person}`,
+  day: DAY,
   person_id: person,
-  name: person.toUpperCase(),
-  pick,
-  guess_min,
+  name: person,
+  answer,
   note: null,
-  created_at: "2026-09-26T12:00:00Z",
-  updated_at: "2026-09-26T12:00:00Z",
+  created_at: "",
+  updated_at: "",
 });
 
-const final = (good: boolean | null, longestMs: number, isVoid = false): Outcome => ({
-  phase: "final",
-  good,
-  void: isVoid,
-  longestMs,
-  running: false,
+// --- days and zones ----------------------------------------------------------
+
+test("the open day is always tomorrow on the wall clock", () => {
+  assert.equal(currentDay(at(10, 23, 59), TZ), "2026-10-10");
+  assert.equal(openDay(at(10, 23, 59), TZ), "2026-10-11");
+  assert.equal(openDay(at(11, 0, 1), TZ), "2026-10-12");
 });
 
-test("zonedInstant: plain evening in Toronto (EDT, UTC-4)", () => {
-  assert.equal(zonedInstant("2026-09-26", 0, 18, TZ).toISOString(), "2026-09-26T22:00:00.000Z");
-  assert.equal(zonedInstant("2026-09-26", 1, 6, TZ).toISOString(), "2026-09-27T10:00:00.000Z");
+test("a day runs midnight to midnight in its own zone, DST included", () => {
+  // Toronto falls back on 2026-11-01: that day is 25 hours long.
+  const w = dayWindow("2026-11-01", TZ);
+  assert.equal(w.to.getTime() - w.from.getTime(), 25 * HOUR);
+  assert.equal(WIN.to.getTime() - WIN.from.getTime(), 24 * HOUR);
 });
 
-test("zonedInstant: the night the clocks spring forward", () => {
-  // 6pm is still EST (UTC-5); by 6am it's EDT (UTC-4). The night is 11 hours.
-  const w = nightWindow("2026-03-07", TZ);
-  assert.equal(w.from.toISOString(), "2026-03-07T23:00:00.000Z");
-  assert.equal(w.to.toISOString(), "2026-03-08T10:00:00.000Z");
-});
-
-test("zonedInstant: the night the clocks fall back", () => {
-  const w = nightWindow("2026-10-31", TZ);
-  assert.equal(w.from.toISOString(), "2026-10-31T22:00:00.000Z");
-  assert.equal(w.to.toISOString(), "2026-11-01T11:00:00.000Z");
-});
-
-test("currentNight: before 6am it's still last night", () => {
-  assert.equal(currentNight(iso("2026-09-27T07:00:00Z"), TZ), "2026-09-26"); // 3am local
-  assert.equal(currentNight(iso("2026-09-27T10:00:00Z"), TZ), "2026-09-27"); // 6am local
-  assert.equal(currentNight(iso("2026-09-26T23:30:00Z"), TZ), "2026-09-26"); // 7:30pm local
-});
-
-test("currentNight: rolls back across a month boundary", () => {
-  assert.equal(currentNight(iso("2026-10-01T06:00:00Z"), TZ), "2026-09-30"); // 2am, Oct 1
-});
-
-test("night keys and time zones validate", () => {
-  assert.ok(isNightKey("2026-09-26"));
-  assert.ok(!isNightKey("2026-02-31"));
-  assert.ok(!isNightKey("26-09-2026"));
-  assert.ok(isValidTimeZone("Europe/London"));
+test("day keys and zones are validated", () => {
+  assert.ok(isDayKey("2026-10-10"));
+  assert.ok(!isDayKey("2026-02-31"));
+  assert.ok(!isDayKey("tomorrow"));
+  assert.ok(isValidTimeZone(TZ));
   assert.ok(!isValidTimeZone("Mars/Olympus"));
-  assert.equal(shiftNight("2026-12-31", 1), "2027-01-01");
+  assert.equal(shiftDay("2026-12-31", 1), "2027-01-01");
 });
 
-const WIN = nightWindow("2026-09-26", TZ); // 6pm = 22:00Z, 8pm = 00:00Z, 6am = 10:00Z
+// --- which question ----------------------------------------------------------
 
-test("lockTime: 8pm if she isn't down yet", () => {
-  assert.equal(lockTime(WIN, []).toISOString(), "2026-09-27T00:00:00.000Z");
+test("every question comes round once per cycle, in a shuffled order", () => {
+  const start = 20_000; // a day number at the start of a cycle
+  const len = KINDS.length;
+  const first = Math.ceil(start / len) * len;
+  const key = (d: number) => new Date(d * 86_400_000).toISOString().slice(0, 10);
+  const ids = Array.from({ length: len }, (_, i) => pickKind(key(first + i), () => true).id);
+  assert.equal(new Set(ids).size, len, "a question repeated within a cycle");
+  assert.notDeepEqual(ids, KINDS.map((k) => k.id), "the deck wasn't shuffled");
 });
 
-test("lockTime: the moment she goes down, if that's earlier", () => {
-  const s = [sleep("2026-09-26T21:00:00Z", "2026-09-26T21:40:00Z"), sleep("2026-09-26T23:15:00Z", null)];
-  // The 5pm nap doesn't count — only sleeps starting from 6pm.
-  assert.equal(lockTime(WIN, s).toISOString(), "2026-09-26T23:15:00.000Z");
+test("the same day gets the same question everywhere", () => {
+  assert.equal(pickKind(DAY, () => true).id, pickKind(DAY, () => true).id);
 });
 
-test("nightOutcome: six hours called early, while she's still asleep", () => {
-  const s = [sleep("2026-09-27T01:00:00Z", null)];
-  const o = nightOutcome(WIN, s, iso("2026-09-27T07:05:00Z"));
-  assert.equal(o.phase, "live");
-  assert.equal(o.good, true);
-  assert.equal(o.running, true);
-  assert.equal(o.longestMs, 6 * HOUR + 5 * MIN);
+test("a question whose log isn't in use is skipped", () => {
+  const kind = pickKind(DAY, (k) => k.source === "feedings");
+  assert.equal(kind.source, "feedings");
 });
 
-test("nightOutcome: short stretches, still undecided mid-night", () => {
-  const s = [
-    sleep("2026-09-27T00:00:00Z", "2026-09-27T03:00:00Z"),
-    sleep("2026-09-27T03:30:00Z", "2026-09-27T07:00:00Z"),
-  ];
-  const o = nightOutcome(WIN, s, iso("2026-09-27T08:00:00Z"));
-  assert.equal(o.phase, "live");
-  assert.equal(o.good, null);
-  assert.equal(o.longestMs, 3.5 * HOUR);
+test("availability: spit-ups need a spit-up on record, a person question needs two people", () => {
+  const windows = pastWindows(DAY, TZ);
+  const data = payload({ feedings: [feed(100, at(9, 9))] });
+  const can = availability(data, windows, 1);
+  assert.ok(can(K("milk_total")));
+  assert.ok(!can(K("spit_up")));
+  assert.ok(!can(K("top_logger")));
+  assert.ok(!can(K("blowout")), "no diapers logged");
+  assert.ok(availability(data, windows, 2)(K("top_logger")));
 });
 
-test("nightOutcome: two long stretches don't add up — no is final after 6am", () => {
-  const s = [
-    sleep("2026-09-27T00:00:00Z", "2026-09-27T05:00:00Z"),
-    sleep("2026-09-27T05:10:00Z", "2026-09-27T10:30:00Z"),
-  ];
-  const o = nightOutcome(WIN, s, iso("2026-09-27T11:00:00Z"));
-  assert.equal(o.phase, "final");
-  assert.equal(o.good, false);
-  assert.equal(o.longestMs, 5 * HOUR + 20 * MIN);
-});
+// --- lines and hints ---------------------------------------------------------
 
-test("nightOutcome: a stretch started before 6am can still win after it", () => {
-  const s = [sleep("2026-09-27T08:00:00Z", null)]; // 4am local, still going
-  const early = nightOutcome(WIN, s, iso("2026-09-27T11:00:00Z"));
-  assert.equal(early.phase, "live");
-  assert.equal(early.good, null);
-  const later = nightOutcome(WIN, s, iso("2026-09-27T14:00:00Z"));
-  assert.equal(later.good, true);
-});
-
-test("nightOutcome: nothing logged all night is void", () => {
-  const o = nightOutcome(WIN, [], iso("2026-09-27T12:00:00Z"));
-  assert.equal(o.void, true);
-  assert.equal(o.good, null);
-  assert.deepEqual(scoreNight([bet("a", "yes")], o), []);
-});
-
-test("nightOutcome: upcoming before 6pm", () => {
-  assert.equal(nightOutcome(WIN, [], iso("2026-09-26T16:00:00Z")).phase, "upcoming");
-});
-
-test("scoreNight: nothing until the night is final", () => {
-  const live: Outcome = { phase: "live", good: true, void: false, longestMs: 7 * HOUR, running: true };
-  assert.deepEqual(scoreNight([bet("a", "yes")], live), []);
-});
-
-test("scoreNight: correct calls earn 10, the lone right one gets the underdog 5", () => {
-  const scores = scoreNight([bet("a", "yes"), bet("b", "no"), bet("c", "no")], final(true, 6.5 * HOUR));
-  const by = Object.fromEntries(scores.map((s) => [s.person_id, s]));
-  assert.equal(by.a.points, 15);
-  assert.equal(by.a.underdog, true);
-  assert.equal(by.b.points, 0);
-  assert.equal(by.c.correct, false);
-});
-
-test("scoreNight: no underdog bonus when the room agreed, or split evenly", () => {
-  const all = scoreNight([bet("a", "no"), bet("b", "no")], final(false, 4 * HOUR));
-  assert.deepEqual(all.map((s) => s.points), [10, 10]);
-  const split = scoreNight([bet("a", "no"), bet("b", "yes")], final(false, 4 * HOUR));
-  assert.deepEqual(split.map((s) => s.points), [10, 0]);
-});
-
-test("scoreNight: closest guess gets 5 even on a wrong call; ties share it", () => {
-  const scores = scoreNight(
-    [bet("a", "yes", 300), bet("b", "no", 200), bet("c", "no", 280)],
-    final(false, 290 * MIN),
+test("an over/under line is the past week's average, off the whole numbers", () => {
+  const feedings = [9, 8, 7].flatMap((d) =>
+    Array.from({ length: d === 9 ? 7 : 6 }, (_, i) => feed(90, at(d, 1 + i * 3))),
   );
-  const by = Object.fromEntries(scores.map((s) => [s.person_id, s]));
-  assert.equal(by.a.closest, true); // 10 off
-  assert.equal(by.c.closest, true); // 10 off
-  assert.equal(by.a.points, 5);
-  assert.equal(by.b.points, 10);
-  assert.equal(by.c.points, 15);
+  // 7, 6, 6 feeds → average 6.33 → line 6.5.
+  assert.equal(lineFor(K("feeds_count"), payload({ feedings }), pastWindows(DAY, TZ)), 6.5);
 });
 
-test("scoreNight: a lone guesser can't win closest", () => {
-  const scores = scoreNight([bet("a", "no", 240), bet("b", "no")], final(false, 240 * MIN));
-  assert.ok(scores.every((s) => !s.closest));
+test("a sleep line is set to the quarter hour", () => {
+  const sleep = [nap(at(9, 1), at(9, 8, 10)), nap(at(8, 1), at(8, 8, 10))];
+  assert.equal(lineFor(K("sleep_total"), payload({ sleep }), pastWindows(DAY, TZ)), 7 * 60 + 15);
 });
 
-test("standings: totals, record, and a streak that resets on a miss", () => {
-  const people = [
-    { id: "a", name: "Ann" },
-    { id: "b", name: "Bo" },
-  ];
-  const nights = [
-    { key: "2026-09-24", bets: [bet("a", "no"), bet("b", "yes")], outcome: final(false, 4 * HOUR) },
-    { key: "2026-09-25", bets: [bet("a", "no"), bet("b", "no")], outcome: final(true, 6 * HOUR) },
-    { key: "2026-09-26", bets: [bet("a", "yes"), bet("b", "yes")], outcome: final(true, 7 * HOUR) },
-  ];
-  const [first, second] = standings(people, nights);
-  assert.equal(first.name, "Ann");
-  assert.equal(first.bbp, 20);
-  assert.deepEqual([first.wins, first.losses, first.streak], [2, 1, 1]);
-  assert.equal(second.bbp, 10);
-  assert.deepEqual([second.wins, second.losses, second.streak], [1, 2, 1]);
+test("no week behind it, no line", () => {
+  assert.equal(lineFor(K("feeds_count"), payload(), pastWindows(DAY, TZ)), null);
+  assert.equal(lineFor(K("milk_total"), payload(), pastWindows(DAY, TZ)), null, "not an over/under");
+});
+
+test("the hint counts how many past days a yes/no happened on", () => {
+  const diapers = [diaper("massive_blowout", at(9, 10)), diaper("pee", at(8, 10)), diaper("pee", at(7, 10))];
+  const h = hintFor(K("blowout"), payload({ diapers }), pastWindows(DAY, TZ));
+  assert.deepEqual({ happened: h.happenedDays, days: h.days }, { happened: 1, days: 3 });
+});
+
+// --- watching it play out ----------------------------------------------------
+
+test("before midnight the question is open; through the day it's live", () => {
+  const data = payload({ feedings: [feed(100, at(10, 2))] });
+  assert.equal(outcome(K("milk_total"), null, data, WIN, at(9, 22)).phase, "open");
+  const live = outcome(K("milk_total"), null, data, WIN, at(10, 12));
+  assert.equal(live.phase, "live");
+  assert.equal(live.obs.value, 100);
+  assert.equal(live.settled, false);
+});
+
+test("a closest-guess question settles at midnight with the day's figure", () => {
+  const data = payload({ feedings: [feed(100, at(10, 2)), feed(120, at(10, 14)), feed(90, at(11, 1))] });
+  const r = outcome(K("milk_total"), null, data, WIN, at(11, 9));
+  assert.equal(r.phase, "final");
+  assert.ok(r.settled);
+  assert.equal(r.obs.value, 220, "the next day's feed leaked in");
+});
+
+test("a yes settles the moment it happens; a no waits for midnight", () => {
+  const data = payload({ diapers: [diaper("pee", at(10, 3)), diaper("massive_blowout", at(10, 11))] });
+  const early = outcome(K("blowout"), null, data, WIN, at(10, 12));
+  assert.deepEqual([early.phase, early.settled, early.winning], ["live", true, "yes"]);
+
+  const quiet = payload({ diapers: [diaper("pee", at(10, 3))] });
+  assert.equal(outcome(K("blowout"), null, quiet, WIN, at(10, 23)).settled, false);
+  assert.equal(outcome(K("blowout"), null, quiet, WIN, at(11, 0, 1)).winning, "no");
+});
+
+test("over settles as soon as the line is passed; under waits", () => {
+  const feedings = Array.from({ length: 7 }, (_, i) => feed(90, at(10, 1 + i)));
+  const r = outcome(K("feeds_count"), 6.5, payload({ feedings }), WIN, at(10, 9));
+  assert.deepEqual([r.settled, r.winning], [true, "over"]);
+
+  const few = payload({ feedings: feedings.slice(0, 4) });
+  assert.equal(outcome(K("feeds_count"), 6.5, few, WIN, at(10, 22)).settled, false);
+  assert.equal(outcome(K("feeds_count"), 6.5, few, WIN, at(11, 1)).winning, "under");
+});
+
+test("landing exactly on a sleep line is no contest", () => {
+  const sleep = [nap(at(10, 1), at(10, 8))];
+  const r = outcome(K("sleep_total"), 7 * 60, payload({ sleep }), WIN, at(11, 1));
+  assert.deepEqual([r.settled, r.void], [true, true]);
+});
+
+test("a stretch belongs to the day it starts and is followed past midnight", () => {
+  // Down at 10pm, up at 5am: a seven-hour stretch, not two hours.
+  const data = payload({ sleep: [nap(at(10, 22), at(11, 5))] });
+  const running = outcome(K("six_hours"), null, payload({ sleep: [nap(at(10, 22), null)] }), WIN, at(11, 1));
+  assert.deepEqual([running.phase, running.settled], ["live", false], "settled before she woke");
+  const r = outcome(K("six_hours"), null, data, WIN, at(11, 9));
+  assert.deepEqual([r.phase, r.winning, r.obs.value], ["final", "yes", 7 * 60]);
+});
+
+test("the first poop settles when it happens, as minutes after midnight", () => {
+  const data = payload({ diapers: [diaper("pee", at(10, 2)), diaper("both", at(10, 7, 30))] });
+  const r = outcome(K("first_poop"), null, data, WIN, at(10, 8));
+  assert.deepEqual([r.settled, r.obs.value], [true, 7 * 60 + 30]);
+});
+
+test("a day with nothing logged is no contest, not a zero", () => {
+  const r = outcome(K("milk_total"), null, payload(), WIN, at(11, 9));
+  assert.deepEqual([r.settled, r.void], [true, true]);
+});
+
+test("top logger counts every kind of entry, by name, ignoring case", () => {
+  const data = payload({
+    feedings: [feed(90, at(10, 1), "Cal"), feed(90, at(10, 4), "sam"), feed(90, at(10, 7), "Sam")],
+    sleep: [{ ...nap(at(10, 9), at(10, 10)), logged_by: "Cal" }],
+    diapers: [{ ...diaper("pee", at(10, 11)), logged_by: "Sam" }],
+  });
+  const r = outcome(K("top_logger"), null, data, WIN, at(11, 1));
+  assert.deepEqual([r.obs.value, r.obs.leaders.map((x) => x.toLowerCase())], [3, ["sam"]]);
+});
+
+// --- answers -----------------------------------------------------------------
+
+test("answers are checked against the question", () => {
+  const people = [{ id: "1", name: "Cal" }];
+  assert.equal(normaliseAnswer(K("milk_total"), "820.4", people), "820");
+  assert.equal(normaliseAnswer(K("milk_total"), "9999", people), null);
+  assert.equal(normaliseAnswer(K("feeds_count"), "over", people), "over");
+  assert.equal(normaliseAnswer(K("feeds_count"), "yes", people), null);
+  assert.equal(normaliseAnswer(K("blowout"), "no", people), "no");
+  assert.equal(normaliseAnswer(K("top_logger"), "cal", people), "Cal");
+  assert.equal(normaliseAnswer(K("top_logger"), "Nana", people), null);
+});
+
+// --- points ------------------------------------------------------------------
+
+const settledMilk = (ml: number) =>
+  outcome(K("milk_total"), null, payload({ feedings: [feed(ml, at(10, 9))] }), WIN, at(11, 1));
+
+test("closest: nearest takes 10, runner-up 5 with three or more, bullseye on top", () => {
+  const scores = scoreDay(
+    K("milk_total"),
+    [pred("a", "810"), pred("b", "700"), pred("c", "1000")],
+    settledMilk(800),
+  );
+  const pts = Object.fromEntries(scores.map((s) => [s.person_id, s.points]));
+  assert.deepEqual(pts, { a: BBP.nearest + BBP.bullseye, b: BBP.runnerUp, c: 0 });
+});
+
+test("closest: a lone guesser can't be nearest, but can still hit the bullseye", () => {
+  assert.equal(scoreDay(K("milk_total"), [pred("a", "500")], settledMilk(800))[0].points, 0);
+  assert.equal(scoreDay(K("milk_total"), [pred("a", "790")], settledMilk(800))[0].points, BBP.bullseye);
+});
+
+test("closest: a tie for nearest pays both", () => {
+  const scores = scoreDay(K("milk_total"), [pred("a", "750"), pred("b", "850")], settledMilk(800));
+  assert.deepEqual(scores.map((s) => s.points), [BBP.nearest, BBP.nearest]);
+});
+
+test("yes/no: right pays 10, and the underdog bonus goes to a minority that was right", () => {
+  const r = outcome(K("blowout"), null, payload({ diapers: [diaper("massive_blowout", at(10, 9))] }), WIN, at(11, 1));
+  const scores = scoreDay(K("blowout"), [pred("a", "yes"), pred("b", "no"), pred("c", "no")], r);
+  const pts = Object.fromEntries(scores.map((s) => [s.person_id, s.points]));
+  assert.deepEqual(pts, { a: BBP.correct + BBP.underdog, b: 0, c: 0 });
+});
+
+test("nothing is scored until it settles, or when it's void", () => {
+  const live = outcome(K("milk_total"), null, payload({ feedings: [feed(90, at(10, 1))] }), WIN, at(10, 9));
+  assert.deepEqual(scoreDay(K("milk_total"), [pred("a", "800"), pred("b", "700")], live), []);
+  const empty = outcome(K("milk_total"), null, payload(), WIN, at(11, 1));
+  assert.deepEqual(scoreDay(K("milk_total"), [pred("a", "800"), pred("b", "700")], empty), []);
+});
+
+test("standings add up points and track the current streak", () => {
+  const yes = outcome(K("blowout"), null, payload({ diapers: [diaper("massive_blowout", at(10, 9))] }), WIN, at(11, 1));
+  const days = ["2026-10-10", "2026-10-11"].map((key) => ({
+    key,
+    kind: K("blowout"),
+    preds: [pred("a", "yes"), pred("b", key === "2026-10-11" ? "yes" : "no")],
+    result: yes,
+  }));
+  const table = standings([{ id: "a", name: "Cal" }, { id: "b", name: "Sam" }], days);
+  assert.deepEqual(
+    table.map((r) => [r.name, r.bbp, r.wins, r.losses, r.streak]),
+    [
+      // A one-against-one split is no underdog: that needs a strict minority.
+      ["Cal", 2 * BBP.correct, 2, 0, 2],
+      ["Sam", BBP.correct, 1, 1, 1],
+    ],
+  );
 });

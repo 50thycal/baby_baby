@@ -20,7 +20,7 @@ handed, in the dark, while holding a baby.
 
 No auth. It's a private-by-obscurity family URL, exactly as specced. People
 pick a *name* — no password — to sign bets and notes; see
-[Names and the nightly bet](#names-and-the-nightly-bet).
+[Names and the daily question](#names-and-the-daily-question).
 
 ## Which database, and why
 
@@ -80,9 +80,9 @@ weights          id, weight_g, ts, is_birth, created_at, logged_by
 snapshots        id, taken_at, reason, counts (jsonb), payload (jsonb)
 
 people           id, name (unique, case-insensitive), created_at
-bet_nights       night (date), tz, created_at
-bets             id, night, person_id, pick (yes|no), guess_min, note,
-                 created_at, updated_at — one per person per night
+bet_days         day (date), tz, kind, line, created_at — one question a day
+predictions      id, day, person_id, answer (text), note,
+                 created_at, updated_at — one per person per day
 ```
 
 `sleep_end IS NULL` means the baby is asleep *right now*. That state has to be
@@ -612,7 +612,7 @@ keep a copy somewhere that isn't this database.
 Neither path is allowed to fail a request: a backup problem is logged and
 dropped rather than blocking the person trying to log a feed.
 
-## Names and the nightly bet
+## Names and the daily question
 
 **Names, not accounts.** The first time someone bets or writes a note, they're
 asked *who's this?*: everyone who has picked a name before is a chip, anyone new
@@ -625,30 +625,50 @@ signed with it (`logged_by`, shown as "Logged by …" when you open an entry and
 text rather than a key into `people`, so it survives backups and restores with
 nothing to dangle.
 
-**The bet** lives on the **Bets** tab: *will she sleep 6 hours straight
-tonight?* All the rules are in `lib/bets.ts`, which is pure so the server and
-every phone agree.
+**The daily question** lives on the **Bets** tab: one prediction a day,
+always about **tomorrow**. All the rules are in `lib/bets.ts`, which is pure so
+the server and every phone agree.
 
-- A good night is **one unbroken sleep of 6h+** that *starts* between 6pm and
-  6am. Two 4-hour stretches don't add up.
-- Call it from 6am. Betting **closes the moment she goes down** — the first
-  sleep logged after 6pm — or 8pm at the latest, and the server enforces it
-  against its own sleep rows. Before 6am, "tonight" still means last night.
-- **Calls are blind until close**: `GET /api/bets` blanks everyone else's
-  pick, guess and note until then. Honour-system blind, not secure — it's there
-  so nobody just copies Nana.
-- **YES is settled early**, the minute any stretch reaches 6h. NO is settled
-  once the night is over and nothing is still running (a stretch that starts at
-  5am can win at 11am). Nothing logged all night is a void — no points.
-- **Baby baby points (BBP):** +10 for calling it, +5 more if most of the family
-  called it wrong (underdog), +5 for the closest guess at her longest stretch
-  (needs two or more guesses; ties share it).
+- **Always open, never a race.** Anyone can call tomorrow's question at any
+  hour, and change it until midnight. A question about *today* that stayed open
+  all day would just reward whoever bet last, with most of the day already on
+  the screen.
+- **A different kind of question most days**, dealt from a pool of twelve like
+  a deck: shuffled once per cycle, so every question comes round before any
+  repeats. Number guesses (milk total, diapers, longest sleep, biggest bottle,
+  time of the first poop), over/unders (feeds, dirty diapers, total sleep), yes/
+  nos (a blowout, a big spit-up, 6 hours straight) and one about the family
+  (who'll log the most). A question whose log isn't in use yet is skipped.
+- **Frozen when it's set.** The first time anyone opens the tab, tomorrow's
+  question is stored with its over/under line, drawn from her seven finished
+  days before today and nudged off whole numbers so a count can't land on it.
+  It's stored rather than recomputed because a line that moved when someone
+  back-filled a feed would be a different bet for everyone who'd already called
+  it. The hint under the question ("Her average lately: 919 mL", "Happened on 2
+  of the last 7 days") comes from the same week.
+- **Blind until midnight**: `GET /api/bets` blanks everyone else's answer and
+  note until tomorrow starts. Honour-system blind, not secure — it's there so
+  nobody just copies Nana.
+- **It plays out live.** Through the day the card shows the figure so far and,
+  for running totals, where it's heading by midnight (the Trends projection),
+  with whoever's nearest that pace marked as leading. Some questions settle
+  early, because some things can't be undone: a blowout has happened, the line
+  has been passed, the first poop has been. A sleep belongs to the day it
+  *starts* and is followed to its end, so a 10pm–5am stretch is seven hours,
+  not two. Nothing logged all day is no contest.
+- **Baby baby points (BBP):** right on a yes/no, over/under or person: +10, and
+  +5 more if most of the family got it wrong. Number guesses: +10 for the
+  nearest (two or more guessers; ties share), +5 for second (three or more), and
+  +5 for a bullseye — within 25 mL, 5 mL on a bottle, 15 minutes on a time —
+  whoever else played.
 
-Nothing about a result is stored. Outcomes, points, records and streaks are
-recomputed from `sleep_sessions` on every load, so fixing a mis-logged sleep
-fixes the bet with it. Each night stores the time zone of whoever bet on it
-first, because "6pm" means nothing to a server running in UTC; the boundaries
-are computed with `Intl`, daylight-saving nights included.
+Nothing about a result is stored. Outcomes, points and streaks are recomputed
+from the log on every load, so fixing a mis-logged feed fixes the bet with it.
+Each day stores the time zone of the phone that set it, because "midnight"
+means nothing to a server running in UTC; the boundaries are computed with
+`Intl`, daylight-saving days included. This replaced the old nightly 6-hour
+bet, which started the leaderboard fresh; its tables (`bet_nights`, `bets`) are
+left untouched in any database that has them and nothing reads them.
 
 ## Tests
 

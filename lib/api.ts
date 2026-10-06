@@ -43,11 +43,16 @@ export function usePeople() {
 }
 
 /**
- * Keyed on who's asking, because other people's calls come back blank until
- * betting closes — and your own must not.
+ * Keyed on who's asking, because other people's answers come back blank until
+ * the day starts — and your own must not. The zone goes along so the server
+ * can set tomorrow's question in the family's own idea of "tomorrow".
  */
-export function useBets(meId: string | null) {
-  return useSWR<BetsPayload>(`/api/bets?me=${meId ?? ""}`, fetcher, SHARED_OPTS);
+export function useBets(meId: string | null, tz: string) {
+  return useSWR<BetsPayload>(
+    `/api/bets?me=${meId ?? ""}&tz=${encodeURIComponent(tz)}`,
+    fetcher,
+    SHARED_OPTS,
+  );
 }
 
 /**

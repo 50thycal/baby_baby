@@ -1,71 +1,71 @@
 import { db } from "@/lib/db";
 import { BadRequest, fail, ok, readJson, readMe } from "@/lib/http";
 import {
-  currentNight,
+  availability,
+  dayWindow,
+  isDayKey,
   isValidTimeZone,
-  lockTime,
-  nightWindow,
-  type Bet,
+  kindById,
+  lineFor,
+  normaliseAnswer,
+  openDay,
+  pastWindows,
+  pickKind,
+  shiftDay,
+  type BetDay,
   type BetsPayload,
-  type Night,
+  type DayKey,
   type Person,
-  type Pick,
+  type Prediction,
 } from "@/lib/bets";
-import type { SleepSession } from "@/lib/types";
+import type { EventsPayload } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const DAY = 86_400_000;
+const DAY_COLUMNS = "to_char(day, 'YYYY-MM-DD') AS day, tz, kind, line";
 
 /**
- * GET /api/bets?me=<person id> — every night, every call, and the sleep that
- * settles them, in one trip. Results and points are worked out on the phone
- * from these rows (lib/bets.ts), so there's nothing here to go stale.
+ * GET /api/bets?me=<person id>&tz=<zone> — every day's question and every
+ * answer, in one trip. The log that settles them comes from /api/events, and
+ * results and points are worked out on the phone (lib/bets.ts), so there's
+ * nothing here to go stale.
  *
- * Calls are blind until betting closes: before then, everyone else's pick,
- * guess and note come back empty, and only the fact that they've called it
- * shows. Honour-system blind — it's in the request, not behind a login — but
- * it's there so nobody just copies Nana.
+ * Asking also sets tomorrow's question if nobody has yet, in the asker's zone.
+ * That's the moment it has to be frozen: the line comes from the past week,
+ * and it must not move under people who have already called it.
+ *
+ * Answers are blind until the day starts: before then, everyone else's answer
+ * and note come back empty, and only the fact that they've played shows.
+ * Honour-system blind — it's in the request, not behind a login — but it's
+ * there so nobody just copies Nana.
  */
 export async function GET(req: Request) {
   try {
-    const me = new URL(req.url).searchParams.get("me");
+    const params = new URL(req.url).searchParams;
+    const me = params.get("me");
+    const tz = params.get("tz");
     const now = new Date();
     const sql = await db();
 
-    const [people, nights, bets] = (await Promise.all([
-      sql`SELECT id, name FROM people ORDER BY lower(name)`,
-      sql`SELECT to_char(night, 'YYYY-MM-DD') AS night, tz FROM bet_nights ORDER BY night`,
-      sql`SELECT b.id, to_char(b.night, 'YYYY-MM-DD') AS night, b.person_id, p.name,
-                 b.pick, b.guess_min, b.note, b.created_at, b.updated_at
-            FROM bets b JOIN people p ON p.id = b.person_id
-           ORDER BY b.night, b.created_at`,
-    ])) as [Person[], Night[], Bet[]];
+    const people = (await sql`SELECT id, name FROM people ORDER BY lower(name)`) as Person[];
+    if (isValidTimeZone(tz)) await ensureDay(openDay(now, tz), tz, now, people.length);
 
-    // Enough sleep to settle the oldest night and draw the live one. Two days
-    // back covers tonight's card when nobody has bet yet.
-    const earliest = nights.length
-      ? Math.min(nightWindow(nights[0].night, nights[0].tz).from.getTime(), now.getTime() - 2 * DAY)
-      : now.getTime() - 2 * DAY;
-    const sleep = (await sql`
-      SELECT * FROM sleep_sessions
-       WHERE sleep_start >= ${new Date(earliest).toISOString()}
-       ORDER BY sleep_start`) as SleepSession[];
+    const [days, predictions] = (await Promise.all([
+      sql.query(`SELECT ${DAY_COLUMNS} FROM bet_days ORDER BY day`),
+      sql`SELECT p.id, to_char(p.day, 'YYYY-MM-DD') AS day, p.person_id, pe.name,
+                 p.answer, p.note, p.created_at, p.updated_at
+            FROM predictions p JOIN people pe ON pe.id = p.person_id
+           ORDER BY p.day, p.created_at`,
+    ])) as [BetDay[], Prediction[]];
 
-    const tzOf = new Map(nights.map((n) => [n.night, n.tz]));
-    const blinded = bets.map((b) => {
-      if (b.person_id === me) return b;
-      const locked = lockTime(nightWindow(b.night, tzOf.get(b.night)!), sleep) <= now;
-      return locked ? b : { ...b, pick: null, guess_min: null, note: null };
+    const tzOf = new Map(days.map((d) => [d.day, d.tz]));
+    const blinded = predictions.map((p) => {
+      if (p.person_id === me) return p;
+      const started = dayWindow(p.day, tzOf.get(p.day)!).from <= now;
+      return started ? p : { ...p, answer: null, note: null };
     });
 
-    const payload: BetsPayload = {
-      now: now.toISOString(),
-      people,
-      nights,
-      bets: blinded,
-      sleep,
-    };
+    const payload: BetsPayload = { now: now.toISOString(), people, days, predictions: blinded };
     return ok(payload);
   } catch (err) {
     return fail(err);
@@ -73,10 +73,54 @@ export async function GET(req: Request) {
 }
 
 /**
- * POST /api/bets — make or change tonight's call. Only ever tonight's, and only
- * until she goes down (or 8pm). Both are checked here, against the database's
- * own sleep rows, because a phone's clock and a phone's idea of "tonight" are
- * exactly the things that can't be trusted to close a bet.
+ * Sets a day's question if it isn't set: picks the card for the day from the
+ * questions whose logs are in use, and draws the over/under line from the
+ * week before it. A no-op when it's already there, so two phones asking at
+ * once both land on the first one's question.
+ */
+async function ensureDay(key: DayKey, tz: string, now: Date, peopleCount: number) {
+  const sql = await db();
+  const exists = (await sql`SELECT 1 FROM bet_days WHERE day = ${key}`) as unknown[];
+  if (exists.length) return;
+
+  // The finished days before today. Today is still going, and a half day in
+  // the average would set every line low.
+  const windows = pastWindows(shiftDay(key, -1), tz);
+  const since = new Date(Math.min(...windows.map((w) => w.from.getTime())));
+  const sinceIso = since.toISOString();
+  const [feedings, sleep, diapers, moments] = (await Promise.all([
+    sql`SELECT * FROM feedings WHERE ts >= ${sinceIso}`,
+    sql`SELECT * FROM sleep_sessions WHERE sleep_end IS NULL OR sleep_end >= ${sinceIso}`,
+    sql`SELECT * FROM diapers WHERE ts >= ${sinceIso}`,
+    sql`SELECT * FROM moments WHERE ts >= ${sinceIso}`,
+  ])) as [
+    EventsPayload["feedings"],
+    EventsPayload["sleep"],
+    EventsPayload["diapers"],
+    EventsPayload["moments"],
+  ];
+  const data: EventsPayload = {
+    start: sinceIso,
+    end: now.toISOString(),
+    feedings,
+    sleep,
+    diapers,
+    moments,
+    comments: [],
+  };
+
+  const kind = pickKind(key, availability(data, windows, peopleCount));
+  const line = lineFor(kind, data, windows);
+  await sql`
+    INSERT INTO bet_days (day, tz, kind, line) VALUES (${key}, ${tz}, ${kind.id}, ${line})
+    ON CONFLICT (day) DO NOTHING`;
+}
+
+/**
+ * POST /api/bets — make or change your answer for tomorrow. Only ever
+ * tomorrow's, and only until its midnight. Both are checked here, in the
+ * day's own zone, because a phone's clock and a phone's idea of "tomorrow"
+ * are exactly the things that can't be trusted to close a bet.
  */
 export async function POST(req: Request) {
   try {
@@ -84,65 +128,45 @@ export async function POST(req: Request) {
     if (!me) throw new BadRequest("Pick your name first");
 
     const body = await readJson(req);
-    const pick = parsePick(body.pick);
-    const guess = parseGuess(body.guess_min);
+    if (!isDayKey(body.day)) throw new BadRequest("day must be YYYY-MM-DD");
     const note = parseNote(body.note);
-    if (!isValidTimeZone(body.tz)) throw new BadRequest("Unknown time zone");
 
     const sql = await db();
-    const person = (await sql`SELECT id FROM people WHERE id = ${me}`) as Person[];
-    if (!person[0]) throw new BadRequest("That name is gone — pick yours again");
+    const people = (await sql`SELECT id, name FROM people ORDER BY lower(name)`) as Person[];
+    if (!people.some((p) => p.id === me)) {
+      throw new BadRequest("That name is gone — pick yours again");
+    }
+
+    const rows = (await sql.query(`SELECT ${DAY_COLUMNS} FROM bet_days WHERE day = $1`, [
+      body.day,
+    ])) as BetDay[];
+    const day = rows[0];
+    if (!day) throw new BadRequest("No question for that day yet");
 
     const now = new Date();
-    const key = currentNight(now, body.tz);
-    if (body.night !== undefined && body.night !== key) {
-      throw new BadRequest("Betting on that night has closed");
+    if (day.day !== openDay(now, day.tz) || dayWindow(day.day, day.tz).from <= now) {
+      throw new BadRequest("Too late — that day has started");
     }
 
-    // First bettor sets the zone; everyone after is judged by the same clock.
-    await sql`
-      INSERT INTO bet_nights (night, tz) VALUES (${key}, ${body.tz})
-      ON CONFLICT (night) DO NOTHING`;
-    const [{ tz }] = (await sql`
-      SELECT tz FROM bet_nights WHERE night = ${key}`) as { tz: string }[];
+    const kind = kindById(day.kind);
+    if (!kind) throw new BadRequest("Unknown question");
+    const answer = normaliseAnswer(kind, body.answer, people);
+    if (answer === null) throw new BadRequest("That answer doesn't fit the question");
 
-    const win = nightWindow(key, tz);
-    const sleep = (await sql`
-      SELECT * FROM sleep_sessions
-       WHERE sleep_start >= ${win.from.toISOString()} AND sleep_start < ${win.to.toISOString()}`) as SleepSession[];
-    if (lockTime(win, sleep) <= now) {
-      throw new BadRequest("Too late — betting closed when she went down");
-    }
-
-    const rows = (await sql`
-      INSERT INTO bets (night, person_id, pick, guess_min, note)
-      VALUES (${key}, ${me}, ${pick}, ${guess}, ${note})
-      ON CONFLICT (night, person_id) DO UPDATE
-         SET pick = EXCLUDED.pick,
-             guess_min = EXCLUDED.guess_min,
+    const saved = (await sql`
+      INSERT INTO predictions (day, person_id, answer, note)
+      VALUES (${day.day}, ${me}, ${answer}, ${note})
+      ON CONFLICT (day, person_id) DO UPDATE
+         SET answer = EXCLUDED.answer,
              note = EXCLUDED.note,
              updated_at = now()
-      RETURNING id, to_char(night, 'YYYY-MM-DD') AS night, person_id, pick, guess_min, note,
-                created_at, updated_at`) as Omit<Bet, "name">[];
+      RETURNING id, to_char(day, 'YYYY-MM-DD') AS day, person_id, answer, note,
+                created_at, updated_at`) as Omit<Prediction, "name">[];
 
-    return ok(rows[0], 201);
+    return ok(saved[0], 201);
   } catch (err) {
     return fail(err);
   }
-}
-
-function parsePick(value: unknown): Pick {
-  if (value !== "yes" && value !== "no") throw new BadRequest("pick must be yes or no");
-  return value;
-}
-
-function parseGuess(value: unknown): number | null {
-  if (value === null || value === undefined) return null;
-  const n = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(n)) throw new BadRequest("guess_min must be a number");
-  const rounded = Math.round(n);
-  if (rounded < 0 || rounded > 24 * 60) throw new BadRequest("guess_min must be within a day");
-  return rounded;
 }
 
 function parseNote(value: unknown): string | null {
