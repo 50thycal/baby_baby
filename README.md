@@ -630,7 +630,10 @@ always about **tomorrow**. All the rules are in `lib/bets.ts`, which is pure so
 the server and every phone agree.
 
 - **Always open, never a race.** Anyone can call tomorrow's question at any
-  hour, and change it until midnight. A question about *today* that stayed open
+  hour until midnight — **once**. A call is locked the moment it's in, with no
+  changes, so nobody drifts toward whatever the evening seems to suggest. The
+  server enforces it with the table's unique key (`ON CONFLICT DO NOTHING`),
+  so two quick taps can't both land. A question about *today* that stayed open
   all day would just reward whoever bet last, with most of the day already on
   the screen.
 - **A different kind of question most days**, dealt from a pool of twelve like

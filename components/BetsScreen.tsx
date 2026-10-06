@@ -229,16 +229,13 @@ function OpenCard({
       <div className="mt-3 flex flex-col gap-3">
         {me ? (
           <>
-            {/* Keyed on the answer itself, so the form picks it up when it
-                arrives — including just after choosing a name, when the
-                previous response had it blanked out. */}
-            <AnswerForm
-              key={mine ? `${mine.updated_at}:${mine.answer}` : "new"}
-              view={view}
-              mine={mine}
-              hint={hint}
-              people={people}
-            />
+            {/* A call is final, so once yours is in the form goes away and
+                the call itself takes its place. */}
+            {mine && mine.answer !== null ? (
+              <LockedCall kind={view.kind} call={mine} />
+            ) : (
+              <AnswerForm view={view} hint={hint} people={people} />
+            )}
             <SignedAs onSwitch={onChooseName} />
           </>
         ) : (
@@ -281,22 +278,36 @@ function startingFigure(kind: Kind, hint: Hint): number {
   return Math.min(hi, Math.max(lo, Math.round(raw / small) * small));
 }
 
-function AnswerForm({
-  view,
-  mine,
-  hint,
-  people,
-}: {
-  view: DayView;
-  mine: Prediction | undefined;
-  hint: Hint;
-  people: Person[];
-}) {
+/** Your call, as it stands. There's nothing to press: it's in. */
+function LockedCall({ kind, call }: { kind: Kind; call: Prediction }) {
+  const side = kind.format === "yesno" || kind.format === "overunder";
+  return (
+    <div className="rounded-[10px] bg-sunk p-3">
+      <div className="flex items-center gap-2">
+        <span className="text-[13px] text-muted">🔒 Your call</span>
+        <span
+          className={
+            side
+              ? "rounded-[4px] px-1.5 py-0.5 font-pixel text-[13px] text-white"
+              : "text-[18px] font-semibold tabular-nums"
+          }
+          style={side ? { background: sideColor(call.answer!) } : undefined}
+        >
+          {fmtAnswer(kind, call.answer!)}
+        </span>
+      </div>
+      {call.note && <p className="mt-1 text-[14px] italic leading-snug">“{call.note}”</p>}
+      <p className="mt-1 text-[12px] text-muted">Locked in — no changes. Good luck.</p>
+    </div>
+  );
+}
+
+function AnswerForm({ view, hint, people }: { view: DayView; hint: Hint; people: Person[] }) {
   const { kind } = view;
   const [answer, setAnswer] = useState<string | null>(
-    mine?.answer ?? (kind.format === "closest" ? String(startingFigure(kind, hint)) : null),
+    kind.format === "closest" ? String(startingFigure(kind, hint)) : null,
   );
-  const [note, setNote] = useState(mine?.note ?? "");
+  const [note, setNote] = useState("");
   const notify = useToast();
 
   return (
@@ -360,8 +371,11 @@ function AnswerForm({
         className="w-full resize-none rounded-[10px] bg-sunk p-3 text-[15px] font-medium outline-none placeholder:text-muted focus:ring-2 focus:ring-ink/20"
       />
 
+      {/* Said before the tap, not after: there's no undo. */}
+      <p className="-mb-1 text-center text-[12px] text-muted">One call, no changes once it&apos;s in.</p>
+
       <ConfirmButton
-        label={mine ? "Update my call" : "Lock in my call"}
+        label="Lock in my call"
         accent={answer === "no" || answer === "under" ? NO : YES}
         disabled={answer === null}
         onConfirm={async () => {
@@ -370,7 +384,7 @@ function AnswerForm({
             answer,
             note: note.trim() || null,
           });
-          notify(mine ? "Call updated" : "You're in 🎲");
+          notify("You're in 🎲");
         }}
       />
     </div>
@@ -695,8 +709,8 @@ function Rules() {
           guess, an over/under, a yes/no, or one of the family.
         </li>
         <li>
-          Call it any time before midnight and change your mind as often as you like. Calls stay
-          hidden until tomorrow starts.
+          Call it any time before midnight — once. A call is locked the moment it&apos;s in, with
+          no changes. Calls stay hidden until tomorrow starts.
         </li>
         <li>
           The log settles it. Some things settle early — a blowout has happened, the line has been
