@@ -134,7 +134,13 @@ export const SCHEMA_STATEMENTS: string[] = [
   // answer is text because the question decides its shape — "820", "over",
   // "yes", "Nana" — and lib/bets.ts checks it against the question. No result
   // column: the outcome is recomputed from the log every time.
-  `CREATE TABLE IF NOT EXISTS predictions (
+  //
+  // Prefixed like bet_days, and not plain "predictions": that name was already
+  // taken in the production database by a table this app didn't create, and
+  // CREATE TABLE IF NOT EXISTS quietly kept the stranger — every read then
+  // failed on a column it didn't have. A prefix keeps this app's tables out of
+  // anyone else's way in a shared database.
+  `CREATE TABLE IF NOT EXISTS bet_predictions (
      id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
      day        date        NOT NULL REFERENCES bet_days (day),
      person_id  uuid        NOT NULL REFERENCES people (id),

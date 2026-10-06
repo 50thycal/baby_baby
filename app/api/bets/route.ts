@@ -54,7 +54,7 @@ export async function GET(req: Request) {
       sql.query(`SELECT ${DAY_COLUMNS} FROM bet_days ORDER BY day`),
       sql`SELECT p.id, to_char(p.day, 'YYYY-MM-DD') AS day, p.person_id, pe.name,
                  p.answer, p.note, p.created_at, p.updated_at
-            FROM predictions p JOIN people pe ON pe.id = p.person_id
+            FROM bet_predictions p JOIN people pe ON pe.id = p.person_id
            ORDER BY p.day, p.created_at`,
     ])) as [BetDay[], Prediction[]];
 
@@ -154,7 +154,7 @@ export async function POST(req: Request) {
     if (answer === null) throw new BadRequest("That answer doesn't fit the question");
 
     const saved = (await sql`
-      INSERT INTO predictions (day, person_id, answer, note)
+      INSERT INTO bet_predictions (day, person_id, answer, note)
       VALUES (${day.day}, ${me}, ${answer}, ${note})
       ON CONFLICT (day, person_id) DO UPDATE
          SET answer = EXCLUDED.answer,

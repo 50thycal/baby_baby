@@ -81,7 +81,7 @@ snapshots        id, taken_at, reason, counts (jsonb), payload (jsonb)
 
 people           id, name (unique, case-insensitive), created_at
 bet_days         day (date), tz, kind, line, created_at — one question a day
-predictions      id, day, person_id, answer (text), note,
+bet_predictions  id, day, person_id, answer (text), note,
                  created_at, updated_at — one per person per day
 ```
 

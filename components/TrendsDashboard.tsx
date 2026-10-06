@@ -549,14 +549,16 @@ function Toggle<T extends string | number>({
                 if (!selected) tick();
                 onChange(o.key);
               }}
-              className="press h-9 flex-1 whitespace-nowrap rounded-[8px] border-2 text-[12px] font-medium"
+              className="press flex h-9 flex-1 items-center justify-center whitespace-nowrap rounded-[8px] border-2"
               style={{
                 background: selected ? "var(--c-ink)" : "var(--c-card)",
                 color: selected ? "var(--c-paper)" : "var(--c-muted)",
                 borderColor: selected ? "var(--c-ink)" : "var(--c-line)",
               }}
             >
-              {o.label}
+              {/* Sized on the span: globals.css gives buttons an unlayered
+                  `font: inherit`, which beats a text size on the button. */}
+              <span className="text-[12px] font-medium">{o.label}</span>
             </button>
           );
         })}
