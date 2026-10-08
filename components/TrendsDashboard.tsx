@@ -5,7 +5,9 @@ import CritterStrip from "@/components/Critters";
 import CumulativeChart from "@/components/CumulativeChart";
 import Explain from "@/components/Explain";
 import GrandTally from "@/components/GrandTally";
+import NightStretchChart from "@/components/NightStretchChart";
 import SleepClock from "@/components/SleepClock";
+import SleepDiary from "@/components/SleepDiary";
 import TrendChart from "@/components/TrendChart";
 import WeightChart from "@/components/WeightChart";
 import {
@@ -22,6 +24,7 @@ import {
   startOfDay,
   type DayProjection,
 } from "@/lib/daily";
+import { nightStretches, sleepDiary } from "@/lib/nights";
 import { useEvents, useWeights } from "@/lib/api";
 import { tick } from "@/lib/haptics";
 import { fmtDuration } from "@/lib/time";
@@ -56,6 +59,15 @@ const CLOCK_SPANS = [
 
 type ClockSpan = (typeof CLOCK_SPANS)[number]["key"];
 
+/** How many nights back the longest-stretch chart reaches. */
+const NIGHT_SPANS = [
+  { key: 14, label: "2 weeks" },
+  { key: 28, label: "4 weeks" },
+  { key: "all", label: "All" },
+] as const;
+
+type NightSpan = (typeof NIGHT_SPANS)[number]["key"];
+
 /** How far back the daily-totals charts reach. */
 const SPANS = [
   { key: 7, label: "1 week" },
@@ -71,7 +83,7 @@ type Span = (typeof SPANS)[number]["key"];
  */
 const SECTIONS = [
   { id: "trends-today", label: "Today" },
-  { id: "trends-clock", label: "Clock" },
+  { id: "trends-clock", label: "Sleep" },
   { id: "trends-daily", label: "Daily" },
   { id: "trends-weight", label: "Weight" },
   { id: "trends-averages", label: "Averages" },
@@ -81,6 +93,7 @@ export default function TrendsDashboard() {
   const [overlay, setOverlay] = useState<number>(1);
   const [span, setSpan] = useState<Span>(7);
   const [clockSpan, setClockSpan] = useState<ClockSpan>(7);
+  const [nightSpan, setNightSpan] = useState<NightSpan>(14);
 
   // One all-time fetch feeds everything here: a week's overlay needs eight days,
   // and "All" on the trends needs the lot. SWR shares this key with the tally.
@@ -149,10 +162,12 @@ export default function TrendsDashboard() {
       trendDiapers: dailyTotals(data, "diaper_count", now, span),
       trendDirty: dailyTotals(data, "poop_count", now, span),
       clock: sleepClock(data, now, clockSpan),
+      diary: sleepDiary(data, now),
+      nights: nightStretches(data, now, nightSpan),
       stats: computeStats(data, now),
       previous: previousWeekStats(data, now),
     };
-  }, [data, now, overlay, span, clockSpan]);
+  }, [data, now, overlay, span, clockSpan, nightSpan]);
 
   if (error) {
     return (
@@ -244,6 +259,18 @@ export default function TrendsDashboard() {
           onChange={(v) => setClockSpan(v as ClockSpan)}
         />
         <SleepClock clock={view.clock} now={now} />
+
+        {/* The stretches, which every chart above folds away: where each sleep
+            actually fell, then how long the longest one ran each night. */}
+        <SleepDiary rows={view.diary} />
+
+        <Toggle
+          label="Longest stretch · nights"
+          options={NIGHT_SPANS}
+          value={nightSpan}
+          onChange={(v) => setNightSpan(v as NightSpan)}
+        />
+        <NightStretchChart points={view.nights} />
       </div>
 
       <div id="trends-daily" className="mt-1 flex scroll-mt-3 flex-col gap-3">
