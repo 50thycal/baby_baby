@@ -413,6 +413,30 @@ the answer is nearly always a night, and a scan that stopped at the end of the
 array would report 22:00–05:00 as two short runs and pick the wrong one as the
 longest.
 
+*Is she getting closer to sleeping through?* — two charts under **When she
+sleeps**, because every other sleep chart totals or averages, and a total can't
+tell fifteen hours in ninety-minute pieces from fifteen hours with a six-hour
+stretch in it. Both live in `lib/nights.ts`.
+
+- **Sleep diary**: one strip per day for the last two weeks, newest at the top,
+  every sleep drawn where it actually fell. Rows run **noon to noon**, because
+  midnight to midnight cuts every night in two and the 10pm–4am stretch you're
+  hoping for comes out as two short bars on two rows. The shaded middle is 6pm
+  to 6am; each night's longest stretch is drawn darker and its length printed
+  at the end of the row (bold from six hours); feeds hang underneath as pink
+  ticks, so a wake-up with a feed right after it explains itself. Rows from
+  before the sleep log began are left off rather than drawn empty.
+- **Longest stretch each night**: one bar per finished night, over two weeks,
+  four, or everything. A night's stretch is the longest sleep that *starts*
+  between 6pm and 6am, followed to its end — the same rule the old 6-hour bet
+  used. Rules at four, five and six hours; a dashed least-squares fit against
+  real dates (so forgotten nights are gaps, not points that squash the
+  timeline). The footer gives the best night, the last week's average, how
+  many nights reached six hours, and — only when the fit is climbing by more
+  than the night-to-night scatter and gets there within three months — a date:
+  "On this trend: six hours around Oct 30". A night with nothing logged is left
+  out rather than drawn as zero, and tonight appears once it's over.
+
 *Which way is this heading* — **Day by day**, one finished day's total per
 point over a week, a fortnight or everything, with a least-squares line fitted
 through it. Today is left out, the same rule the averages follow: it's partial
