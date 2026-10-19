@@ -1,15 +1,12 @@
 import { db } from "@/lib/db";
 import { fail, ok } from "@/lib/http";
+import { eventWindow } from "@/lib/event-window";
 import {
-  ALL_TIME_FLOOR,
-  rangeHours,
-  RANGES,
   type Comment,
   type Diaper,
   type EventsPayload,
   type Feeding,
   type Moment,
-  type RangeKey,
   type SleepSession,
 } from "@/lib/types";
 
@@ -18,14 +15,7 @@ export const dynamic = "force-dynamic";
 /** GET /api/events?range=24h — everything the dashboard draws, in one trip. */
 export async function GET(req: Request) {
   try {
-    const key = new URL(req.url).searchParams.get("range") ?? "24h";
-    const end = new Date();
-
-    const valid = RANGES.some((r) => r.key === key);
-    const hours = rangeHours((valid ? key : "24h") as RangeKey);
-    // `all` has no fixed width, so it runs from the floor instead.
-    const start =
-      hours === null ? new Date(ALL_TIME_FLOOR) : new Date(end.getTime() - hours * 3600_000);
+    const { start, end } = eventWindow(new URL(req.url).searchParams);
 
     const sql = await db();
     const [feedings, sleep, diapers, comments, moments] = await Promise.all([

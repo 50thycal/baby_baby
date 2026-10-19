@@ -7,6 +7,7 @@ import FeedSheet from "@/components/sheets/FeedSheet";
 import ImportSheet from "@/components/sheets/ImportSheet";
 import SettingsSheet from "@/components/sheets/SettingsSheet";
 import SleepSheet from "@/components/sheets/SleepSheet";
+import CatchUpSheet from "@/components/sheets/CatchUpSheet";
 import CritterStrip from "@/components/Critters";
 import { BottleIcon, MoonIcon, NappyIcon, ScaleIcon } from "@/components/icons";
 import BirthWeightSheet from "@/components/sheets/BirthWeightSheet";
@@ -19,6 +20,7 @@ import { fmtAgo, fmtClock, fmtClockRange, fmtDuration } from "@/lib/time";
 import { DIAPER_SHORT } from "@/lib/types";
 
 type Which =
+  | "catch-up"
   | "feed"
   | "sleep"
   | "diaper"
@@ -156,6 +158,14 @@ export default function HomeScreen() {
         )}
       </button>
 
+      <button
+        type="button"
+        onClick={() => setOpen("catch-up")}
+        className="press flex h-11 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-sunk text-sm font-semibold"
+      >
+        Catch up on missed logs
+      </button>
+
       <CritterStrip />
 
       {/* Import, backups and the birth weight are rare, deliberate errands —
@@ -174,6 +184,9 @@ export default function HomeScreen() {
       )}
       {open === "sleep" && <SleepSheet onClose={close} active={asleep} />}
       {open === "diaper" && <DiaperSheet onClose={close} />}
+      {open === "catch-up" && (
+        <CatchUpSheet onClose={close} defaultAmount={data?.lastFeeding?.amount_ml ?? 60} />
+      )}
       {open === "weight" && <WeightSheet onClose={close} previous={lastWeight} />}
       {open === "birth" && <BirthWeightSheet onClose={close} existing={birthWeight} />}
       {open === "import" && <ImportSheet onClose={close} />}
@@ -248,3 +261,4 @@ function ActionTile({
     </button>
   );
 }
+

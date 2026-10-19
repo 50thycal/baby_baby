@@ -149,8 +149,33 @@ actually done at 3am. It carries the last recorded weight so you can read it
 without opening anything.
 
 Every timestamp defaults to now and is adjustable by tapping it — a horizontal
-scroll-snap wheel with 5-minute detents, plus `−1h / −30m / −5m / +5m / reset`
-chips. No date pickers anywhere.
+scroll-snap wheel with 5-minute detents, reaching **24 hours back** (and forward),
+plus `−1 day / −1h / −30m / −5m / +5m / +1 day / Reset` chips. Day jumps can
+recenter the wheel to reach older dates. Every selected time shows its date;
+midnight ticks carry a date label too. No date pickers anywhere.
+
+The expanded wheel includes three aligned context tracks: feeding amounts,
+shaded sleep intervals, and diaper types. Tap a log to read its exact time.
+History loads only while the wheel is open, using a bounded 48-hour query
+around its center, so even editing an old event shows its actual neighbors.
+Loading failures are shown explicitly and don't prevent adjusting the time.
+
+**Catch up on missed logs** on the Log screen opens a persistent entry session.
+It starts yesterday and has previous/next-day, Yesterday, and Today controls.
+Switch between Feed, Diaper, and Sleep without losing the selected time.
+**Save & add another** saves immediately, refreshes the context tracks and the
+day's chronological log list, and keeps the sheet open. Completed naps accept
+both start and end in one request, including naps crossing midnight, without
+changing any live sleep timer. After a nap is saved the cursor moves to its
+wake-up; other saves keep the same time. Future catch-up times and invalid nap
+durations are blocked. A failed save keeps the form intact for retry.
+
+`GET /api/events` also accepts explicit `start` and `end` ISO timestamps for
+this historical context; both are required and the window is capped at 72
+hours. Existing dashboard range queries are unchanged. `POST /api/sleep`
+accepts an optional `sleep_end` for an atomic completed backfill and rejects
+overlaps with existing sleep sessions. Ordinary start-sleep requests retain
+the single-active-session behavior.
 
 **Today** — three time-aligned tracks sharing one horizontal axis: feeding bars
 scaled by volume, sleep blocks scaled by duration, diaper icons. Ranges are
@@ -774,3 +799,4 @@ The app icon is the fox on deep pine, generated from the same sprite data —
 - `maximum-scale=1` stops iOS double-tap zoom during fast repeated taps.
 - Haptics fire on dial and wheel detents where the browser supports it; the
   visuals never depend on it.
+
