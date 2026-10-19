@@ -29,6 +29,15 @@ export function useEvents(range: RangeKey) {
   return useSWR<EventsPayload>(`/api/events?range=${range}`, fetcher, SHARED_OPTS);
 }
 
+/** Historical entry context shares SWR's cache and refreshes after every save. */
+export function useEventWindow(start: number, end: number, enabled = true) {
+  const key = enabled
+    ? `/api/events?start=${encodeURIComponent(new Date(start).toISOString())}&end=${encodeURIComponent(new Date(end).toISOString())}`
+    : null;
+  // Never display the previous day's logs while a newly selected day loads.
+  return useSWR<EventsPayload>(key, fetcher, { ...SHARED_OPTS, keepPreviousData: false });
+}
+
 /**
  * Every weigh-in, always the lot. Weight is a state rather than an event — the
  * current figure has to survive whichever range the timeline is showing — and
@@ -111,3 +120,4 @@ export async function send<T>(method: Method, url: string, body?: unknown): Prom
   await refreshAll();
   return payload as T;
 }
+

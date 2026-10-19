@@ -1,80 +1,84 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useLayoutEffect, useRef, useState } from "react";
+import EntryContext from "@/components/EntryContext";
+import { useEventWindow } from "@/lib/api";
+import {
+  ENTRY_COUNT,
+  ENTRY_ITEM_WIDTH as ITEM_W,
+  ENTRY_SPAN,
+  ENTRY_STEP,
+  entryAnchor,
+  entryIndex,
+  entryTime,
+  shiftLocalDay,
+} from "@/lib/entry-time";
 import { tick } from "@/lib/haptics";
-import { fmtAgo, fmtClock, fmtDayLabel, isSameLocalDay, MINUTE, roundToStep } from "@/lib/time";
+import { fmtAgo, fmtClock, fmtDayLabel, MINUTE, roundToStep } from "@/lib/time";
 
 type Props = {
-  /** The timestamp being edited. */
   value: Date;
   onChange: (next: Date) => void;
-  /** Where the wheel is centred — normally "now", or the event's own time when editing. */
   base: Date;
   accent?: string;
   label?: string;
+  initiallyOpen?: boolean;
 };
 
-const STEP_MIN = 5;
-const SPAN_MIN = 8 * 60; // reachable by scrolling; the chips cover bigger jumps
-const ITEM_W = 24;
-const COUNT = (SPAN_MIN * 2) / STEP_MIN + 1;
-
-/**
- * Tap the time, scrub the wheel. Nobody types a date into this app.
- *
- * The wheel snaps to tidy 5-minute detents around `base`, but an untouched
- * field keeps the exact timestamp it was given.
- */
-export default function TimeField({ value, onChange, base, accent, label }: Props) {
-  const [open, setOpen] = useState(false);
+/** A full day in either direction, with calendar-day jumps for older entries. */
+export default function TimeField({
+  value,
+  onChange,
+  base,
+  accent,
+  label,
+  initiallyOpen = false,
+}: Props) {
+  const [open, setOpen] = useState(initiallyOpen);
+  const [anchor, setAnchor] = useState(() => entryAnchor(base));
+  const [detail, setDetail] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
-  const lastIndex = useRef<number>(-1);
+  const lastIndex = useRef(-1);
+  const timestamp = value.getTime();
+  const start = anchor - ENTRY_SPAN;
+  const end = anchor + ENTRY_SPAN;
+  const { data, error, isLoading } = useEventWindow(start, end, open);
 
-  // Detents are anchored to a rounded base so tick labels land on :00 and :30.
-  const anchor = useMemo(() => roundToStep(base, STEP_MIN).getTime(), [base]);
-  const indexFor = (t: number) =>
-    Math.min(COUNT - 1, Math.max(0, Math.round((t - anchor) / (STEP_MIN * MINUTE)) + SPAN_MIN / STEP_MIN));
-  const timeFor = (index: number) => anchor + (index - SPAN_MIN / STEP_MIN) * STEP_MIN * MINUTE;
-
-  // Centre the wheel on the current value whenever it is opened.
-  useEffect(() => {
-    if (!open) return;
-    const el = scroller.current;
-    if (!el) return;
-    const index = indexFor(value.getTime());
+  // Opening or moving an external cursor must not round an untouched timestamp.
+  useLayoutEffect(() => {
+    if (!open || !scroller.current) return;
+    if (timestamp < anchor - ENTRY_SPAN || timestamp > anchor + ENTRY_SPAN) {
+      setAnchor(entryAnchor(new Date(timestamp)));
+      return;
+    }
+    const index = entryIndex(timestamp, anchor);
     lastIndex.current = index;
-    el.scrollLeft = index * ITEM_W;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  const onScroll = () => {
-    const el = scroller.current;
-    if (!el) return;
-    const index = Math.min(COUNT - 1, Math.max(0, Math.round(el.scrollLeft / ITEM_W)));
-    if (index === lastIndex.current) return;
-    lastIndex.current = index;
-    tick();
-    onChange(new Date(timeFor(index)));
-  };
+    if (Math.round(scroller.current.scrollLeft / ITEM_W) !== index) {
+      scroller.current.scrollLeft = index * ITEM_W;
+    }
+  }, [open, anchor, timestamp]);
 
   const jumpTo = (next: Date) => {
-    const el = scroller.current;
-    const index = indexFor(next.getTime());
-    lastIndex.current = index;
-    onChange(new Date(timeFor(index)));
-    if (el) el.scrollTo({ left: index * ITEM_W, behavior: "smooth" });
+    const rounded = roundToStep(next, ENTRY_STEP);
+    const t = rounded.getTime();
+    setDetail("");
+    if (t < start || t > end) setAnchor(entryAnchor(rounded));
+    else if (scroller.current) {
+      const index = entryIndex(t, anchor);
+      lastIndex.current = index;
+      // Instant positioning avoids intermediate scroll events changing the time.
+      scroller.current.scrollLeft = index * ITEM_W;
+    }
+    onChange(rounded);
     tick();
   };
 
-  const shift = (minutes: number) => jumpTo(new Date(value.getTime() + minutes * MINUTE));
-
-  const now = new Date();
-  const sameDay = isSameLocalDay(value, now);
-
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0">
       <button
         type="button"
+        aria-expanded={open}
+        aria-label={`${label ?? "Event time"}: ${fmtDayLabel(value)} ${fmtClock(value)}`}
         onClick={() => {
           setOpen((v) => !v);
           tick();
@@ -88,77 +92,131 @@ export default function TimeField({ value, onChange, base, accent, label }: Prop
           </span>
         )}
         <span className="flex items-baseline gap-2">
-          <span className="text-3xl font-semibold tabular-nums tracking-[-0.01em]">{fmtClock(value)}</span>
-          <span
-            className="text-sm font-semibold"
-            style={{ color: accent ?? "var(--c-muted)" }}
-            aria-hidden
-          >
+          <span className="text-3xl font-semibold tabular-nums">{fmtClock(value)}</span>
+          <span aria-hidden style={{ color: accent ?? "var(--c-muted)" }}>
             {open ? "▾" : "▸"}
           </span>
         </span>
         <span className="mt-0.5 text-[13px] font-medium text-muted">
-          {sameDay ? fmtAgo(value, now) : `${fmtDayLabel(value)} · ${fmtAgo(value, now)}`}
+          {fmtDayLabel(value)} · {fmtAgo(value)}
         </span>
       </button>
 
       {open && (
         <div className="mt-1">
+          <div className="mb-2 flex justify-center gap-4 text-[11px] font-semibold" aria-hidden>
+            <span className="text-feed-ink">Feed</span>
+            <span className="text-sleep-ink">Sleep</span>
+            <span className="text-diaper-ink">Diaper</span>
+          </div>
           <div className="relative">
-            {/* Centre indicator */}
             <div
-              className="pointer-events-none absolute left-1/2 top-1 z-10 h-9 w-[3px] -translate-x-1/2 rounded-[8px]"
+              aria-hidden
+              className="pointer-events-none absolute bottom-8 left-1/2 top-0 z-10 w-[2px] -translate-x-1/2 rounded"
               style={{ background: accent ?? "var(--c-ink)" }}
             />
             <div
               ref={scroller}
-              onScroll={onScroll}
+              role="group"
+              aria-label="Time scale with feeding, sleep, and diaper history"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                  e.preventDefault();
+                  jumpTo(
+                    new Date(timestamp + (e.key === "ArrowLeft" ? -1 : 1) * ENTRY_STEP * MINUTE),
+                  );
+                }
+              }}
+              onScroll={() => {
+                const el = scroller.current;
+                if (!el) return;
+                const index = Math.max(
+                  0,
+                  Math.min(ENTRY_COUNT - 1, Math.round(el.scrollLeft / ITEM_W)),
+                );
+                if (index === lastIndex.current) return;
+                lastIndex.current = index;
+                setDetail("");
+                onChange(new Date(entryTime(index, anchor)));
+                tick();
+              }}
               className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain pb-1"
-              style={{ scrollSnapType: "x mandatory" }}
             >
               <div className="shrink-0" style={{ width: `calc(50% - ${ITEM_W / 2}px)` }} />
-              {Array.from({ length: COUNT }, (_, i) => {
-                const t = new Date(timeFor(i));
-                const minutes = t.getMinutes();
-                const isHour = minutes === 0;
-                const isHalf = minutes % 30 === 0;
-                return (
-                  <div
-                    key={i}
-                    className="flex shrink-0 snap-center flex-col items-center"
-                    style={{ width: ITEM_W }}
-                  >
-                    <div
-                      className="w-[2px] rounded-[8px] bg-line"
-                      style={{ height: isHour ? 30 : isHalf ? 22 : 14 }}
+              <div className="shrink-0" style={{ width: ENTRY_COUNT * ITEM_W }}>
+                {data ? (
+                  <div className="px-3">
+                    <EntryContext
+                      data={data}
+                      start={start}
+                      end={end}
+                      width={(ENTRY_COUNT - 1) * ITEM_W}
+                      onInspect={setDetail}
                     />
-                    {/* Absolute so an hour label can overhang its 24px detent. */}
-                    <div className="relative mt-1 h-4 w-full">
-                      {isHour && (
-                        <span className="absolute left-1/2 top-0 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold tabular-nums text-muted">
-                          {t.toLocaleTimeString([], { hour: "numeric" })}
-                        </span>
-                      )}
-                    </div>
                   </div>
-                );
-              })}
+                ) : (
+                  <div className="h-[116px]" />
+                )}
+                <TimeTicks anchor={anchor} />
+              </div>
               <div className="shrink-0" style={{ width: `calc(50% - ${ITEM_W / 2}px)` }} />
             </div>
           </div>
-
-          <div className="mt-2 flex justify-center gap-2">
-            <Chip onClick={() => shift(-60)}>−1h</Chip>
-            <Chip onClick={() => shift(-30)}>−30m</Chip>
-            <Chip onClick={() => shift(-5)}>−5m</Chip>
-            <Chip onClick={() => shift(5)}>+5m</Chip>
-            <Chip onClick={() => jumpTo(base)}>⟲</Chip>
+          <p role="status" className="min-h-5 text-center text-[11px] text-muted">
+            {error
+              ? "History couldn’t load. You can still set the time."
+              : isLoading
+                ? "Loading nearby logs…"
+                : detail || "Scroll to set the time · tap a log for details"}
+          </p>
+          <div className="mt-2 flex flex-wrap justify-center gap-2">
+            <Chip onClick={() => jumpTo(shiftLocalDay(value, -1))}>−1 day</Chip>
+            <Chip onClick={() => jumpTo(new Date(timestamp - 60 * MINUTE))}>−1h</Chip>
+            <Chip onClick={() => jumpTo(new Date(timestamp - 30 * MINUTE))}>−30m</Chip>
+            <Chip onClick={() => jumpTo(new Date(timestamp - 5 * MINUTE))}>−5m</Chip>
+            <Chip onClick={() => jumpTo(new Date(timestamp + 5 * MINUTE))}>+5m</Chip>
+            <Chip onClick={() => jumpTo(shiftLocalDay(value, 1))}>+1 day</Chip>
+            <Chip onClick={() => jumpTo(base)}>Reset</Chip>
           </div>
         </div>
       )}
     </div>
   );
 }
+
+const TimeTicks = memo(function TimeTicks({ anchor }: { anchor: number }) {
+  return (
+    <div className="flex" aria-hidden>
+      {Array.from({ length: ENTRY_COUNT }, (_, i) => {
+        const t = new Date(entryTime(i, anchor));
+        const minutes = t.getMinutes();
+        const isHour = minutes === 0;
+        const midnight = isHour && t.getHours() === 0;
+        return (
+          <div
+            key={i}
+            className="flex shrink-0 snap-center flex-col items-center"
+            style={{ width: ITEM_W }}
+          >
+            <div
+              className="w-[2px] rounded bg-line"
+              style={{ height: isHour ? 30 : minutes % 30 === 0 ? 22 : 14 }}
+            />
+            <div className="relative mt-1 h-7 w-full">
+              {isHour && (
+                <span className="absolute left-1/2 top-0 -translate-x-1/2 whitespace-nowrap text-center text-[10px] font-semibold text-muted">
+                  {fmtClock(t)}
+                  {midnight && <span className="block text-ink">{fmtDayLabel(t)}</span>}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+});
 
 function Chip({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
   return (
