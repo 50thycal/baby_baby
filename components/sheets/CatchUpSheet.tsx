@@ -78,11 +78,74 @@ export default function CatchUpSheet({
     : [];
 
   return (
-    <Sheet title="Catch up" onClose={onClose} accent={ACCENT[kind]}>
-      <p className="mb-3 text-center text-sm text-muted">
+    <Sheet
+      title="Catch up"
+      onClose={onClose}
+      accent={ACCENT[kind]}
+      footer={
+        <>
+          <ConfirmButton
+            key={kind}
+            label={`Save ${kind} & add another`}
+            accent={ACCENT[kind]}
+            disabled={
+              invalidTime || (kind === "diaper" && !diaper) || (kind === "sleep" && invalidSleep)
+            }
+            onConfirm={async () => {
+              setSaving(true);
+              try {
+                if (kind === "feed")
+                  await send("POST", "/api/feedings", {
+                    amount_ml: amount,
+                    ts: ts.toISOString(),
+                  });
+                else if (kind === "diaper")
+                  await send("POST", "/api/diapers", {
+                    type: diaper,
+                    ts: ts.toISOString(),
+                  });
+                else
+                  await send("POST", "/api/sleep", {
+                    sleep_start: ts.toISOString(),
+                    sleep_end: end.toISOString(),
+                  });
+                setSaved((n) => n + 1);
+                notify(
+                  `${kind === "sleep" ? "Sleep" : kind === "feed" ? "Feed" : "Diaper"} saved · ${fmtDayLabel(ts)} ${fmtClock(ts)}`,
+                );
+                if (kind === "sleep") {
+                  setTs(end);
+                  setEnd(new Date(end.getTime() + HOUR));
+                }
+                // Require a fresh diaper selection so another tap can't repeat it.
+                if (kind === "diaper") setDiaper(null);
+              } finally {
+                setSaving(false);
+              }
+            }}
+          />
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <p role="status" className=" text-center text-xs text-muted">
+              {saved
+                ? `${saved} ${saved === 1 ? "entry" : "entries"} added this session`
+                : "Each entry saves immediately"}
+            </p>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={onClose}
+              className="press h-10 rounded-[8px] bg-sunk px-4 text-sm font-semibold"
+            >
+              Done
+            </button>
+          </div>
+        </>
+      }
+    >
+      <p className="catch-up-help mb-2 text-center text-xs text-muted">
         Fill in missed logs. Your place stays put after every save.
       </p>
-      <fieldset disabled={saving} className="min-w-0 space-y-3 disabled:opacity-70">
+      <fieldset disabled={saving} className="catch-up-fields min-w-0 space-y-2 disabled:opacity-70">
         <div className="flex items-center justify-between gap-2">
           <button
             type="button"
@@ -97,7 +160,7 @@ export default function CatchUpSheet({
             <div className="flex justify-center gap-3 text-xs text-muted">
               <button
                 type="button"
-                className="press py-2 underline"
+                className="press py-1 underline"
                 onClick={() => {
                   const yesterday = shiftLocalDay(new Date(), -1);
                   yesterday.setHours(ts.getHours(), ts.getMinutes(), 0, 0);
@@ -108,7 +171,7 @@ export default function CatchUpSheet({
               </button>
               <button
                 type="button"
-                className="press py-2 underline"
+                className="press py-1 underline"
                 onClick={() => {
                   const next = new Date();
                   next.setHours(ts.getHours(), ts.getMinutes(), 0, 0);
@@ -179,54 +242,12 @@ export default function CatchUpSheet({
               : "Wake-up must be after falling asleep and no later than now."}
           </p>
         )}
-        <ConfirmButton
-          key={kind}
-          label={`Save ${kind} & add another`}
-          accent={ACCENT[kind]}
-          disabled={
-            invalidTime || (kind === "diaper" && !diaper) || (kind === "sleep" && invalidSleep)
-          }
-          onConfirm={async () => {
-            setSaving(true);
-            try {
-              if (kind === "feed")
-                await send("POST", "/api/feedings", {
-                  amount_ml: amount,
-                  ts: ts.toISOString(),
-                });
-              else if (kind === "diaper")
-                await send("POST", "/api/diapers", {
-                  type: diaper,
-                  ts: ts.toISOString(),
-                });
-              else
-                await send("POST", "/api/sleep", {
-                  sleep_start: ts.toISOString(),
-                  sleep_end: end.toISOString(),
-                });
-              setSaved((n) => n + 1);
-              notify(
-                `${kind === "sleep" ? "Sleep" : kind === "feed" ? "Feed" : "Diaper"} saved · ${fmtDayLabel(ts)} ${fmtClock(ts)}`,
-              );
-              if (kind === "sleep") {
-                setTs(end);
-                setEnd(new Date(end.getTime() + HOUR));
-              }
-              // Require a fresh diaper selection so another tap can't repeat it.
-              if (kind === "diaper") setDiaper(null);
-            } finally {
-              setSaving(false);
-            }
-          }}
-        />
       </fieldset>
-      <p role="status" className="mt-3 text-center text-xs text-muted">
-        {saved
-          ? `${saved} ${saved === 1 ? "entry" : "entries"} added this session`
-          : "Each entry saves immediately"}
-      </p>
-      <div className="mt-4 rounded-[10px] bg-sunk p-3">
-        <h3 className="text-xs font-semibold">Already logged · {fmtDayLabel(ts)}</h3>
+
+      <details className="catch-up-history mt-2 rounded-[10px] bg-sunk px-3 py-1">
+        <summary className="cursor-pointer text-xs font-semibold">
+          Already logged · {fmtDayLabel(ts)} ({entries.length})
+        </summary>
         {error ? (
           <p role="alert" className="mt-2 text-xs text-danger">
             Couldn’t load this day’s logs. Check your connection before adding more.
@@ -248,15 +269,7 @@ export default function CatchUpSheet({
         ) : (
           <p className="mt-2 text-xs text-muted">Nothing logged for this day yet.</p>
         )}
-      </div>
-      <button
-        type="button"
-        disabled={saving}
-        onClick={onClose}
-        className="press mt-3 h-11 w-full rounded-[8px] bg-sunk text-sm font-semibold"
-      >
-        Done
-      </button>
+      </details>
     </Sheet>
   );
 }

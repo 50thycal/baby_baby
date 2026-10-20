@@ -43,20 +43,12 @@ export default function WeightSheet({
   const change = previous ? ounces - ouncesFromGrams(previous.weight_g) : null;
 
   return (
-    <Sheet onClose={onClose} title="Weight" accent={ACCENT}>
-      <div className="flex flex-col items-center gap-2">
-        <WeightField value={ounces} onChange={setOunces} accent={ACCENT} />
-
-        <p className="text-[13px] text-muted">
-          {fmtKg(grams)}
-          {change !== null && change !== 0 && (
-            <> · {fmtOunceChange(change)} since last time</>
-          )}
-        </p>
-
-        <TimeField value={ts} onChange={setTs} base={base} accent={ACCENT} label="Weighed" />
-
-        <div className="mt-1 w-full">
+    <Sheet
+      onClose={onClose}
+      title="Weight"
+      accent={ACCENT}
+      footer={
+        <>
           <ConfirmButton
             label="Save weight"
             accent={ACCENT}
@@ -69,7 +61,18 @@ export default function WeightSheet({
               onClose();
             }}
           />
-        </div>
+        </>
+      }
+    >
+      <div className="flex flex-col items-center gap-2">
+        <WeightField value={ounces} onChange={setOunces} accent={ACCENT} />
+
+        <p className="text-[13px] text-muted">
+          {fmtKg(grams)}
+          {change !== null && change !== 0 && <> · {fmtOunceChange(change)} since last time</>}
+        </p>
+
+        <TimeField value={ts} onChange={setTs} base={base} accent={ACCENT} label="Weighed" />
       </div>
     </Sheet>
   );

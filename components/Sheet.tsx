@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect } from "react";
+import { createContext, useEffect, useMemo, useState } from "react";
+
+/** Only one time scale needs to be expanded inside a sheet. */
+export const SheetTimeContext = createContext<{
+  active: string | null;
+  setActive: (id: string | null) => void;
+} | null>(null);
 
 type Props = {
   onClose: () => void;
   title?: string;
   accent?: string;
   children: React.ReactNode;
+  footer?: React.ReactNode;
 };
 
 /**
@@ -14,7 +21,9 @@ type Props = {
  * closes on backdrop tap or Escape. Parents mount it conditionally, so each
  * open starts from fresh state.
  */
-export default function Sheet({ onClose, title, accent, children }: Props) {
+export default function Sheet({ onClose, title, accent, children, footer }: Props) {
+  const [active, setActive] = useState<string | null>(null);
+  const timeGroup = useMemo(() => ({ active, setActive }), [active]);
   useEffect(() => {
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -37,19 +46,24 @@ export default function Sheet({ onClose, title, accent, children }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="animate-sheet relative max-h-[92vh] overflow-y-auto rounded-t-[24px] border-t border-line bg-card px-5 pt-3"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 22px)" }}
+        className={`sheet-dialog animate-sheet relative flex max-h-[92dvh] flex-col overflow-hidden rounded-t-[24px] border-t border-line bg-card px-5 pt-3 ${footer ? "entry-sheet" : ""}`}
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
       >
-        <div className="mx-auto mb-4 h-1 w-10 rounded-[8px] bg-line" />
+        <div className="sheet-handle mx-auto mb-4 h-1 w-10 shrink-0 rounded-[8px] bg-line" />
         {title && (
           <h2
-            className="mb-4 text-center text-[13px] font-medium uppercase tracking-[0.12em]"
+            className="sheet-title mb-4 shrink-0 text-center text-[13px] font-medium uppercase tracking-[0.12em]"
             style={{ color: accent ?? "var(--c-muted)" }}
           >
             {title}
           </h2>
         )}
-        {children}
+        <SheetTimeContext.Provider value={timeGroup}>
+          <div className="sheet-body min-h-0 overflow-y-auto">{children}</div>
+          {footer && (
+            <div className="sheet-footer shrink-0 border-t border-line bg-card pt-2">{footer}</div>
+          )}
+        </SheetTimeContext.Provider>
       </div>
     </div>
   );
