@@ -499,22 +499,35 @@ button {
 }
 
 .time-header {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  column-gap: 8px;
-  padding: 4px 8px;
-  text-align: left;
+  justify-content: center;
+  min-height: 44px;
+  padding: 1px 8px;
+  text-align: center;
 }
-.time-label,
+.time-label {
+  line-height: 10px;
+}
 .time-clock {
-  grid-column: 1;
+  position: relative;
+  gap: 0;
+}
+.time-value {
+  line-height: 24px;
+}
+.time-clock > [aria-hidden] {
+  /* Keep the digits centered rather than shifting them to allow for the caret. */
+  position: absolute;
+  left: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
 }
 .time-date {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  max-width: 150px;
-  text-align: right;
+  max-width: 100%;
+  line-height: 12px;
+  text-align: center;
 }
 /* The catch-up form needs both amount and time visible at once. Keep the same
    dial and +/- controls, side by side instead of stacking them. */
