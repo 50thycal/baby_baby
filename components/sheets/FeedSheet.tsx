@@ -30,7 +30,24 @@ export default function FeedSheet({ onClose, defaultAmount }: Props) {
   const hint = history ? likelyAmount(history.feedings, new Date()) : null;
 
   return (
-    <Sheet onClose={onClose} title="Feed" accent="var(--c-feed)">
+    <Sheet
+      onClose={onClose}
+      title="Feed"
+      accent="var(--c-feed)"
+      footer={
+        <>
+          <ConfirmButton
+            label="Confirm"
+            accent="var(--c-feed)"
+            onConfirm={async () => {
+              await send("POST", "/api/feedings", { amount_ml: amount, ts: ts.toISOString() });
+              notify(`Logged ${amount} mL`);
+              onClose();
+            }}
+          />
+        </>
+      }
+    >
       <div className="flex flex-col items-center gap-1">
         <Dial value={amount} onChange={setAmount} />
         {hint && (
@@ -41,17 +58,6 @@ export default function FeedSheet({ onClose, defaultAmount }: Props) {
           </p>
         )}
         <TimeField value={ts} onChange={setTs} base={base} accent="var(--c-feed)" />
-        <div className="mt-2 w-full">
-          <ConfirmButton
-            label="Confirm"
-            accent="var(--c-feed)"
-            onConfirm={async () => {
-              await send("POST", "/api/feedings", { amount_ml: amount, ts: ts.toISOString() });
-              notify(`Logged ${amount} mL`);
-              onClose();
-            }}
-          />
-        </div>
 
         {/* A spit-up usually gets noticed while you're logging the feed, so it
             hangs off this sheet — but it's its own event with its own time,

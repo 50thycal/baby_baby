@@ -27,7 +27,37 @@ export default function SleepSheet({ onClose, active }: Props) {
   const wouldBeNegative = start !== null && ts.getTime() <= start.getTime();
 
   return (
-    <Sheet onClose={onClose} title={active ? "Wake up" : "Sleep"} accent="var(--c-sleep)">
+    <Sheet
+      onClose={onClose}
+      title={active ? "Wake up" : "Sleep"}
+      accent="var(--c-sleep)"
+      footer={
+        <>
+          <ConfirmButton
+            label={active ? "Baby's Awake" : "Start Sleep"}
+            accent="var(--c-sleep)"
+            disabled={wouldBeNegative}
+            onConfirm={async () => {
+              if (active) {
+                await send("PATCH", `/api/sleep/${active.id}`, { sleep_end: ts.toISOString() });
+                notify(
+                  `Slept ${fmtDuration(ts.getTime() - new Date(active.sleep_start).getTime())}`,
+                );
+              } else {
+                await send("POST", "/api/sleep", { sleep_start: ts.toISOString() });
+                notify("Sleep started");
+              }
+              onClose();
+            }}
+          />
+          {wouldBeNegative && (
+            <p className="mt-2 text-center text-sm font-medium text-danger">
+              Wake-up time has to be after {fmtClock(start!)}
+            </p>
+          )}
+        </>
+      }
+    >
       <div className="flex flex-col items-center gap-2">
         {active && start ? (
           <div className="mb-1 flex flex-col items-center">
@@ -51,29 +81,6 @@ export default function SleepSheet({ onClose, active }: Props) {
           accent="var(--c-sleep)"
           label={active ? "Woke up" : "Fell asleep"}
         />
-
-        <div className="mt-2 w-full">
-          <ConfirmButton
-            label={active ? "Baby's Awake" : "Start Sleep"}
-            accent="var(--c-sleep)"
-            disabled={wouldBeNegative}
-            onConfirm={async () => {
-              if (active) {
-                await send("PATCH", `/api/sleep/${active.id}`, { sleep_end: ts.toISOString() });
-                notify(`Slept ${fmtDuration(ts.getTime() - new Date(active.sleep_start).getTime())}`);
-              } else {
-                await send("POST", "/api/sleep", { sleep_start: ts.toISOString() });
-                notify("Sleep started");
-              }
-              onClose();
-            }}
-          />
-          {wouldBeNegative && (
-            <p className="mt-2 text-center text-sm font-medium text-danger">
-              Wake-up time has to be after {fmtClock(start!)}
-            </p>
-          )}
-        </div>
 
         {/* Fussiness belongs to the sleep story rather than the feeding one, so
             it hangs off this sheet — its own event, with its own time. */}

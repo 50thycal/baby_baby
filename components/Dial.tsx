@@ -84,12 +84,16 @@ export default function Dial({ value, onChange, max = 200, step = 5 }: Props) {
   };
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="amount-dial flex flex-col items-center">
       <div className="relative">
         <svg
           ref={svgRef}
           viewBox={`0 0 ${SIZE} ${SIZE}`}
-          className="h-[260px] w-[260px] touch-none select-none"
+          className="amount-dial-face touch-none select-none"
+          style={{
+            width: "var(--entry-dial-size, 260px)",
+            height: "var(--entry-dial-size, 260px)",
+          }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           role="slider"
@@ -157,7 +161,10 @@ export default function Dial({ value, onChange, max = 200, step = 5 }: Props) {
         </svg>
 
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <div className="text-[68px] font-semibold leading-none tabular-nums tracking-tight">
+          <div
+            className="font-semibold leading-none tabular-nums tracking-tight"
+            style={{ fontSize: "var(--entry-amount-size, 68px)" }}
+          >
             {value}
           </div>
           <div className="mt-1 text-lg font-semibold text-muted">mL</div>
@@ -186,7 +193,7 @@ function NudgeButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="press h-12 w-20 rounded-[10px] bg-feed-wash text-lg font-medium text-feed-ink disabled:opacity-35"
+      className="amount-nudge press h-12 w-20 rounded-[10px] bg-feed-wash text-lg font-medium text-feed-ink disabled:opacity-35"
     >
       {label}
     </button>

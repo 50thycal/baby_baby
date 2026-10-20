@@ -40,7 +40,7 @@ export default function ConfirmButton({ label, accent, onConfirm, disabled }: Pr
         type="button"
         onClick={run}
         disabled={busy || disabled}
-        className="press h-16 w-full rounded-[8px] text-xl font-medium disabled:opacity-60"
+        className="confirm-action press h-16 w-full rounded-[8px] text-xl font-medium disabled:opacity-60"
         style={{ background: accent, color: "#fff" }}
       >
         {busy ? "Saving…" : label}

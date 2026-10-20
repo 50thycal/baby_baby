@@ -150,8 +150,7 @@ without opening anything.
 
 Every timestamp defaults to now and is adjustable by tapping it — a horizontal
 scroll-snap wheel with 5-minute detents, reaching **24 hours back** (and forward),
-plus `−1 day / −1h / −30m / −5m / +5m / +1 day / Reset` chips. Day jumps can
-recenter the wheel to reach older dates. Every selected time shows its date;
+plus the original `−1h / −30m / −5m / +5m / ⟲` chips in one row. Every selected time shows its date;
 midnight ticks carry a date label too. No date pickers anywhere.
 
 The expanded wheel includes three aligned context tracks: feeding amounts,
@@ -159,12 +158,16 @@ shaded sleep intervals, and diaper types. Tap a log to read its exact time.
 History loads only while the wheel is open, using a bounded 48-hour query
 around its center, so even editing an old event shows its actual neighbors.
 Loading failures are shown explicitly and don't prevent adjusting the time.
+Opening the scale compacts the amount dial, diaper choices, and history tracks
+to keep the entry controls visible together. The save action stays in a fixed
+sheet footer. Only one time scale is expanded per sheet; opening a sleep's
+wake-up scale closes its start scale without changing either timestamp.
 
 **Catch up on missed logs** on the Log screen opens a persistent entry session.
 It starts yesterday and has previous/next-day, Yesterday, and Today controls.
 Switch between Feed, Diaper, and Sleep without losing the selected time.
 **Save & add another** saves immediately, refreshes the context tracks and the
-day's chronological log list, and keeps the sheet open. Completed naps accept
+day's chronological log list (available under **Already logged**), and keeps the sheet open. Completed naps accept
 both start and end in one request, including naps crossing midnight, without
 changing any live sleep timer. After a nap is saved the cursor moves to its
 wake-up; other saves keep the same time. Future catch-up times and invalid nap

@@ -17,35 +17,19 @@ import { MOMENT_ACCENT, MOMENT_LABEL, type MomentKind } from "@/lib/types";
  * "roughly when", and asking it the familiar way means nobody has to learn
  * anything new at 3am.
  */
-export default function MomentSheet({
-  kind,
-  onClose,
-}: {
-  kind: MomentKind;
-  onClose: () => void;
-}) {
+export default function MomentSheet({ kind, onClose }: { kind: MomentKind; onClose: () => void }) {
   const base = useRef(new Date()).current;
   const [ts, setTs] = useState(base);
   const notify = useToast();
   const accent = MOMENT_ACCENT[kind];
 
   return (
-    <Sheet onClose={onClose} title={MOMENT_LABEL[kind]} accent={accent}>
-      <div className="flex flex-col items-center gap-3">
-        <div
-          className="flex h-24 w-24 items-center justify-center rounded-[8px]"
-          style={{ background: `color-mix(in srgb, ${accent} 14%, transparent)` }}
-          aria-hidden
-        >
-          <MomentIcon kind={kind} size={64} />
-        </div>
-        <p className="text-center text-[13px] text-muted">
-          Just the time — no amount to record.
-        </p>
-
-        <TimeField value={ts} onChange={setTs} base={base} accent={accent} label="When" />
-
-        <div className="mt-1 w-full">
+    <Sheet
+      onClose={onClose}
+      title={MOMENT_LABEL[kind]}
+      accent={accent}
+      footer={
+        <>
           <ConfirmButton
             label={`Log ${MOMENT_LABEL[kind].toLowerCase()}`}
             accent={accent}
@@ -55,7 +39,20 @@ export default function MomentSheet({
               onClose();
             }}
           />
+        </>
+      }
+    >
+      <div className="flex flex-col items-center gap-3">
+        <div
+          className="flex h-24 w-24 items-center justify-center rounded-[8px]"
+          style={{ background: `color-mix(in srgb, ${accent} 14%, transparent)` }}
+          aria-hidden
+        >
+          <MomentIcon kind={kind} size={64} />
         </div>
+        <p className="text-center text-[13px] text-muted">Just the time — no amount to record.</p>
+
+        <TimeField value={ts} onChange={setTs} base={base} accent={accent} label="When" />
       </div>
     </Sheet>
   );

@@ -17,7 +17,26 @@ export default function DiaperSheet({ onClose }: { onClose: () => void }) {
   const notify = useToast();
 
   return (
-    <Sheet onClose={onClose} title="Diaper" accent="var(--c-diaper)">
+    <Sheet
+      onClose={onClose}
+      title="Diaper"
+      accent="var(--c-diaper)"
+      footer={
+        type && (
+          <>
+            <ConfirmButton
+              label="Confirm"
+              accent="var(--c-diaper)"
+              onConfirm={async () => {
+                await send("POST", "/api/diapers", { type, ts: ts.toISOString() });
+                notify(`Logged ${DIAPER_LABEL[type]}`);
+                onClose();
+              }}
+            />
+          </>
+        )
+      }
+    >
       <DiaperPicker
         value={type}
         onChange={(next) => {
@@ -29,17 +48,6 @@ export default function DiaperSheet({ onClose }: { onClose: () => void }) {
       {type && (
         <div className="animate-pop mt-3 flex flex-col items-center gap-2">
           <TimeField value={ts} onChange={setTs} base={base} accent="var(--c-diaper)" />
-          <div className="mt-1 w-full">
-            <ConfirmButton
-              label="Confirm"
-              accent="var(--c-diaper)"
-              onConfirm={async () => {
-                await send("POST", "/api/diapers", { type, ts: ts.toISOString() });
-                notify(`Logged ${DIAPER_LABEL[type]}`);
-                onClose();
-              }}
-            />
-          </div>
         </div>
       )}
     </Sheet>
@@ -54,7 +62,7 @@ export function DiaperPicker({
   onChange: (next: DiaperType) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="diaper-picker grid grid-cols-2 gap-3">
       {DIAPER_TYPES.map((t) => {
         const selected = value === t;
         return (

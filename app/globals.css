@@ -448,3 +448,84 @@ button {
     transform: none;
   }
 }
+
+
+/* Expanding a time scale keeps the entry controls together on a phone.
+   The save action is outside the scrolling body, including on short screens. */
+.sheet-dialog:has([data-time-open="true"]) {
+  --entry-dial-size: clamp(88px, 17dvh, 144px);
+  --entry-amount-size: clamp(28px, 6dvh, 44px);
+  max-height: calc(100dvh - 8px);
+  padding-top: 8px;
+}
+.sheet-dialog:has([data-time-open="true"]) .sheet-handle {
+  margin-bottom: 6px;
+}
+.sheet-dialog:has([data-time-open="true"]) .sheet-title {
+  margin-bottom: 8px;
+}
+.sheet-dialog:has([data-time-open="true"]) .amount-nudge {
+  height: 40px;
+}
+.sheet-dialog:has([data-time-open="true"]) .diaper-picker {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.sheet-dialog:has([data-time-open="true"]) .diaper-picker > button {
+  height: 76px;
+  gap: 4px;
+}
+.sheet-dialog:has([data-time-open="true"]) .diaper-picker svg {
+  width: 24px;
+  height: 24px;
+}
+.sheet-dialog:has([data-time-open="true"]) .diaper-picker > button > span:last-child {
+  padding-inline: 2px;
+  font-size: 11px;
+}
+.entry-sheet .confirm-action {
+  height: 52px;
+  font-size: 18px;
+}
+.time-detail {
+  /* Two lines are reserved, so inspecting a log doesn't shift the controls. */
+  height: 24px;
+  overflow-y: auto;
+}
+@media (max-height: 700px) {
+  .entry-sheet:has([data-time-open="true"]) .catch-up-help {
+    display: none;
+  }
+}
+
+.time-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: 8px;
+  padding: 4px 8px;
+  text-align: left;
+}
+.time-label,
+.time-clock {
+  grid-column: 1;
+}
+.time-date {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  max-width: 150px;
+  text-align: right;
+}
+/* The catch-up form needs both amount and time visible at once. Keep the same
+   dial and +/- controls, side by side instead of stacking them. */
+.entry-sheet:has([data-time-open="true"]) .catch-up-fields .amount-dial {
+  flex-direction: row;
+  justify-content: center;
+  gap: 8px;
+}
+.entry-sheet:has([data-time-open="true"]) .catch-up-fields .amount-nudge {
+  width: 56px;
+}
+.entry-sheet:has([data-time-open="true"]) .catch-up-fields > :not(:last-child) {
+  margin-block: 0 4px;
+}
