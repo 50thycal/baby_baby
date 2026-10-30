@@ -2,6 +2,7 @@
 
 import { useCallback, useRef } from "react";
 import { tick } from "@/lib/haptics";
+import { fmtOz } from "@/lib/volume";
 
 type Props = {
   value: number;
@@ -26,7 +27,7 @@ const CENTER = SIZE / 2;
  */
 const DETENTS = 10;
 
-export default function Dial({ value, onChange, max = 200, step = 5 }: Props) {
+export default function Dial({ value, onChange, max = 300, step = 5 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const lastValue = useRef(value);
 
@@ -129,7 +130,7 @@ export default function Dial({ value, onChange, max = 200, step = 5 }: Props) {
             transform={`rotate(${START} ${CENTER} ${CENTER})`}
             style={{ transition: "stroke-dasharray 90ms linear" }}
           />
-          {/* Detent marks — max / DETENTS apart, so 20 mL on a 200 mL dial */}
+          {/* Detent marks — max / DETENTS apart, so 30 mL on a 300 mL dial */}
           {Array.from({ length: DETENTS + 1 }, (_, i) => {
             const a = ((START + (SWEEP * i) / DETENTS) * Math.PI) / 180;
             const inner = R - 4;
@@ -171,9 +172,18 @@ export default function Dial({ value, onChange, max = 200, step = 5 }: Props) {
         </div>
       </div>
 
-      <div className="mt-1 flex items-center gap-3">
-        <NudgeButton label={`−${step}`} onClick={() => nudge(-step)} disabled={value <= 0} />
-        <NudgeButton label={`+${step}`} onClick={() => nudge(step)} disabled={value >= max} />
+      {/* Ounces sit with the buttons rather than inside the gauge: on a short
+          screen the gauge shrinks to 88px and the middle has room for the mL
+          figure alone. Grouped this way, the side-by-side catch-up layout keeps
+          them together too. */}
+      <div className="mt-1 flex flex-col items-center gap-1">
+        <div className="amount-oz text-[15px] font-medium tabular-nums text-muted">
+          ≈ {fmtOz(value)}
+        </div>
+        <div className="flex items-center gap-3">
+          <NudgeButton label={`−${step}`} onClick={() => nudge(-step)} disabled={value <= 0} />
+          <NudgeButton label={`+${step}`} onClick={() => nudge(step)} disabled={value >= max} />
+        </div>
       </div>
     </div>
   );
