@@ -117,8 +117,8 @@ be a strip of status lines above the tiles as well, which said everything twice
 ("1h 47m ago — 113 mL" over a tile reading "last 113 mL"), so each fact now
 lives once, on the button you'd press about it.
 
-- **Feed** opens a 270° drag dial (0–200 mL, snaps to 5, with `−5`/`+5` for
-  precision). It defaults to the last feed's amount, since the next one usually
+- **Feed** opens a 270° drag dial (0–300 mL, snaps to 5, with `−5`/`+5` for
+  precision, and the same amount in US fluid ounces beside them). It defaults to the last feed's amount, since the next one usually
   matches. The gap at the bottom of the gauge is deliberate: you can't drag past
   the top of the scale and wrap around to 0. Detents are a fixed *count* rather
   than a fixed interval — ten gaps read as marks you can count at any ceiling,

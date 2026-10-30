@@ -10,6 +10,7 @@ import TimeField from "@/components/TimeField";
 import { useToast } from "@/components/Toaster";
 import { send, useEvents } from "@/lib/api";
 import { likelyAmount } from "@/lib/predict";
+import { fmtOz } from "@/lib/volume";
 
 type Props = {
   onClose: () => void;
@@ -41,7 +42,7 @@ export default function FeedSheet({ onClose, defaultAmount }: Props) {
             accent="var(--c-feed)"
             onConfirm={async () => {
               await send("POST", "/api/feedings", { amount_ml: amount, ts: ts.toISOString() });
-              notify(`Logged ${amount} mL`);
+              notify(`Logged ${amount} mL (${fmtOz(amount)})`);
               onClose();
             }}
           />
