@@ -3,6 +3,8 @@ import { test } from "node:test";
 import {
   availability,
   BBP,
+  betting,
+  closesAt,
   currentDay,
   dayWindow,
   hintFor,
@@ -16,6 +18,7 @@ import {
   outcome,
   pastWindows,
   pickKind,
+  questionWindow,
   scoreDay,
   shiftDay,
   standings,
@@ -79,10 +82,19 @@ const pred = (person: string, answer: string | null): Prediction => ({
 
 // --- days and zones ----------------------------------------------------------
 
-test("the open day is always tomorrow on the wall clock", () => {
-  assert.equal(currentDay(at(10, 23, 59), TZ), "2026-10-10");
-  assert.equal(openDay(at(10, 23, 59), TZ), "2026-10-11");
-  assert.equal(openDay(at(11, 0, 1), TZ), "2026-10-12");
+test("the open day is today on the wall clock — a 6pm bet is about that same day", () => {
+  assert.equal(currentDay(at(10, 18), TZ), "2026-10-10");
+  assert.equal(openDay(at(10, 18), TZ), "2026-10-10");
+  assert.equal(openDay(at(10, 23, 59), TZ), "2026-10-10");
+  assert.equal(openDay(at(11, 0, 1), TZ), "2026-10-11");
+});
+
+test("every question is either about today or about tonight", () => {
+  const night = KINDS.filter((k) => k.period === "night").map((k) => k.id).sort();
+  assert.deepEqual(night, ["longest_sleep", "six_hours"]);
+  for (const k of KINDS) {
+    assert.match(k.ask, k.period === "night" ? /tonight/ : /today/, `${k.id} says when it's about`);
+  }
 });
 
 test("a day runs midnight to midnight in its own zone, DST included", () => {
@@ -204,13 +216,58 @@ test("landing exactly on a sleep line is no contest", () => {
   assert.deepEqual([r.settled, r.void], [true, true]);
 });
 
-test("a stretch belongs to the day it starts and is followed past midnight", () => {
-  // Down at 10pm, up at 5am: a seven-hour stretch, not two hours.
+const NIGHT = questionWindow(K("six_hours"), DAY, TZ);
+
+test("tonight runs from 6pm to 6am, in the day's own zone", () => {
+  assert.equal(NIGHT.from.getTime(), at(10, 18).getTime());
+  assert.equal(NIGHT.to.getTime(), at(11, 6).getTime());
+  assert.equal(questionWindow(K("milk_total"), DAY, TZ).from.getTime(), WIN.from.getTime());
+});
+
+test("a 6pm bet on 6 hours straight is settled by that night's sleep", () => {
+  // Down at 10pm, up at 5am: a seven-hour stretch, followed past midnight.
   const data = payload({ sleep: [nap(at(10, 22), at(11, 5))] });
-  const running = outcome(K("six_hours"), null, payload({ sleep: [nap(at(10, 22), null)] }), WIN, at(11, 1));
+  const running = outcome(K("six_hours"), null, payload({ sleep: [nap(at(10, 22), null)] }), NIGHT, at(11, 1));
   assert.deepEqual([running.phase, running.settled], ["live", false], "settled before she woke");
-  const r = outcome(K("six_hours"), null, data, WIN, at(11, 9));
+  const r = outcome(K("six_hours"), null, data, NIGHT, at(11, 9));
   assert.deepEqual([r.phase, r.winning, r.obs.value], ["final", "yes", 7 * 60]);
+});
+
+test("last night's sleep doesn't count towards tonight", () => {
+  // The 1am–8am stretch belongs to the night of the 9th, not the 10th.
+  const data = payload({ sleep: [nap(at(10, 1), at(10, 8)), nap(at(10, 21), at(11, 1))] });
+  const r = outcome(K("six_hours"), null, data, NIGHT, at(11, 9));
+  assert.deepEqual([r.winning, r.obs.value], ["no", 4 * 60]);
+});
+
+test("a stretch that starts before 6am is still tonight's, and can win after it", () => {
+  const data = payload({ sleep: [nap(at(11, 5), null)] });
+  const early = outcome(K("six_hours"), null, data, NIGHT, at(11, 7));
+  assert.equal(early.settled, false);
+  assert.equal(outcome(K("six_hours"), null, data, NIGHT, at(11, 11, 1)).winning, "yes");
+});
+
+test("a day question closes at noon", () => {
+  assert.equal(closesAt(K("milk_total"), DAY, TZ, payload()).getTime(), at(10, 12).getTime());
+  assert.equal(betting(K("milk_total"), null, payload(), DAY, TZ, at(10, 11, 59)).open, true);
+  assert.equal(betting(K("milk_total"), null, payload(), DAY, TZ, at(10, 12)).open, false);
+});
+
+test("a night question closes when she goes down after 6pm, or 8pm at the latest", () => {
+  // A 5pm nap doesn't count as going down for the night.
+  const down = payload({ sleep: [nap(at(10, 17), at(10, 17, 40)), nap(at(10, 19, 15), null)] });
+  assert.equal(closesAt(K("six_hours"), DAY, TZ, down).getTime(), at(10, 19, 15).getTime());
+  assert.equal(closesAt(K("six_hours"), DAY, TZ, payload()).getTime(), at(10, 20).getTime());
+  // So at 6pm, before she's down, tonight is still open.
+  assert.equal(betting(K("six_hours"), null, down, DAY, TZ, at(10, 18)).open, true);
+  assert.equal(betting(K("six_hours"), null, down, DAY, TZ, at(10, 19, 20)).open, false);
+});
+
+test("betting closes early once the log has decided it", () => {
+  const data = payload({ diapers: [diaper("poop", at(10, 7, 30))] });
+  const before = betting(K("first_poop"), null, data, DAY, TZ, at(10, 7));
+  const after = betting(K("first_poop"), null, data, DAY, TZ, at(10, 8));
+  assert.deepEqual([before.open, after.open, after.decided], [true, false, true]);
 });
 
 test("the first poop settles when it happens, as minutes after midnight", () => {
