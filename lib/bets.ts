@@ -1,11 +1,12 @@
 /**
- * The daily question: one prediction a day, about tomorrow.
+ * The daily question: one prediction a day, about that same day or night.
  *
- * Betting is always open — anyone can open the app at any hour and call it —
- * because the question is always about a day that hasn't started yet. It locks
- * at that day's midnight, plays out live through the day, and settles itself
- * from the log at the following midnight. A question about *today* that stayed
- * open all day would just reward whoever bet last.
+ * A bet is about the day you place it on. A day question ("how much milk
+ * today?") covers today, midnight to midnight, and closes at noon. A night
+ * question ("6 hours straight tonight?") covers tonight, every sleep that
+ * starts from 6pm until 6am, and closes the moment she goes down after 6pm,
+ * or at 8pm at the latest. Either one also closes early if the log decides it
+ * first: once the first poop is in, nobody gets to "guess" its time.
  *
  * Everything here is pure, so the server (which enforces the lock and freezes
  * each day's question) and every phone (which draws the cards and the
@@ -21,7 +22,7 @@ import { clipSleep } from "./summary";
 import { HOUR, MINUTE } from "./time";
 import type { EventsPayload } from "./types";
 
-/** `YYYY-MM-DD` — the local date the question is about. */
+/** `YYYY-MM-DD` — the local date the question is about. A night belongs to the date it starts on. */
 export type DayKey = string;
 
 export type Person = { id: string; name: string };
@@ -43,6 +44,12 @@ export type Format = "closest" | "overunder" | "yesno" | "person";
 /** What the figure is measured in, which decides how it's shown and entered. */
 export type Unit = "ml" | "count" | "duration" | "clock";
 
+/**
+ * What a question covers: today, midnight to midnight, or tonight, the sleeps
+ * that start between 6pm and 6am.
+ */
+export type Period = "day" | "night";
+
 /** Which log a question reads, so it's only asked once that log is in use. */
 type Source = "feedings" | "sleep" | "diapers" | "moments" | "people";
 
@@ -63,6 +70,7 @@ export type KindId =
 export type Kind = {
   id: KindId;
   format: Format;
+  period: Period;
   /** Figures are in mL, a count, minutes, or minutes after midnight. */
   unit: Unit;
   /** The question as asked. `{line}` is filled in for over/under. */
@@ -81,8 +89,9 @@ export const KINDS: Kind[] = [
   {
     id: "milk_total",
     format: "closest",
+    period: "day",
     unit: "ml",
-    ask: "How much milk will she drink?",
+    ask: "How much milk will she drink today?",
     short: "Milk total",
     source: "feedings",
     bullseye: 25,
@@ -92,16 +101,18 @@ export const KINDS: Kind[] = [
   {
     id: "feeds_count",
     format: "overunder",
+    period: "day",
     unit: "count",
-    ask: "Over or under {line} feeds?",
+    ask: "Over or under {line} feeds today?",
     short: "Feeds",
     source: "feedings",
   },
   {
     id: "diapers_count",
     format: "closest",
+    period: "day",
     unit: "count",
-    ask: "How many diapers?",
+    ask: "How many diapers today?",
     short: "Diapers",
     source: "diapers",
     bullseye: 0,
@@ -111,16 +122,18 @@ export const KINDS: Kind[] = [
   {
     id: "dirty_count",
     format: "overunder",
+    period: "day",
     unit: "count",
-    ask: "Over or under {line} dirty diapers?",
+    ask: "Over or under {line} dirty diapers today?",
     short: "Dirty diapers",
     source: "diapers",
   },
   {
     id: "longest_sleep",
     format: "closest",
+    period: "night",
     unit: "duration",
-    ask: "How long will her longest sleep be?",
+    ask: "How long will her longest sleep be tonight?",
     short: "Longest sleep",
     source: "sleep",
     bullseye: 15,
@@ -130,16 +143,18 @@ export const KINDS: Kind[] = [
   {
     id: "sleep_total",
     format: "overunder",
+    period: "day",
     unit: "duration",
-    ask: "Over or under {line} of sleep?",
+    ask: "Over or under {line} of sleep today?",
     short: "Total sleep",
     source: "sleep",
   },
   {
     id: "biggest_feed",
     format: "closest",
+    period: "day",
     unit: "ml",
-    ask: "How big will her biggest bottle be?",
+    ask: "How big will her biggest bottle be today?",
     short: "Biggest bottle",
     source: "feedings",
     bullseye: 5,
@@ -149,8 +164,9 @@ export const KINDS: Kind[] = [
   {
     id: "first_poop",
     format: "closest",
+    period: "day",
     unit: "clock",
-    ask: "What time is the first poop?",
+    ask: "What time is today's first poop?",
     short: "First poop",
     source: "diapers",
     bullseye: 15,
@@ -160,32 +176,36 @@ export const KINDS: Kind[] = [
   {
     id: "blowout",
     format: "yesno",
+    period: "day",
     unit: "count",
-    ask: "Any blowouts?",
+    ask: "Any blowouts today?",
     short: "Blowout",
     source: "diapers",
   },
   {
     id: "spit_up",
     format: "yesno",
+    period: "day",
     unit: "count",
-    ask: "Any big spit-ups?",
+    ask: "Any big spit-ups today?",
     short: "Spit-up",
     source: "moments",
   },
   {
     id: "six_hours",
     format: "yesno",
+    period: "night",
     unit: "duration",
-    ask: "Will she sleep 6 hours straight?",
+    ask: "Will she sleep 6 hours straight tonight?",
     short: "6 hours straight",
     source: "sleep",
   },
   {
     id: "top_logger",
     format: "person",
+    period: "day",
     unit: "count",
-    ask: "Who'll log the most?",
+    ask: "Who'll log the most today?",
     short: "Top logger",
     source: "people",
   },
@@ -197,6 +217,15 @@ export function kindById(id: string): Kind | undefined {
 
 /** A good stretch, for `six_hours`. */
 export const GOOD_STRETCH_MS = 6 * HOUR;
+
+/** Tonight is every sleep that starts from 6pm… */
+export const NIGHT_FROM_HOUR = 18;
+/** …until 6am. */
+export const NIGHT_TO_HOUR = 6;
+/** A night question closes when she goes down after 6pm, or at 8pm at the latest. */
+export const BEDTIME_LATEST_HOUR = 20;
+/** A day question closes at noon. */
+export const DAY_CLOSES_HOUR = 12;
 
 /** Baby baby points. Worth exactly nothing; argued over endlessly. */
 export const BBP = {
@@ -277,9 +306,13 @@ export function currentDay(now: Date, tz: string): DayKey {
   return `${w.y}-${pad(w.m)}-${pad(w.d)}`;
 }
 
-/** The only day that can be bet on: tomorrow. */
+/**
+ * The day whose question is being asked: today. Before 6am that's already the
+ * new date — last night's question is still playing out, but it was asked
+ * yesterday.
+ */
 export function openDay(now: Date, tz: string): DayKey {
-  return shiftDay(currentDay(now, tz), 1);
+  return currentDay(now, tz);
 }
 
 export function shiftDay(key: DayKey, days: number): DayKey {
@@ -293,11 +326,26 @@ export function isDayKey(value: unknown): value is DayKey {
   return shiftDay(value, 0) === value; // rejects 2026-02-31
 }
 
-export type DayWindow = { key: DayKey; from: Date; to: Date };
+export type DayWindow = { key: DayKey; tz: string; from: Date; to: Date };
 
-/** Midnight to midnight, in the day's own zone. Betting locks at `from`. */
+/** Midnight to midnight, in the day's own zone. */
 export function dayWindow(key: DayKey, tz: string): DayWindow {
-  return { key, from: zonedInstant(key, 0, 0, tz), to: zonedInstant(key, 1, 0, tz) };
+  return { key, tz, from: zonedInstant(key, 0, 0, tz), to: zonedInstant(key, 1, 0, tz) };
+}
+
+/** 6pm on the day to 6am the next morning: the sleeps that start in it are tonight's. */
+export function nightWindow(key: DayKey, tz: string): DayWindow {
+  return {
+    key,
+    tz,
+    from: zonedInstant(key, 0, NIGHT_FROM_HOUR, tz),
+    to: zonedInstant(key, 1, NIGHT_TO_HOUR, tz),
+  };
+}
+
+/** The stretch of time a question is about. */
+export function questionWindow(kind: Kind, key: DayKey, tz: string): DayWindow {
+  return kind.period === "night" ? nightWindow(key, tz) : dayWindow(key, tz);
 }
 
 // ---------------------------------------------------------------------------
@@ -384,13 +432,13 @@ export type Observation = {
 const ts = (s: string) => new Date(s).getTime();
 
 /**
- * What the log says about one kind over one day, as of `now`.
+ * What the log says about one kind over its window, as of `now`.
  *
  * Sleep is read two ways. Totals clip to the day, because a day has 24 hours
- * of sleep to give and no more. Stretches (`longest_sleep`, `six_hours`) belong
- * to the day they *start* in and are followed to their end, because a 10pm
- * sleep that runs to 5am is a seven-hour stretch, not a two-hour one — which is
- * why those settle when she wakes rather than at midnight.
+ * of sleep to give and no more. Stretches (`longest_sleep`, `six_hours`) are
+ * tonight's when they *start* between 6pm and 6am, and are followed to their
+ * end, because a 5am sleep that runs to 9am is a four-hour stretch, not a
+ * one-hour one — which is why those settle when she wakes.
  */
 export function observe(
   kind: Kind,
@@ -579,6 +627,48 @@ export function outcome(
 }
 
 // ---------------------------------------------------------------------------
+// When betting closes.
+
+/**
+ * The latest a call can go in: noon for a day question; for a night question,
+ * the moment she goes down after 6pm — so nobody watches how bedtime goes
+ * before choosing — or 8pm, whichever comes first.
+ */
+export function closesAt(kind: Kind, key: DayKey, tz: string, data: EventsPayload): Date {
+  if (kind.period === "day") return zonedInstant(key, 0, DAY_CLOSES_HOUR, tz);
+  const latest = zonedInstant(key, 0, BEDTIME_LATEST_HOUR, tz).getTime();
+  const night = nightWindow(key, tz);
+  const down = data.sleep
+    .map((s) => ts(s.sleep_start))
+    .filter((at) => at >= night.from.getTime() && at < night.to.getTime());
+  return new Date(Math.min(latest, ...down));
+}
+
+export type Betting = {
+  open: boolean;
+  closesAt: Date;
+  /** Closed because the log decided it before the cutoff. */
+  decided: boolean;
+};
+
+/**
+ * Whether calls are still being taken on a day's question. Shared by the API,
+ * which refuses a late call, and the phone, which stops offering the form.
+ */
+export function betting(
+  kind: Kind,
+  line: number | null,
+  data: EventsPayload,
+  key: DayKey,
+  tz: string,
+  now: Date,
+): Betting {
+  const close = closesAt(kind, key, tz, data);
+  const decided = outcome(kind, line, data, questionWindow(kind, key, tz), now).settled;
+  return { open: now < close && !decided, closesAt: close, decided: decided && now < close };
+}
+
+// ---------------------------------------------------------------------------
 // Lines and hints, from her own past week.
 
 /** How many finished days the line and the hint look back over. */
@@ -589,9 +679,10 @@ export function pastWindows(key: DayKey, tz: string, days = LOOKBACK_DAYS): DayW
   return Array.from({ length: days }, (_, i) => dayWindow(shiftDay(key, -(i + 1)), tz));
 }
 
-/** Each past day's figure for a kind, skipping days that weren't logged. */
+/** Each past day's (or night's) figure for a kind, skipping ones that weren't logged. */
 function history(kind: Kind, data: EventsPayload, windows: DayWindow[]): number[] {
   return windows
+    .map((w) => questionWindow(kind, w.key, w.tz))
     .map((w) => observe(kind, data, w, w.to))
     .filter((o) => !o.empty && o.value !== null)
     .map((o) => o.value as number);
@@ -663,7 +754,7 @@ export type Prediction = {
   day: DayKey;
   person_id: string;
   name: string;
-  /** `null` when it's someone else's and the day hasn't started yet. */
+  /** `null` when it's someone else's and betting hasn't closed yet. */
   answer: string | null;
   note: string | null;
   created_at: string;

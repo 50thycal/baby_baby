@@ -8,17 +8,19 @@ import Sheet from "@/components/Sheet";
 import { send, useBets, useEvents } from "@/lib/api";
 import {
   BBP,
+  BEDTIME_LATEST_HOUR,
+  betting,
   currentDay,
-  dayWindow,
   hintFor,
   kindById,
-  openDay,
   outcome,
   pastWindows,
+  questionWindow,
   scoreDay,
   shiftDay,
   standings,
   type BetDay,
+  type Betting,
   type DayKey,
   type Hint,
   type Kind,
@@ -38,7 +40,7 @@ import type { EventsPayload } from "@/lib/types";
 const YES = "var(--c-sleep)";
 const NO = "var(--c-awake)";
 
-/** The phone's own zone — sent along so tomorrow means the family's tomorrow. */
+/** The phone's own zone — sent along so today means the family's today. */
 function localZone() {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -54,21 +56,37 @@ type DayView = {
   preds: Prediction[];
   result: Outcome;
   scores: Score[];
+  bet: Betting;
 };
 
 function viewDay(row: BetDay, data: EventsPayload, preds: Prediction[], now: Date): DayView | null {
   const kind = kindById(row.kind);
   if (!kind) return null;
-  const result = outcome(kind, row.line, data, dayWindow(row.day, row.tz), now);
+  const result = outcome(kind, row.line, data, questionWindow(kind, row.day, row.tz), now);
   const mine = preds.filter((p) => p.day === row.day);
-  return { key: row.day, kind, line: row.line, preds: mine, result, scores: scoreDay(kind, mine, result) };
+  return {
+    key: row.day,
+    kind,
+    line: row.line,
+    preds: mine,
+    result,
+    scores: scoreDay(kind, mine, result),
+    bet: betting(kind, row.line, data, row.day, row.tz, now),
+  };
+}
+
+/** "Today" or "Tonight" for today's question; "Yesterday" or "Last night" for the one before. */
+function when(view: DayView, which: "today" | "yesterday") {
+  const night = view.kind.period === "night";
+  if (which === "today") return night ? "Tonight" : "Today";
+  return night ? "Last night" : "Yesterday";
 }
 
 /**
- * One question a day, always about tomorrow. Anyone can call it at any hour;
- * it locks at midnight, plays out live through the day, and the log settles
- * it. Points are baby baby points — worth exactly nothing, argued over
- * endlessly.
+ * One question a day, about that same day or night. Call it before noon (or
+ * before bedtime, for a night question); it plays out live and the log
+ * settles it. Points are baby baby points — worth exactly nothing, argued
+ * over endlessly.
  */
 export default function BetsScreen() {
   const me = useMe();
@@ -101,7 +119,6 @@ export default function BetsScreen() {
   const byKey = new Map(views.map((v) => [v.key, v]));
 
   const todayKey = currentDay(now, tz);
-  const tomorrow = byKey.get(openDay(now, tz));
   const today = byKey.get(todayKey);
   const yesterday = byKey.get(shiftDay(todayKey, -1));
 
@@ -116,19 +133,29 @@ export default function BetsScreen() {
 
   return (
     <div className="flex flex-col gap-3 px-5 pb-4">
-      {tomorrow ? (
+      {!today ? (
+        <div className="h-48 animate-pulse rounded-[10px] bg-sunk" />
+      ) : today.bet.open ? (
         <OpenCard
-          view={tomorrow}
-          hint={hintFor(tomorrow.kind, events, pastWindows(todayKey, tz))}
+          view={today}
+          now={now}
+          hint={hintFor(today.kind, events, pastWindows(todayKey, tz))}
           people={data.people}
           onChooseName={() => setChoosing(true)}
         />
       ) : (
-        <div className="h-48 animate-pulse rounded-[10px] bg-sunk" />
-      )}
-
-      {today && (
-        <LiveCard view={today} events={events} now={now} title={`Today · ${dayLabel(today.key)}`} />
+        <>
+          <LiveCard
+            view={today}
+            events={events}
+            now={now}
+            title={`${when(today, "today")} · ${dayLabel(today.key)}`}
+          />
+          <p className="-mt-1 px-1 text-[13px] text-muted">
+            Betting&apos;s closed for {when(today, "today").toLowerCase()}. Tomorrow&apos;s question
+            opens at midnight.
+          </p>
+        </>
       )}
 
       {yesterday && yesterday.preds.length > 0 && (
@@ -136,7 +163,8 @@ export default function BetsScreen() {
           view={yesterday}
           events={events}
           now={now}
-          title={`Yesterday · ${dayLabel(yesterday.key)}`}
+          title={`${when(yesterday, "yesterday")} · ${dayLabel(yesterday.key)}`}
+          past
         />
       )}
 
@@ -177,8 +205,14 @@ function fmtValue(kind: Kind, v: number): string {
   }
 }
 
-function question(kind: Kind, line: number | null): string {
-  return kind.ask.replace("{line}", line === null ? "?" : fmtValue(kind, line));
+/**
+ * The question as asked. Once its day has gone the card's label says
+ * "Yesterday" or "Last night", so the "today"/"tonight" in it comes out
+ * rather than contradicting the label.
+ */
+function question(kind: Kind, line: number | null, past = false): string {
+  const asked = kind.ask.replace("{line}", line === null ? "?" : fmtValue(kind, line));
+  return past ? asked.replace(/ (today|tonight)\?$/, "?").replace("today's ", "the ") : asked;
 }
 
 /** How an answer reads on a call: a figure, a side, or a name. */
@@ -196,22 +230,36 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Question({ kind, line }: { kind: Kind; line: number | null }) {
+function Question({ kind, line, past }: { kind: Kind; line: number | null; past?: boolean }) {
   return (
-    <h2 className="mt-1 font-pixel text-[20px] font-semibold leading-tight">{question(kind, line)}</h2>
+    <h2 className="mt-1 font-pixel text-[20px] font-semibold leading-tight">
+      {question(kind, line, past)}
+    </h2>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Tomorrow: the open question.
+// Today: the open question.
+
+/** When betting closes, said the way the family would say it. */
+function closesLine(view: DayView, now: Date) {
+  const left = fmtDuration(view.bet.closesAt.getTime() - now.getTime());
+  if (view.kind.period === "night") {
+    const latest = fmtClock(new Date(2000, 0, 1, BEDTIME_LATEST_HOUR));
+    return `Closes when she goes down tonight — ${latest} at the latest (${left})`;
+  }
+  return `Closes at ${fmtClock(view.bet.closesAt)} (${left} left)`;
+}
 
 function OpenCard({
   view,
+  now,
   hint,
   people,
   onChooseName,
 }: {
   view: DayView;
+  now: Date;
   hint: Hint;
   people: Person[];
   onChooseName: () => void;
@@ -222,9 +270,12 @@ function OpenCard({
 
   return (
     <div className="panel rounded-[10px] p-4">
-      <Label>Tomorrow · {dayLabel(view.key)}</Label>
+      <Label>
+        {when(view, "today")} · {dayLabel(view.key)}
+      </Label>
       <Question kind={view.kind} line={view.line} />
       <HintLine kind={view.kind} hint={hint} />
+      <p className="mt-1 text-[13px] text-muted">{closesLine(view, now)}</p>
 
       <div className="mt-3 flex flex-col gap-3">
         {me ? (
@@ -249,7 +300,7 @@ function OpenCard({
           <p className="text-[13px] text-muted">
             🔒 In:{" "}
             <span className="font-medium text-ink">{others.map((p) => p.name).join(", ")}</span> —
-            revealed at midnight
+            revealed when betting closes
           </p>
         )}
       </div>
@@ -257,12 +308,14 @@ function OpenCard({
   );
 }
 
+const periodNoun = (kind: Kind) => (kind.period === "night" ? "nights" : "days");
+
 /** What her past week says, so a guess has something to go on. */
 function HintLine({ kind, hint }: { kind: Kind; hint: Hint }) {
   if (!hint.days) return null;
   let text: string | null = null;
   if (kind.format === "yesno") {
-    text = `Happened on ${hint.happenedDays} of the last ${hint.days} days`;
+    text = `Happened on ${hint.happenedDays} of the last ${hint.days} ${periodNoun(kind)}`;
   } else if (kind.format !== "person" && hint.typical !== null) {
     text = `${kind.unit === "clock" ? "Usually around" : "Her average lately:"} ${fmtValue(kind, hint.typical)}`;
   }
@@ -326,7 +379,9 @@ function AnswerForm({ view, hint, people }: { view: DayView; hint: Hint; people:
                   ? `${side === "over" ? "more than" : "less than"} ${fmtValue(kind, view.line)}`
                   : side === "yes"
                     ? "it'll happen"
-                    : "not tomorrow"
+                    : kind.period === "night"
+                      ? "not tonight"
+                      : "not today"
               }
               color={sideColor(side)}
               on={answer === side}
@@ -497,17 +552,19 @@ function LiveCard({
   events,
   now,
   title,
+  past,
 }: {
   view: DayView;
   events: EventsPayload;
   now: Date;
   title: string;
+  past?: boolean;
 }) {
   const pace = paceFor(view, events, now);
   return (
     <div className="panel rounded-[10px] p-4">
       <Label>{title}</Label>
-      <Question kind={view.kind} line={view.line} />
+      <Question kind={view.kind} line={view.line} past={past} />
       <div className="mt-2 flex flex-col gap-3">
         <Verdict view={view} pace={pace} />
         <Calls view={view} pace={pace} />
@@ -542,7 +599,7 @@ function Verdict({ view, pace }: { view: DayView; pace: number | null }) {
       if (kind.id === "six_hours") sub = `Longest stretch ${fmtValue(kind, obs.value ?? 0)}`;
     }
   } else if (result.phase === "open") {
-    text = "Starts at midnight";
+    text = kind.period === "night" ? "Counts from 6pm" : "Starts at midnight";
   } else {
     // Live and undecided: what's happened so far.
     switch (kind.format) {
@@ -705,17 +762,23 @@ function Rules() {
       <summary className="press cursor-pointer py-1">How it works</summary>
       <ul className="mt-1 flex list-disc flex-col gap-1 pl-5">
         <li>
-          One question a day, always about tomorrow, and a different kind most days: a number to
-          guess, an over/under, a yes/no, or one of the family.
+          One question a day, about that same day or night, and a different kind most days: a
+          number to guess, an over/under, a yes/no, or one of the family.
         </li>
         <li>
-          Call it any time before midnight — once. A call is locked the moment it&apos;s in, with
-          no changes. Calls stay hidden until tomorrow starts.
+          Day questions are about today, midnight to midnight, and close at noon. Night questions
+          are about tonight — any sleep that starts between 6pm and 6am — and close when she goes
+          down after 6pm, or 8pm at the latest. Bet at 6pm and it&apos;s tonight you&apos;re betting
+          on.
+        </li>
+        <li>
+          One call each, locked the moment it&apos;s in. Calls stay hidden until betting closes. If
+          the log decides it first — the first poop has been — betting closes right then.
         </li>
         <li>
           The log settles it. Some things settle early — a blowout has happened, the line has been
-          passed, the first poop has been — and the rest at midnight. A sleep that starts that day
-          counts in full, even when she wakes the next morning. Nothing logged at all is no contest.
+          passed — and the rest at midnight. A night&apos;s sleep counts in full, even when she
+          wakes after 6am. Nothing logged at all is no contest.
         </li>
         <li>
           Over/under lines come from her past week, so they&apos;re close to a coin flip.

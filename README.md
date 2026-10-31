@@ -678,39 +678,48 @@ text rather than a key into `people`, so it survives backups and restores with
 nothing to dangle.
 
 **The daily question** lives on the **Bets** tab: one prediction a day,
-always about **tomorrow**. All the rules are in `lib/bets.ts`, which is pure so
-the server and every phone agree.
+about **that same day or night** — a bet placed at 6pm on a sleep question is
+about tonight, not tomorrow night. All the rules are in `lib/bets.ts`, which is
+pure so the server and every phone agree.
 
-- **Always open, never a race.** Anyone can call tomorrow's question at any
-  hour until midnight — **once**. A call is locked the moment it's in, with no
-  changes, so nobody drifts toward whatever the evening seems to suggest. The
-  server enforces it with the table's unique key (`ON CONFLICT DO NOTHING`),
-  so two quick taps can't both land. A question about *today* that stayed open
-  all day would just reward whoever bet last, with most of the day already on
-  the screen.
+- **Today or tonight, and a cutoff for each.** Day questions (milk, feeds,
+  diapers, first poop, total sleep, who logs most…) are about **today**,
+  midnight to midnight, and close at **noon**. Night questions (6 hours
+  straight, longest sleep) are about **tonight** — every sleep that starts
+  between 6pm and 6am — and close **when she goes down** after 6pm, or 8pm at
+  the latest, so nobody watches how bedtime goes before choosing. Either one
+  closes on the spot if the log decides it first: once the first poop is in,
+  there's no guessing its time. The server checks all of it against its own
+  log. After the cutoff the card plays out live; tomorrow's question appears
+  at midnight.
+- **One call, no changes.** A call is locked the moment it's in, so nobody
+  drifts toward whatever the day seems to suggest. The server enforces it with
+  the table's unique key (`ON CONFLICT DO NOTHING`), so two quick taps can't
+  both land.
 - **A different kind of question most days**, dealt from a pool of twelve like
   a deck: shuffled once per cycle, so every question comes round before any
   repeats. Number guesses (milk total, diapers, longest sleep, biggest bottle,
   time of the first poop), over/unders (feeds, dirty diapers, total sleep), yes/
   nos (a blowout, a big spit-up, 6 hours straight) and one about the family
   (who'll log the most). A question whose log isn't in use yet is skipped.
-- **Frozen when it's set.** The first time anyone opens the tab, tomorrow's
-  question is stored with its over/under line, drawn from her seven finished
-  days before today and nudged off whole numbers so a count can't land on it.
+- **Frozen when it's set.** The first time anyone opens the tab each day,
+  today's question is stored with its over/under line, drawn from her seven
+  finished days before today and nudged off whole numbers so a count can't land
+  on it.
   It's stored rather than recomputed because a line that moved when someone
   back-filled a feed would be a different bet for everyone who'd already called
   it. The hint under the question ("Her average lately: 919 mL", "Happened on 2
   of the last 7 days") comes from the same week.
-- **Blind until midnight**: `GET /api/bets` blanks everyone else's answer and
-  note until tomorrow starts. Honour-system blind, not secure — it's there so
+- **Blind until betting closes**: `GET /api/bets` blanks everyone else's answer
+  and note until noon, or bedtime for a night question. Honour-system blind, not secure — it's there so
   nobody just copies Nana.
 - **It plays out live.** Through the day the card shows the figure so far and,
   for running totals, where it's heading by midnight (the Trends projection),
   with whoever's nearest that pace marked as leading. Some questions settle
   early, because some things can't be undone: a blowout has happened, the line
-  has been passed, the first poop has been. A sleep belongs to the day it
-  *starts* and is followed to its end, so a 10pm–5am stretch is seven hours,
-  not two. Nothing logged all day is no contest.
+  has been passed, the first poop has been. A night's sleep is followed to its
+  end, so a 10pm–5am stretch is seven hours, not two, and a 5am sleep that runs
+  to 11 still counts for last night. Nothing logged at all is no contest.
 - **Baby baby points (BBP):** right on a yes/no, over/under or person: +10, and
   +5 more if most of the family got it wrong. Number guesses: +10 for the
   nearest (two or more guessers; ties share), +5 for second (three or more), and
@@ -719,8 +728,8 @@ the server and every phone agree.
 
 Nothing about a result is stored. Outcomes, points and streaks are recomputed
 from the log on every load, so fixing a mis-logged feed fixes the bet with it.
-Each day stores the time zone of the phone that set it, because "midnight"
-means nothing to a server running in UTC; the boundaries are computed with
+Each day stores the time zone of the phone that set it, because "noon" and
+"6pm" mean nothing to a server running in UTC; the boundaries are computed with
 `Intl`, daylight-saving days included. This replaced the old nightly 6-hour
 bet, which started the leaderboard fresh; its tables (`bet_nights`, `bets`) are
 left untouched in any database that has them and nothing reads them.

@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { BadRequest, fail, ok, readJson, readMe } from "@/lib/http";
 import {
   availability,
+  betting,
+  currentDay,
   dayWindow,
   isDayKey,
   isValidTimeZone,
@@ -11,7 +13,6 @@ import {
   openDay,
   pastWindows,
   pickKind,
-  shiftDay,
   type BetDay,
   type BetsPayload,
   type DayKey,
@@ -30,12 +31,13 @@ const DAY_COLUMNS = "to_char(day, 'YYYY-MM-DD') AS day, tz, kind, line";
  * results and points are worked out on the phone (lib/bets.ts), so there's
  * nothing here to go stale.
  *
- * Asking also sets tomorrow's question if nobody has yet, in the asker's zone.
+ * Asking also sets today's question if nobody has yet, in the asker's zone.
  * That's the moment it has to be frozen: the line comes from the past week,
  * and it must not move under people who have already called it.
  *
- * Answers are blind until the day starts: before then, everyone else's answer
- * and note come back empty, and only the fact that they've played shows.
+ * Answers are blind until betting closes — noon, or bedtime for a night
+ * question: before then, everyone else's answer and note come back empty, and
+ * only the fact that they've played shows.
  * Honour-system blind — it's in the request, not behind a login — but it's
  * there so nobody just copies Nana.
  */
@@ -58,12 +60,29 @@ export async function GET(req: Request) {
            ORDER BY p.day, p.created_at`,
     ])) as [BetDay[], Prediction[]];
 
-    const tzOf = new Map(days.map((d) => [d.day, d.tz]));
-    const blinded = predictions.map((p) => {
-      if (p.person_id === me) return p;
-      const started = dayWindow(p.day, tzOf.get(p.day)!).from <= now;
-      return started ? p : { ...p, answer: null, note: null };
-    });
+    // Only today's question can still be taking calls; anything earlier has
+    // closed, and nothing later exists yet. Today's needs the log to say
+    // whether she's gone down or it's already been decided.
+    const byDay = new Map(days.map((d) => [d.day, d]));
+    const closed = new Map<DayKey, boolean>();
+    const isClosed = async (key: DayKey) => {
+      if (closed.has(key)) return closed.get(key)!;
+      const d = byDay.get(key)!;
+      const today = currentDay(now, d.tz);
+      const kind = kindById(d.kind);
+      let result = key < today;
+      if (key === today && kind) {
+        const log = await loadLog(dayWindow(key, d.tz).from, now);
+        result = !betting(kind, d.line, log, key, d.tz, now).open;
+      }
+      closed.set(key, result);
+      return result;
+    };
+    const blinded: Prediction[] = [];
+    for (const p of predictions) {
+      const shown = p.person_id === me || (await isClosed(p.day));
+      blinded.push(shown ? p : { ...p, answer: null, note: null });
+    }
 
     const payload: BetsPayload = { now: now.toISOString(), people, days, predictions: blinded };
     return ok(payload);
@@ -83,10 +102,22 @@ async function ensureDay(key: DayKey, tz: string, now: Date, peopleCount: number
   const exists = (await sql`SELECT 1 FROM bet_days WHERE day = ${key}`) as unknown[];
   if (exists.length) return;
 
-  // The finished days before today. Today is still going, and a half day in
-  // the average would set every line low.
-  const windows = pastWindows(shiftDay(key, -1), tz);
+  // The finished days before this one. It has already started, and a half
+  // day in the average would set every line low.
+  const windows = pastWindows(key, tz);
   const since = new Date(Math.min(...windows.map((w) => w.from.getTime())));
+  const data = await loadLog(since, now);
+
+  const kind = pickKind(key, availability(data, windows, peopleCount));
+  const line = lineFor(kind, data, windows);
+  await sql`
+    INSERT INTO bet_days (day, tz, kind, line) VALUES (${key}, ${tz}, ${kind.id}, ${line})
+    ON CONFLICT (day) DO NOTHING`;
+}
+
+/** The log from `since` on, in the shape the rules in lib/bets.ts read. */
+async function loadLog(since: Date, now: Date): Promise<EventsPayload> {
+  const sql = await db();
   const sinceIso = since.toISOString();
   const [feedings, sleep, diapers, moments] = (await Promise.all([
     sql`SELECT * FROM feedings WHERE ts >= ${sinceIso}`,
@@ -99,7 +130,7 @@ async function ensureDay(key: DayKey, tz: string, now: Date, peopleCount: number
     EventsPayload["diapers"],
     EventsPayload["moments"],
   ];
-  const data: EventsPayload = {
+  return {
     start: sinceIso,
     end: now.toISOString(),
     feedings,
@@ -108,21 +139,16 @@ async function ensureDay(key: DayKey, tz: string, now: Date, peopleCount: number
     moments,
     comments: [],
   };
-
-  const kind = pickKind(key, availability(data, windows, peopleCount));
-  const line = lineFor(kind, data, windows);
-  await sql`
-    INSERT INTO bet_days (day, tz, kind, line) VALUES (${key}, ${tz}, ${kind.id}, ${line})
-    ON CONFLICT (day) DO NOTHING`;
 }
 
 /**
- * POST /api/bets — lock in your answer for tomorrow. Once, and for good: a
- * call can't be changed after it's in, so nobody can drift toward whatever
- * the rest of the evening seems to suggest. Only ever tomorrow's, and only
- * until its midnight — both checked here, in the day's own zone, because a
- * phone's clock and a phone's idea of "tomorrow" are exactly the things that
- * can't be trusted to close a bet.
+ * POST /api/bets — lock in your answer for today. Once, and for good: a call
+ * can't be changed after it's in, so nobody can drift toward whatever the
+ * rest of the day seems to suggest. Only ever today's, and only until noon —
+ * or bedtime for a night question, or the moment the log decides it — all
+ * checked here, in the day's own zone, against the database's own log,
+ * because a phone's clock and a phone's idea of "today" are exactly the
+ * things that can't be trusted to close a bet.
  */
 export async function POST(req: Request) {
   try {
@@ -145,13 +171,22 @@ export async function POST(req: Request) {
     const day = rows[0];
     if (!day) throw new BadRequest("No question for that day yet");
 
-    const now = new Date();
-    if (day.day !== openDay(now, day.tz) || dayWindow(day.day, day.tz).from <= now) {
-      throw new BadRequest("Too late — that day has started");
-    }
-
     const kind = kindById(day.kind);
     if (!kind) throw new BadRequest("Unknown question");
+
+    const now = new Date();
+    if (day.day !== openDay(now, day.tz)) throw new BadRequest("Betting on that day has closed");
+    const log = await loadLog(dayWindow(day.day, day.tz).from, now);
+    const status = betting(kind, day.line, log, day.day, day.tz, now);
+    if (!status.open) {
+      throw new BadRequest(
+        status.decided
+          ? "Too late — it's already been decided"
+          : kind.period === "night"
+            ? "Too late — betting closed at bedtime"
+            : "Too late — betting closed at noon",
+      );
+    }
     const answer = normaliseAnswer(kind, body.answer, people);
     if (answer === null) throw new BadRequest("That answer doesn't fit the question");
 
@@ -165,7 +200,7 @@ export async function POST(req: Request) {
     // Nothing came back: there was already a call, and it stands. Decided by
     // the database's unique constraint rather than a read beforehand, so two
     // quick taps can't both get in.
-    if (!saved[0]) throw new BadRequest("You've already locked in your call for tomorrow");
+    if (!saved[0]) throw new BadRequest("You've already locked in your call for today");
 
     return ok(saved[0], 201);
   } catch (err) {
